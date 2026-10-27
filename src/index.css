@@ -1,0 +1,563 @@
+:root {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Theme Palette */
+  --bg-darkest: #07090e;
+  --bg-darker: #0c0f17;
+  --bg-dark: #121722;
+  --bg-surface: #18202f;
+  --bg-surface-hover: #1f2a3e;
+  --bg-card: rgba(24, 32, 47, 0.7);
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.15);
+  --border-glow: rgba(99, 102, 241, 0.35);
+
+  /* Primary & Accent */
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --primary-glow: rgba(99, 102, 241, 0.25);
+  --accent: #8b5cf6;
+
+  /* Status */
+  --success: #10b981;
+  --success-glow: rgba(16, 185, 129, 0.2);
+  --warning: #f59e0b;
+  --warning-glow: rgba(245, 158, 11, 0.2);
+  --danger: #ef4444;
+  --info: #0ea5e9;
+
+  /* Typography */
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  /* MTG Mana Colors */
+  --mana-w: #f8f6d8;
+  --mana-u: #38bdf8;
+  --mana-b: #272a30;
+  --mana-r: #f43f5e;
+  --mana-g: #22c55e;
+  --mana-c: #94a3b8;
+  --mana-gold: #eab308;
+
+  /* Glassmorphism */
+  --glass-blur: blur(12px);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 25px rgba(99, 102, 241, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-darkest);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-darkest);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-surface-hover);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-medium);
+}
+
+/* Glass Panels */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.glass-card {
+  background: rgba(24, 32, 47, 0.6);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-card:hover {
+  border-color: var(--border-glow);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.badge-success {
+  background: var(--success-glow);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-warning {
+  background: var(--warning-glow);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-primary {
+  background: var(--primary-glow);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.badge-rarity-mythic {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.badge-rarity-rare {
+  background: rgba(234, 179, 8, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+.badge-rarity-uncommon {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+.badge-rarity-common {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(100, 116, 139, 0.25);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
+  color: white;
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--bg-surface);
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+}
+.btn-secondary:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-medium);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+.btn-ghost:hover {
+  background: var(--bg-surface);
+  color: var(--text-main);
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 0.775rem;
+  border-radius: var(--radius-sm);
+}
+
+.btn-icon {
+  padding: 8px;
+  border-radius: var(--radius-md);
+  line-height: 0;
+}
+
+/* Form Controls */
+.input-text, .select-field, .textarea-field {
+  width: 100%;
+  padding: 9px 13px;
+  background: var(--bg-darker);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+  outline: none;
+}
+.input-text:focus, .select-field:focus, .textarea-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+.select-field {
+  cursor: pointer;
+}
+
+/* Modals */
+dialog.custom-modal {
+  background: transparent;
+  border: none;
+  padding: 0;
+  max-width: 90vw;
+  width: 680px;
+  margin: auto;
+  overflow: visible;
+  outline: none;
+}
+
+dialog.custom-modal::backdrop {
+  background: rgba(7, 9, 14, 0.75);
+  backdrop-filter: blur(8px);
+}
+
+dialog.custom-modal[open] {
+  animation: modal-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Card Visual Grid */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 20px;
+  padding: 10px 0;
+}
+
+.card-item-container {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.card-item-container:hover {
+  transform: translateY(-4px) scale(1.02);
+  border-color: var(--border-glow);
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(99, 102, 241, 0.2);
+  z-index: 5;
+}
+
+.card-image-wrapper {
+  position: relative;
+  aspect-ratio: 5 / 7;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.card-item-container:hover .card-image {
+  transform: scale(1.03);
+}
+
+/* Foil Shimmer Effect */
+.foil-sheen::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 215, 0, 0.15) 45%,
+    rgba(147, 197, 253, 0.2) 50%,
+    rgba(244, 114, 182, 0.15) 55%,
+    transparent 70%
+  );
+  pointer-events: none;
+  animation: foil-sweep 5s infinite linear;
+}
+
+@keyframes foil-sweep {
+  0% { transform: translateY(-30%) rotate(25deg); }
+  100% { transform: translateY(30%) rotate(25deg); }
+}
+
+/* Stacked Columns View (Moxfield / Archidekt style) */
+.stacked-board {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 24px;
+}
+
+.stacked-column {
+  flex: 0 0 240px;
+  background: rgba(18, 23, 34, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.stacked-cards-list {
+  display: flex;
+  flex-direction: column;
+  padding-top: 8px;
+}
+
+.stacked-card-entry {
+  position: relative;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  margin-top: -30px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.stacked-card-entry:first-child {
+  margin-top: 0;
+}
+
+.stacked-card-entry:hover {
+  margin-top: 0;
+  margin-bottom: 12px;
+  transform: scale(1.04);
+  z-index: 10;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(99, 102, 241, 0.3);
+  border-color: var(--primary);
+}
+
+.stacked-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(12, 15, 23, 0.85);
+  font-size: 0.8rem;
+  font-weight: 500;
+  gap: 6px;
+}
+
+/* Mana Symbols */
+.mana-pip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  line-height: 1;
+}
+.mana-pip-W { background: var(--mana-w); color: #1e293b; border: 1px solid #d4d0a5; }
+.mana-pip-U { background: var(--mana-u); color: #082f49; border: 1px solid #0284c7; }
+.mana-pip-B { background: #272a30; color: #f1f5f9; border: 1.5px solid #cbd5e1; }
+.mana-pip-R { background: var(--mana-r); color: #ffffff; border: 1px solid #be123c; }
+.mana-pip-G { background: var(--mana-g); color: #022c22; border: 1px solid #15803d; }
+.mana-pip-C { background: #64748b; color: #ffffff; border: 1px solid #475569; }
+.mana-pip-generic { background: #94a3b8; color: #0f172a; border: 1px solid #cbd5e1; }
+
+/* Common Icon & Animation Utilities */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+.text-indigo-400 { color: #818cf8; }
+.text-amber-400 { color: #fbbf24; }
+.text-emerald-400 { color: #34d399; }
+.text-red-400 { color: #f87171; }
+.text-slate-400 { color: #94a3b8; }
+.text-slate-600 { color: #475569; }
+.text-white { color: #ffffff; }
+.inline { display: inline; vertical-align: middle; }
+
+/* =========================================================================
+   A4 PROXY PRINTING STYLES (9 Cards Per Page: 3 cols x 3 rows, 63mm x 88mm)
+   ========================================================================= */
+.a4-page-sheet {
+  width: 210mm;
+  height: 297mm;
+  padding: 10mm;
+  background: white;
+  margin: 0 auto 30px auto;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  display: grid;
+  grid-template-columns: repeat(3, 63mm);
+  grid-template-rows: repeat(3, 88mm);
+  gap: 0;
+  justify-content: center;
+  align-content: center;
+  position: relative;
+  page-break-after: always;
+  box-sizing: border-box;
+}
+
+.a4-card-slot {
+  width: 63mm;
+  height: 88mm;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.a4-card-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Crop marks / Cutting guides */
+.show-cut-lines .a4-card-slot {
+  border: 0.15mm solid rgba(0, 0, 0, 0.45);
+}
+
+.show-crop-marks .a4-card-slot::before,
+.show-crop-marks .a4-card-slot::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+}
+.show-crop-marks .a4-card-slot::before {
+  top: 0;
+  left: 0;
+  width: 4mm;
+  height: 4mm;
+  border-top: 0.3mm solid #000;
+  border-left: 0.3mm solid #000;
+}
+.show-crop-marks .a4-card-slot::after {
+  bottom: 0;
+  right: 0;
+  width: 4mm;
+  height: 4mm;
+  border-bottom: 0.3mm solid #000;
+  border-right: 0.3mm solid #000;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide everything except the proxy printing sheet container */
+  .no-print,
+  nav,
+  header,
+  footer,
+  aside,
+  button,
+  .print-hide {
+    display: none !important;
+  }
+
+  .a4-print-container {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .a4-page-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 10mm !important;
+    width: 210mm !important;
+    height: 297mm !important;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .a4-card-slot {
+    width: 63mm !important;
+    height: 88mm !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
