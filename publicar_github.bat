@@ -30,3 +30,4 @@ echo [SUCESSO] Codigo enviado! O GitHub Actions ira publicar automaticamente em:
 echo https://davipmelo.github.io/dms-mtg-manager
 echo.
 pause
+
