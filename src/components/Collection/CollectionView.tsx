@@ -678,7 +678,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                   title="Ordenar por Quantidade"
                 >
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>qtd</span>
+                    <span>Qtd.</span>
                     <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'quantity' ? 1 : 0.25 }}>
                       {sortColumn === 'quantity' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
                     </span>
@@ -709,10 +709,10 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     userSelect: 'none',
                     color: sortColumn === 'name' ? '#ffbb00' : '#94a3b8',
                   }}
-                  title="Ordenar por Nome da Carta"
+                  title="Ordenar por Nome"
                 >
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>nome da carta</span>
+                    <span>Nome</span>
                     <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'name' ? 1 : 0.25 }}>
                       {sortColumn === 'name' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
                     </span>
@@ -726,10 +726,10 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     userSelect: 'none',
                     color: sortColumn === 'cmc' ? '#ffbb00' : '#94a3b8',
                   }}
-                  title="Ordenar por Custo (CMC)"
+                  title="Ordenar por Custo"
                 >
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>custo</span>
+                    <span>Custo</span>
                     <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'cmc' ? 1 : 0.25 }}>
                       {sortColumn === 'cmc' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
                     </span>
@@ -746,7 +746,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                   title="Ordenar por Tipo"
                 >
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>tipo</span>
+                    <span>Tipo</span>
                     <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'type' ? 1 : 0.25 }}>
                       {sortColumn === 'type' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
                     </span>
@@ -763,7 +763,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                   title="Ordenar por Edição"
                 >
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>edição</span>
+                    <span>Edição</span>
                     <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'set' ? 1 : 0.25 }}>
                       {sortColumn === 'set' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
                     </span>
@@ -780,7 +780,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                   title="Ordenar por Raridade"
                 >
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>raridade</span>
+                    <span>Raridade</span>
                     <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'rarity' ? 1 : 0.25 }}>
                       {sortColumn === 'rarity' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
                     </span>
@@ -797,7 +797,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                   title="Ordenar por Preço"
                 >
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>preço</span>
+                    <span>Preço</span>
                     <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'price' ? 1 : 0.25 }}>
                       {sortColumn === 'price' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
                     </span>

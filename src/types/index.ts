@@ -83,6 +83,7 @@ export interface DeckCard {
   quantity: number;
   category: CardCategory;
   collectionItemId?: string;
+  isFoil?: boolean;
 }
 
 export interface Deck {

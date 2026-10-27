@@ -397,6 +397,7 @@ export function App() {
           quantity: c.quantity,
           category: c.category,
           collectionItemId: cardToColId.get(c.card.id),
+          isFoil: c.isFoil || c.card.isFoil,
         })),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -417,6 +418,7 @@ export function App() {
               quantity: c.quantity,
               category: c.category,
               collectionItemId: cardToColId.get(c.card.id),
+              isFoil: c.isFoil || c.card.isFoil,
             })),
           ],
           updatedAt: new Date().toISOString(),
@@ -800,6 +802,7 @@ export function App() {
           (syncedActiveDeck ? (
             <DeckBuilder
               deck={syncedActiveDeck}
+              collection={collectionWithUsage}
               onBack={() => setActiveDeckId(null)}
               onUpdateDeck={(updatedDeck) => {
                 updateDecksState(decks.map((d) => (d.id === updatedDeck.id ? updatedDeck : d)));
@@ -808,6 +811,7 @@ export function App() {
                 setArtSelectorCard(card);
                 setArtSelectorContext({ deckCardIndex: cardIndex });
               }}
+              onAddToProxies={handleAddCardToProxies}
               onSendDeckToProxies={handleAddDeckToProxies}
               onOpenExportModal={(deckId) => {
                 setImportExportMode('export');

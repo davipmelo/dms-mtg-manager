@@ -39,8 +39,14 @@ export function parseScryfallCard(raw: any): Card {
     imageUrlLarge: largeImg,
     imageUrlSmall: smallImg,
     imageUrlArtCrop: artCropImg,
-    priceUsd: raw.prices?.usd ? parseFloat(raw.prices.usd) : undefined,
-    isFoil: raw.foil === true,
+    priceUsd: raw.prices?.usd
+      ? parseFloat(raw.prices.usd)
+      : raw.prices?.usd_foil
+      ? parseFloat(raw.prices.usd_foil)
+      : raw.prices?.usd_etched
+      ? parseFloat(raw.prices.usd_etched)
+      : undefined,
+    isFoil: raw.foil === true || (Array.isArray(raw.finishes) && raw.finishes.includes('foil') && !raw.finishes.includes('nonfoil')),
     printsSearchUri: raw.prints_search_uri,
   };
 }
@@ -102,13 +108,14 @@ export async function getCardByName(name: string): Promise<Card | null> {
  * Fetch a card by set code and collector number (e.g. "CLB", "187").
  */
 export async function getCardBySetAndNumber(setCode: string, collectorNumber: string): Promise<Card | null> {
-  const cacheKey = `set:${setCode.toLowerCase()}:${collectorNumber}`;
+  const cleanNumber = collectorNumber.replace(/^#/, '').trim();
+  const cacheKey = `set:${setCode.toLowerCase()}:${cleanNumber.toLowerCase()}`;
   if (cardCache.has(cacheKey)) {
     return cardCache.get(cacheKey)!;
   }
 
   try {
-    const res = await fetch(`${API_BASE}/cards/${setCode.toLowerCase()}/${collectorNumber}`, {
+    const res = await fetch(`${API_BASE}/cards/${setCode.toLowerCase()}/${encodeURIComponent(cleanNumber)}`, {
       headers: { Accept: 'application/json' },
     });
     if (!res.ok) return null;
@@ -118,7 +125,34 @@ export async function getCardBySetAndNumber(setCode: string, collectorNumber: st
     cardCache.set(`id:${card.id}`, card);
     return card;
   } catch (err) {
-    console.error(`Error fetching card ${setCode}/${collectorNumber}:`, err);
+    console.error(`Error fetching card ${setCode}/${cleanNumber}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Fetch a card by exact card name and set code (e.g. "Krenko, Mob Boss", "SLD").
+ */
+export async function getCardByNameAndSet(name: string, setCode: string): Promise<Card | null> {
+  const cacheKey = `nameset:${name.toLowerCase().trim()}:${setCode.toLowerCase().trim()}`;
+  if (cardCache.has(cacheKey)) {
+    return cardCache.get(cacheKey)!;
+  }
+
+  try {
+    const url = `${API_BASE}/cards/search?q=${encodeURIComponent(`!"${name.trim()}" set:${setCode.toLowerCase().trim()} include:extras`)}&unique=prints`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+      const card = parseScryfallCard(data.data[0]);
+      cardCache.set(cacheKey, card);
+      cardCache.set(`id:${card.id}`, card);
+      return card;
+    }
+    return null;
+  } catch (err) {
+    console.error(`Error fetching card ${name} in set ${setCode}:`, err);
     return null;
   }
 }

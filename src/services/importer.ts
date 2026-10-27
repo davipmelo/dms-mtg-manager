@@ -105,73 +105,68 @@ export function parseCardList(rawText: string): ParsedCardLine[] {
       continue;
     }
 
-    // Pattern 1: Arena Format: "4 Lightning Bolt (CLB) 187" or "1 Sol Ring (C21) 263 *F*"
-    const arenaMatch = line.match(/^(\d+)x?\s+([^(]+?)\s+\(([A-Za-z0-9]{3,5})\)\s+([A-Za-z0-9]+)(\s+\*F\*)?/i);
-    if (arenaMatch) {
-      const qty = parseInt(arenaMatch[1], 10);
-      const name = translatePtCardName(arenaMatch[2].trim());
-      const setCode = arenaMatch[3].toUpperCase();
-      const colNum = arenaMatch[4];
-      const isFoil = !!arenaMatch[5];
-      results.push({
-        quantity: qty,
-        name,
-        setCode,
-        collectorNumber: colNum,
-        category: currentCategory,
-        isFoil,
-      });
-      continue;
-    }
-
-    // Pattern 2: Bracketed set (LigaMagic or Cockatrice): "4x Raio [M10]" or "1 Sol Ring [C21:263]"
-    const bracketMatch = line.match(/^(\d+)x?\s+(.+?)\s+\[([A-Za-z0-9]{3,5})(?::([A-Za-z0-9]+))?\]/i);
-    if (bracketMatch) {
-      const qty = parseInt(bracketMatch[1], 10);
-      const name = translatePtCardName(bracketMatch[2].trim());
-      const setCode = bracketMatch[3].toUpperCase();
-      const colNum = bracketMatch[4] || undefined;
-      results.push({
-        quantity: qty,
-        name,
-        setCode,
-        collectorNumber: colNum,
-        category: currentCategory,
-      });
-      continue;
-    }
-
-    // Pattern 3: Standard Qty + Card Name: "4x Lightning Bolt" or "4 Lightning Bolt" or "1 Sol Ring"
-    const standardMatch = line.match(/^(\d+)x?\s+(.+)$/);
-    if (standardMatch) {
-      const qty = parseInt(standardMatch[1], 10);
-      let name = standardMatch[2].trim();
-      let isFoil = false;
-      if (name.endsWith('*F*') || name.toLowerCase().endsWith('*foil*')) {
-        isFoil = true;
-        name = name.replace(/\*F\*|\*foil\*/gi, '').trim();
-      }
-      name = translatePtCardName(name);
-      results.push({
-        quantity: qty,
-        name,
-        category: currentCategory,
-        isFoil,
-      });
-      continue;
-    }
-
-    // Pattern 4: Just card name (default qty 1)
-    let cardName = line;
+    // 1. Detect and strip Foil markers (e.g. *F*, *Foil*, *E*, [Foil], (Foil), or trailing foil)
     let isFoil = false;
-    if (cardName.endsWith('*F*') || cardName.toLowerCase().endsWith('*foil*')) {
+    const foilRegex = /(\s+\*F\*|\s+\*foil\*|\s+\*E\*|\s+\[foil\]|\s+\(foil\)|\s+foil$)/i;
+    if (foilRegex.test(line)) {
       isFoil = true;
-      cardName = cardName.replace(/\*F\*|\*foil\*/gi, '').trim();
+      line = line.replace(foilRegex, '').trim();
     }
+
+    // 2. Extract Quantity (e.g. "1x", "4", default 1)
+    let quantity = 1;
+    const qtyMatch = line.match(/^(\d+)x?\s+/i);
+    if (qtyMatch) {
+      quantity = parseInt(qtyMatch[1], 10);
+      line = line.slice(qtyMatch[0].length).trim();
+    }
+
+    // 3. Extract Set Code and Collector Number
+    let setCode: string | undefined;
+    let collectorNumber: string | undefined;
+
+    // Pattern A: Parenthesized set with collector number: "(SLD) 2407" or "(SLD) #2407" or "(SLD:2407)"
+    const parenSetNumMatch =
+      line.match(/\(([A-Za-z0-9_]{3,6})(?::|\s+#?|\s+)([A-Za-z0-9★\-]+)\)/i) ||
+      line.match(/\(([A-Za-z0-9_]{3,6})\)\s+#?([A-Za-z0-9★\-]+)/i);
+
+    // Pattern B: Bracketed set with collector number: "[SLD:2407]" or "[SLD] 2407" or "[SLD] #2407"
+    const bracketSetNumMatch =
+      line.match(/\[([A-Za-z0-9_]{3,6})(?::|\s+#?|\s+)([A-Za-z0-9★\-]+)\]/i) ||
+      line.match(/\[([A-Za-z0-9_]{3,6})\]\s+#?([A-Za-z0-9★\-]+)/i);
+
+    // Pattern C: Parenthesized set only: "(SLD)"
+    const parenSetOnlyMatch = line.match(/\(([A-Za-z0-9_]{3,6})\)/i);
+
+    // Pattern D: Bracketed set only: "[SLD]"
+    const bracketSetOnlyMatch = line.match(/\[([A-Za-z0-9_]{3,6})\]/i);
+
+    if (parenSetNumMatch) {
+      setCode = parenSetNumMatch[1].toUpperCase();
+      collectorNumber = parenSetNumMatch[2];
+      line = line.replace(parenSetNumMatch[0], '').trim();
+    } else if (bracketSetNumMatch) {
+      setCode = bracketSetNumMatch[1].toUpperCase();
+      collectorNumber = bracketSetNumMatch[2];
+      line = line.replace(bracketSetNumMatch[0], '').trim();
+    } else if (parenSetOnlyMatch) {
+      setCode = parenSetOnlyMatch[1].toUpperCase();
+      line = line.replace(parenSetOnlyMatch[0], '').trim();
+    } else if (bracketSetOnlyMatch) {
+      setCode = bracketSetOnlyMatch[1].toUpperCase();
+      line = line.replace(bracketSetOnlyMatch[0], '').trim();
+    }
+
+    // Clean remaining line as card name
+    let cardName = line.trim();
+    if (!cardName) continue;
     cardName = translatePtCardName(cardName);
+
     results.push({
-      quantity: 1,
+      quantity,
       name: cardName,
+      setCode,
+      collectorNumber,
       category: currentCategory,
       isFoil,
     });

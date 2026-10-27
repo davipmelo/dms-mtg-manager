@@ -8,7 +8,7 @@ import {
   exportCollectionToCsv,
 } from '../../services/importer';
 import { createSystemBackup, parseSystemBackup } from '../../services/storage';
-import { getCardByName, getCardBySetAndNumber } from '../../services/scryfall';
+import { getCardByName, getCardBySetAndNumber, getCardByNameAndSet } from '../../services/scryfall';
 import {
   Download,
   Upload,
@@ -179,16 +179,23 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
       if (item.setCode && item.collectorNumber) {
         card = await getCardBySetAndNumber(item.setCode, item.collectorNumber);
       }
+      if (!card && item.setCode) {
+        card = await getCardByNameAndSet(item.name, item.setCode);
+      }
       if (!card) {
         card = await getCardByName(item.name);
       }
 
       if (card) {
+        const isFoil = item.isFoil || card.isFoil;
         importedResults.push({
-          card,
+          card: {
+            ...card,
+            isFoil,
+          },
           quantity: item.quantity,
           category: item.category,
-          isFoil: item.isFoil,
+          isFoil,
         });
       }
     }
