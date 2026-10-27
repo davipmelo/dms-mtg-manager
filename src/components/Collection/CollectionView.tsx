@@ -30,6 +30,9 @@ interface CollectionViewProps {
   onOpenAddModal: () => void;
 }
 
+export type SortColumn = 'quantity' | 'available' | 'name' | 'cmc' | 'type' | 'set' | 'rarity' | 'price';
+export type SortDirection = 'asc' | 'desc';
+
 export const CollectionView: React.FC<CollectionViewProps> = ({
   collection,
   onUpdateQuantity,
@@ -40,12 +43,55 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedColor, setSelectedColor] = useState<string>('all');
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [isMultiOnly, setIsMultiOnly] = useState(false);
+  const [isColorlessOnly, setIsColorlessOnly] = useState(false);
+  const [colorMatchMode, setColorMatchMode] = useState<'exact' | 'pool'>('exact');
   const [selectedRarity, setSelectedRarity] = useState<string>('all');
   const [usageFilter, setUsageFilter] = useState<'all' | 'available' | 'in_use'>('all');
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [showCharts, setShowCharts] = useState(false);
   const [hoveredCardImg, setHoveredCardImg] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const handleSort = (field: SortColumn) => {
+    if (sortColumn === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else {
+        setSortColumn(null);
+        setSortDirection('asc');
+      }
+    } else {
+      setSortColumn(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const handleToggleColor = (col: string) => {
+    setIsColorlessOnly(false);
+    setSelectedColors((prev) =>
+      prev.includes(col) ? prev.filter((c) => c !== col) : [...prev, col]
+    );
+  };
+
+  const handleToggleMulti = () => {
+    setIsColorlessOnly(false);
+    setIsMultiOnly((prev) => !prev);
+  };
+
+  const handleToggleColorless = () => {
+    setSelectedColors([]);
+    setIsMultiOnly(false);
+    setIsColorlessOnly((prev) => !prev);
+  };
+
+  const handleResetColors = () => {
+    setSelectedColors([]);
+    setIsMultiOnly(false);
+    setIsColorlessOnly(false);
+  };
 
   // Filter collection
   const filteredItems = useMemo(() => {
@@ -59,14 +105,32 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
         if (!matchesName && !matchesType && !matchesText) return false;
       }
 
-      // Color
-      if (selectedColor !== 'all') {
-        if (selectedColor === 'C') {
-          if (item.card.colors.length > 0) return false;
-        } else if (selectedColor === 'M') {
-          if (item.card.colors.length <= 1) return false;
+      // Color filter
+      const cardColors = item.card.colors || [];
+      if (isColorlessOnly) {
+        if (cardColors.length > 0) return false;
+      } else if (isMultiOnly) {
+        if (cardColors.length <= 1) return false;
+        if (selectedColors.length > 0) {
+          if (!cardColors.every((c) => selectedColors.includes(c))) return false;
+        }
+      } else if (selectedColors.length === 1) {
+        // Strictly mono-color matching that 1 color
+        if (cardColors.length !== 1 || cardColors[0] !== selectedColors[0]) return false;
+      } else if (selectedColors.length > 1) {
+        if (colorMatchMode === 'exact') {
+          // Exactly matching all selected colors and no others
+          if (
+            cardColors.length !== selectedColors.length ||
+            !selectedColors.every((c) => cardColors.includes(c))
+          ) {
+            return false;
+          }
         } else {
-          if (!item.card.colors.includes(selectedColor)) return false;
+          // Pool mode: subset of selected colors
+          if (cardColors.length === 0 || !cardColors.every((c) => selectedColors.includes(c))) {
+            return false;
+          }
         }
       }
 
@@ -84,7 +148,58 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
 
       return true;
     });
-  }, [collection, searchQuery, selectedColor, selectedRarity, usageFilter]);
+  }, [collection, searchQuery, selectedColors, isMultiOnly, isColorlessOnly, colorMatchMode, selectedRarity, usageFilter]);
+
+  // Sorted items
+  const sortedItems = useMemo(() => {
+    if (!sortColumn) return filteredItems;
+
+    const rarityRank: Record<string, number> = {
+      common: 1,
+      uncommon: 2,
+      rare: 3,
+      mythic: 4,
+      special: 5,
+    };
+
+    return [...filteredItems].sort((a, b) => {
+      let cmp = 0;
+      switch (sortColumn) {
+        case 'quantity':
+          cmp = a.quantity - b.quantity;
+          break;
+        case 'available':
+          cmp = (a.availableQuantity ?? a.quantity) - (b.availableQuantity ?? b.quantity);
+          break;
+        case 'name':
+          cmp = a.card.name.localeCompare(b.card.name, 'pt-BR', { sensitivity: 'base' });
+          break;
+        case 'cmc':
+          cmp = (a.card.cmc ?? 0) - (b.card.cmc ?? 0);
+          break;
+        case 'type':
+          cmp = (a.card.typeLine || '').localeCompare(b.card.typeLine || '', 'pt-BR');
+          break;
+        case 'set':
+          cmp = (a.card.setName || a.card.setCode || '').localeCompare(
+            b.card.setName || b.card.setCode || '',
+            'pt-BR'
+          );
+          break;
+        case 'rarity':
+          cmp =
+            (rarityRank[a.card.rarity.toLowerCase()] || 0) -
+            (rarityRank[b.card.rarity.toLowerCase()] || 0);
+          break;
+        case 'price':
+          cmp = (a.card.priceUsd || 0) - (b.card.priceUsd || 0);
+          break;
+        default:
+          cmp = 0;
+      }
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+  }, [filteredItems, sortColumn, sortDirection]);
 
   // Aggregate stats
   const totalCardsCount = useMemo(() => collection.reduce((sum, i) => sum + i.quantity, 0), [collection]);
@@ -104,7 +219,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
       'Outros': [],
     };
 
-    filteredItems.forEach((item) => {
+    sortedItems.forEach((item) => {
       const t = item.card.typeLine.toLowerCase();
       if (t.includes('creature') || t.includes('criatura')) groups['Criaturas'].push(item);
       else if (t.includes('instant') || t.includes('instantânea')) groups['Mágicas Instantâneas'].push(item);
@@ -117,7 +232,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
     });
 
     return Object.entries(groups).filter(([_, items]) => items.length > 0);
-  }, [filteredItems]);
+  }, [sortedItems]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -139,7 +254,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
               onClick={() => setShowCharts(!showCharts)}
             >
               <BarChart3 size={15} />
-              {showCharts ? 'Ocultar Estatísticas' : 'Ver Estatísticas Globais'}
+              {showCharts ? 'Ocultar Estatísticas' : 'Estatísticas'}
             </button>
 
             <button className="btn btn-primary btn-sm" onClick={onOpenAddModal}>
@@ -177,7 +292,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
         </div>
       </div>
 
-      {/* Estatísticas Globais da Coleção & Pool */}
+      {/* Estatísticas */}
       <div className="glass-panel" style={{ padding: '24px' }}>
         <div
           style={{
@@ -198,7 +313,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
             }}
           >
             <BarChart3 className="text-primary" size={18} />
-            Estatísticas Globais da Coleção & Pool
+            Estatísticas
           </h2>
           <button className="btn btn-ghost btn-sm" onClick={() => setShowCharts(!showCharts)}>
             {showCharts ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -231,62 +346,59 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
           </div>
 
           {/* Color filter */}
-          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
-              className={`btn btn-sm ${selectedColor === 'all' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setSelectedColor('all')}
+              className={`btn btn-sm ${!isColorlessOnly && !isMultiOnly && selectedColors.length === 0 ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={handleResetColors}
             >
               Todas
             </button>
+            {(['W', 'U', 'B', 'R', 'G'] as const).map((col) => {
+              const isSelected = selectedColors.includes(col);
+              const colNames: Record<string, string> = {
+                W: 'Branco',
+                U: 'Azul',
+                B: 'Preto',
+                R: 'Vermelho',
+                G: 'Verde',
+              };
+              return (
+                <button
+                  key={col}
+                  className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={() => handleToggleColor(col)}
+                  title={colNames[col]}
+                >
+                  <span className={`mana-pip mana-pip-${col}`}>{col}</span>
+                </button>
+              );
+            })}
             <button
-              className={`btn btn-sm ${selectedColor === 'W' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setSelectedColor('W')}
-              title="Branco"
-            >
-              <span className="mana-pip mana-pip-W">W</span>
-            </button>
-            <button
-              className={`btn btn-sm ${selectedColor === 'U' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setSelectedColor('U')}
-              title="Azul"
-            >
-              <span className="mana-pip mana-pip-U">U</span>
-            </button>
-            <button
-              className={`btn btn-sm ${selectedColor === 'B' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setSelectedColor('B')}
-              title="Preto"
-            >
-              <span className="mana-pip mana-pip-B">B</span>
-            </button>
-            <button
-              className={`btn btn-sm ${selectedColor === 'R' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setSelectedColor('R')}
-              title="Vermelho"
-            >
-              <span className="mana-pip mana-pip-R">R</span>
-            </button>
-            <button
-              className={`btn btn-sm ${selectedColor === 'G' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setSelectedColor('G')}
-              title="Verde"
-            >
-              <span className="mana-pip mana-pip-G">G</span>
-            </button>
-            <button
-              className={`btn btn-sm ${selectedColor === 'M' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setSelectedColor('M')}
+              className={`btn btn-sm ${isMultiOnly ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={handleToggleMulti}
               title="Multicolor"
             >
               Multi
             </button>
             <button
-              className={`btn btn-sm ${selectedColor === 'C' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setSelectedColor('C')}
+              className={`btn btn-sm ${isColorlessOnly ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={handleToggleColorless}
               title="Incolor"
             >
               Incolor
             </button>
+
+            {/* Mode switch when 2+ colors are selected */}
+            {selectedColors.length > 1 && !isMultiOnly && (
+              <button
+                className="btn btn-xs btn-secondary"
+                style={{ fontSize: '0.72rem', padding: '3px 8px', marginLeft: '4px' }}
+                onClick={() => setColorMatchMode((m) => (m === 'exact' ? 'pool' : 'exact'))}
+                title="Alternar entre modo Exato e modo Pool de Identidade"
+              >
+                {colorMatchMode === 'exact' ? 'Exato (=)' : 'Identidade (≤)'}
+              </button>
+            )}
           </div>
 
           {/* Usage Filter (Requirement 4) */}
@@ -338,14 +450,14 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
       </div>
 
       {/* Main Content Area Based on View Mode */}
-      {filteredItems.length === 0 ? (
+      {sortedItems.length === 0 ? (
         <div className="glass-card" style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8' }}>
           Nenhuma carta encontrada com os filtros selecionados.
         </div>
       ) : viewMode === 'grid' ? (
         /* 1. VISUAL GRID VIEW */
         <div className="cards-grid">
-          {filteredItems.map((item) => (
+          {sortedItems.map((item) => (
             <div key={item.id} className="card-item-container">
               {/* Image & Sheen */}
               <div className={`card-image-wrapper ${item.isFoil ? 'foil-sheen' : ''}`}>
@@ -555,19 +667,147 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#94a3b8' }}>
-                <th style={{ padding: '12px 16px' }}>Qtd</th>
-                <th style={{ padding: '12px 16px' }}>Disponível / Uso</th>
-                <th style={{ padding: '12px 16px' }}>Nome da Carta</th>
-                <th style={{ padding: '12px 16px' }}>Custo</th>
-                <th style={{ padding: '12px 16px' }}>Tipo</th>
-                <th style={{ padding: '12px 16px' }}>Edição</th>
-                <th style={{ padding: '12px 16px' }}>Raridade</th>
-                <th style={{ padding: '12px 16px' }}>Preço</th>
+                <th
+                  onClick={() => handleSort('quantity')}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    color: sortColumn === 'quantity' ? '#ffbb00' : '#94a3b8',
+                  }}
+                  title="Ordenar por Quantidade"
+                >
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span>qtd</span>
+                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'quantity' ? 1 : 0.25 }}>
+                      {sortColumn === 'quantity' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
+                    </span>
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('available')}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    color: sortColumn === 'available' ? '#ffbb00' : '#94a3b8',
+                  }}
+                  title="Ordenar por Disponível / Uso"
+                >
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span>Disponível / Uso</span>
+                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'available' ? 1 : 0.25 }}>
+                      {sortColumn === 'available' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
+                    </span>
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('name')}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    color: sortColumn === 'name' ? '#ffbb00' : '#94a3b8',
+                  }}
+                  title="Ordenar por Nome da Carta"
+                >
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span>nome da carta</span>
+                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'name' ? 1 : 0.25 }}>
+                      {sortColumn === 'name' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
+                    </span>
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('cmc')}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    color: sortColumn === 'cmc' ? '#ffbb00' : '#94a3b8',
+                  }}
+                  title="Ordenar por Custo (CMC)"
+                >
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span>custo</span>
+                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'cmc' ? 1 : 0.25 }}>
+                      {sortColumn === 'cmc' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
+                    </span>
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('type')}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    color: sortColumn === 'type' ? '#ffbb00' : '#94a3b8',
+                  }}
+                  title="Ordenar por Tipo"
+                >
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span>tipo</span>
+                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'type' ? 1 : 0.25 }}>
+                      {sortColumn === 'type' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
+                    </span>
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('set')}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    color: sortColumn === 'set' ? '#ffbb00' : '#94a3b8',
+                  }}
+                  title="Ordenar por Edição"
+                >
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span>edição</span>
+                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'set' ? 1 : 0.25 }}>
+                      {sortColumn === 'set' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
+                    </span>
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('rarity')}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    color: sortColumn === 'rarity' ? '#ffbb00' : '#94a3b8',
+                  }}
+                  title="Ordenar por Raridade"
+                >
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span>raridade</span>
+                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'rarity' ? 1 : 0.25 }}>
+                      {sortColumn === 'rarity' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
+                    </span>
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('price')}
+                  style={{
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    color: sortColumn === 'price' ? '#ffbb00' : '#94a3b8',
+                  }}
+                  title="Ordenar por Preço"
+                >
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <span>preço</span>
+                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'price' ? 1 : 0.25 }}>
+                      {sortColumn === 'price' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
+                    </span>
+                  </div>
+                </th>
                 <th style={{ padding: '12px 16px', textAlign: 'right' }}>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filteredItems.map((item) => (
+              {sortedItems.map((item) => (
                 <tr
                   key={item.id}
                   style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.15s ease' }}

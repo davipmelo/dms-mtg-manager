@@ -125,41 +125,45 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
     };
   }, [cards]);
 
-  const colorData = {
-    labels: ['Branco', 'Azul', 'Preto', 'Vermelho', 'Verde', 'Incolor', 'Multicolor'],
-    datasets: [
-      {
-        data: [
-          stats.colorsCount.White,
-          stats.colorsCount.Blue,
-          stats.colorsCount.Black,
-          stats.colorsCount.Red,
-          stats.colorsCount.Green,
-          stats.colorsCount.Colorless,
-          stats.colorsCount.Multicolor,
+  const activeColorItems = useMemo(() => {
+    const rawItems = [
+      { label: 'Branco', count: stats.colorsCount.White, bg: '#f8f6d8', border: '#0f141d' },
+      { label: 'Azul', count: stats.colorsCount.Blue, bg: '#38bdf8', border: '#0f141d' },
+      { label: 'Preto', count: stats.colorsCount.Black, bg: '#272a30', border: '#0f141d' },
+      { label: 'Vermelho', count: stats.colorsCount.Red, bg: '#f43f5e', border: '#0f141d' },
+      { label: 'Verde', count: stats.colorsCount.Green, bg: '#22c55e', border: '#0f141d' },
+      { label: 'Incolor', count: stats.colorsCount.Colorless, bg: '#94a3b8', border: '#0f141d' },
+      { label: 'Multicolor', count: stats.colorsCount.Multicolor, bg: '#eab308', border: '#0f141d' },
+    ];
+    return rawItems.filter((item) => item.count > 0);
+  }, [stats.colorsCount]);
+
+  const colorData = useMemo(() => {
+    if (activeColorItems.length === 0) {
+      return {
+        labels: ['Nenhuma carta'],
+        datasets: [
+          {
+            data: [1],
+            backgroundColor: ['rgba(255, 255, 255, 0.05)'],
+            borderColor: ['#0f141d'],
+            borderWidth: 2,
+          },
         ],
-        backgroundColor: [
-          '#f8f6d8',
-          '#38bdf8',
-          '#272a30',
-          '#f43f5e',
-          '#22c55e',
-          '#94a3b8',
-          '#eab308',
-        ],
-        borderColor: [
-          '#0f141d',
-          '#0f141d',
-          '#cbd5e1',
-          '#0f141d',
-          '#0f141d',
-          '#0f141d',
-          '#0f141d',
-        ],
-        borderWidth: 2,
-      },
-    ],
-  };
+      };
+    }
+    return {
+      labels: activeColorItems.map((c) => c.label),
+      datasets: [
+        {
+          data: activeColorItems.map((c) => c.count),
+          backgroundColor: activeColorItems.map((c) => c.bg),
+          borderColor: activeColorItems.map((c) => c.border),
+          borderWidth: 2,
+        },
+      ],
+    };
+  }, [activeColorItems]);
 
   const cmcData = {
     labels: ['0', '1', '2', '3', '4', '5', '6', '7+'],

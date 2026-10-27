@@ -428,7 +428,7 @@ dialog.custom-modal[open] {
 }
 .mana-pip-W { background: var(--mana-w); color: #1e293b; border: 1px solid #d4d0a5; }
 .mana-pip-U { background: var(--mana-u); color: #082f49; border: 1px solid #0284c7; }
-.mana-pip-B { background: #272a30; color: #f1f5f9; border: 1.5px solid #cbd5e1; }
+.mana-pip-B { background: #272a30; color: #f1f5f9; border: 1.5px solid #000000; }
 .mana-pip-R { background: var(--mana-r); color: #ffffff; border: 1px solid #be123c; }
 .mana-pip-G { background: var(--mana-g); color: #022c22; border: 1px solid #15803d; }
 .mana-pip-C { background: #64748b; color: #ffffff; border: 1px solid #475569; }

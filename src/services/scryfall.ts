@@ -309,12 +309,14 @@ export async function searchUtilityCards(
     }
 
     if (color && color !== 'all') {
-      if (color === 'C') {
+      if (color.startsWith('c:') || color.startsWith('c=') || color.startsWith('c<=') || color.startsWith('id=')) {
+        q += ` ${color}`;
+      } else if (color === 'C') {
         q += ' c:c';
       } else if (color === 'M') {
         q += ' c:m';
       } else {
-        q += ` c:${color}`;
+        q += ` c:${color.toLowerCase()}`;
       }
     }
 

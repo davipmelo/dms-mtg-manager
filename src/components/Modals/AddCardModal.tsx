@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Card, Deck } from '../../types';
-import { searchAutocomplete, getCardByName } from '../../services/scryfall';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Card, Deck, CardPrint } from '../../types';
+import { searchAutocomplete, getCardByName, getCardPrints } from '../../services/scryfall';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
-import { Search, Plus, X, Loader2, Sparkles, Check } from 'lucide-react';
+import { CardImage } from '../Common/CardImage';
+import { Search, Plus, X, Loader2, Sparkles, Check, Image as ImageIcon } from 'lucide-react';
 
 interface AddCardModalProps {
   isOpen: boolean;
@@ -22,6 +23,9 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [prints, setPrints] = useState<CardPrint[]>([]);
+  const [loadingPrints, setLoadingPrints] = useState(false);
+  const [printSearch, setPrintSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [isFoil, setIsFoil] = useState(false);
@@ -35,6 +39,8 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
       setQuery('');
       setSuggestions([]);
       setSelectedCard(null);
+      setPrints([]);
+      setPrintSearch('');
       setQuantity(1);
       setIsFoil(false);
       setTargetDeckId(defaultDeckId || '');
@@ -62,15 +68,55 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
     setLoading(true);
     setSuggestions([]);
     setQuery(name);
+    setPrints([]);
+    setPrintSearch('');
     try {
       const card = await getCardByName(name);
       if (card) {
         setSelectedCard(card);
+        setLoadingPrints(true);
+        getCardPrints(card)
+          .then((printsList) => {
+            setPrints(printsList);
+          })
+          .catch((err) => {
+            console.error('Erro ao buscar edições da carta:', err);
+          })
+          .finally(() => {
+            setLoadingPrints(false);
+          });
       }
     } finally {
       setLoading(false);
     }
   };
+
+  const handleSelectPrint = (p: CardPrint) => {
+    if (!selectedCard) return;
+    setSelectedCard({
+      ...selectedCard,
+      id: p.id,
+      setCode: p.setCode,
+      setName: p.setName,
+      collectorNumber: p.collectorNumber,
+      imageUrl: p.imageUrl,
+      imageUrlLarge: p.imageUrlLarge || p.imageUrl,
+      imageUrlArtCrop: p.imageUrlArtCrop,
+      priceUsd: p.priceUsd ?? selectedCard.priceUsd,
+    });
+  };
+
+  const filteredPrints = useMemo(() => {
+    const q = printSearch.trim().toLowerCase();
+    if (!q) return prints;
+    return prints.filter(
+      (p) =>
+        p.setName.toLowerCase().includes(q) ||
+        p.setCode.toLowerCase().includes(q) ||
+        p.collectorNumber.toLowerCase().includes(q) ||
+        (p.releasedAt && p.releasedAt.includes(q))
+    );
+  }, [prints, printSearch]);
 
   const handleAdd = () => {
     if (!selectedCard) return;
@@ -212,7 +258,8 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
 
           {/* Card Preview & Details */}
           {selectedCard && (
-            <div
+            <>
+              <div
               style={{
                 display: 'grid',
                 gridTemplateColumns: '180px 1fr',
@@ -224,9 +271,12 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
               }}
             >
               <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '5/7' }}>
-                <img
-                  src={selectedCard.imageUrl}
-                  alt={selectedCard.name}
+                <CardImage
+                  name={selectedCard.name}
+                  imageUrl={selectedCard.imageUrl}
+                  imageUrlLarge={selectedCard.imageUrlLarge}
+                  setCode={selectedCard.setCode}
+                  collectorNumber={selectedCard.collectorNumber}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>
@@ -268,7 +318,160 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                 </div>
               </div>
             </div>
-          )}
+
+            {/* Escolher Edição / Arte */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                background: 'rgba(18, 23, 34, 0.5)',
+                padding: '14px',
+                borderRadius: '12px',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ImageIcon size={16} className="text-primary" />
+                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#f8fafc' }}>
+                    Escolher Arte / Edição
+                  </span>
+                  {!loadingPrints && prints.length > 0 && (
+                    <span className="badge badge-primary" style={{ fontSize: '0.72rem' }}>
+                      {prints.length} {prints.length === 1 ? 'edição' : 'edições'}
+                    </span>
+                  )}
+                </div>
+
+                {prints.length > 5 && (
+                  <div style={{ position: 'relative', width: '180px' }}>
+                    <Search size={13} style={{ position: 'absolute', left: '8px', top: '8px', color: '#64748b' }} />
+                    <input
+                      type="text"
+                      className="input-text"
+                      placeholder="Filtrar edições..."
+                      value={printSearch}
+                      onChange={(e) => setPrintSearch(e.target.value)}
+                      style={{ fontSize: '0.75rem', paddingLeft: '26px', height: '28px' }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {loadingPrints ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '0.8rem', padding: '14px 6px' }}>
+                  <Loader2 size={16} className="animate-spin text-primary" />
+                  <span>Carregando todas as ilustrações e edições disponíveis...</span>
+                </div>
+              ) : prints.length > 0 ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '10px',
+                    overflowX: 'auto',
+                    paddingBottom: '8px',
+                    paddingTop: '4px',
+                  }}
+                >
+                  {filteredPrints.map((p) => {
+                    const isSelected = p.id === selectedCard.id;
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => handleSelectPrint(p)}
+                        style={{
+                          flex: '0 0 105px',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          border: isSelected ? '2px solid #ffbb00' : '1px solid rgba(255, 255, 255, 0.08)',
+                          boxShadow: isSelected ? '0 0 12px rgba(255, 187, 0, 0.45)' : undefined,
+                          transition: 'all 0.15s ease',
+                          background: '#090c13',
+                          display: 'flex',
+                          flexDirection: 'column',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                        }}
+                      >
+                        <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b', overflow: 'hidden' }}>
+                          <CardImage
+                            name={selectedCard.name}
+                            imageUrl={p.imageUrl}
+                            imageUrlLarge={p.imageUrlLarge}
+                            setCode={p.setCode}
+                            collectorNumber={p.collectorNumber}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                          {isSelected && (
+                            <div
+                              style={{
+                                position: 'absolute',
+                                top: '4px',
+                                right: '4px',
+                                background: '#ffbb00',
+                                color: '#000000',
+                                borderRadius: '50%',
+                                width: '18px',
+                                height: '18px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 800,
+                              }}
+                            >
+                              <Check size={12} />
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ padding: '6px', fontSize: '0.68rem', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              color: isSelected ? '#ffbb00' : '#f1f5f9',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                            title={p.setName}
+                          >
+                            {p.setCode.toUpperCase()} #{p.collectorNumber}
+                          </div>
+                          <div
+                            style={{
+                              color: '#64748b',
+                              fontSize: '0.65rem',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                            title={p.setName}
+                          >
+                            {p.setName}
+                          </div>
+                          {p.priceUsd && (
+                            <div style={{ color: '#10b981', fontWeight: 600, fontSize: '0.68rem' }}>
+                              ${p.priceUsd.toFixed(2)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.8rem', color: '#64748b', padding: '6px' }}>
+                  Edição padrão selecionada ({selectedCard.setName}).
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
           {/* Form Options: Qty, Foil, Target Destination */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>

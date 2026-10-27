@@ -35,57 +35,57 @@ interface CategoryOption {
 const UTILITY_CATEGORIES: CategoryOption[] = [
   {
     id: 'tokens',
-    label: 'Fichas / Tokens',
-    description: 'Fichas de criaturas e artefatos (Tesouro, Comida, Pista, Zumbi, Soldado, Cópia, etc.)',
-    placeholder: 'Buscar ficha em inglês (ex: Treasure, Zombie, Soldier, Angel, Copy, Dragon)...',
+    label: 'Fichas',
+    description: 'Fichas de criaturas e artefatos (Tesouro, Comida, Pista, Zumbi, Soldado, etc.)',
+    placeholder: 'Buscar ficha (ex: Treasure, Zombie, Soldier, Angel, Copy, Dragon)...',
     icon: <Coins size={15} />,
   },
   {
     id: 'planes',
-    label: 'Planos (Planechase)',
-    description: 'Cartas de Plano (t:plane) e Fenômenos (t:phenomenon) para partidas de Planechase',
-    placeholder: 'Buscar plano ou plano-alvo (ex: Dominaria, Ravnica, Zendikar, Bolas, Phenomenon)...',
+    label: 'Planos',
+    description: 'Cartas de Planos e Fenômenos para partidas de Planechase',
+    placeholder: 'Buscar plano (ex: Dominaria, Ravnica, Zendikar, Bolas, Phenomenon)...',
     icon: <Compass size={15} />,
   },
   {
     id: 'emblems',
     label: 'Emblemas',
-    description: 'Emblemas oficiais gerados por Planeswalkers e outras cartas (t:emblem)',
+    description: 'Emblemas oficiais gerados por Planeswalkers e outras fontes',
     placeholder: 'Buscar emblema por Planeswalker (ex: Teferi, Chandra, Liliana, Elspeth, Wrenn)...',
     icon: <Shield size={15} />,
   },
   {
     id: 'markers',
-    label: 'Marcadores & Auxiliares',
-    description: 'Monarca, Iniciativa, Dia/Noite, O Anel, Bênção da Cidade, Veneno, Energia, Foretell, Plot e Morph',
+    label: 'Marcadores',
+    description: 'Monarca, Iniciativa, Dia/Noite, O Anel, Bênção da Cidade, Veneno, Energia e Marcadores',
     placeholder: 'Filtrar marcador (ex: Monarch, Ring, Initiative, Day, Poison, Foretell)...',
     icon: <Crown size={15} />,
   },
   {
     id: 'dungeons',
-    label: 'Masmorras (Dungeons)',
-    description: 'Masmorras oficiais de Forgotten Realms, Baldur’s Gate e Undercity (t:dungeon)',
+    label: 'Masmorras',
+    description: 'Masmorras oficiais (Undercity, Tumba da Aniquilação, Mina de Phandelver, etc.)',
     placeholder: 'Buscar masmorra (ex: Undercity, Tomb of Annihilation, Phandelver)...',
     icon: <Map size={15} />,
   },
   {
     id: 'schemes',
-    label: 'Archenemy (Schemes)',
-    description: 'Cartas de Esquema para partidas de Archenemy / Nicol Bolas / Duskmourn (t:scheme)',
-    placeholder: 'Buscar scheme (ex: Ongoing, Bolas, Behold, Evil)...',
+    label: 'Esquemas',
+    description: 'Cartas de Esquemas para partidas de Archenemy',
+    placeholder: 'Buscar esquema (ex: Ongoing, Bolas, Behold, Evil)...',
     icon: <Flame size={15} />,
   },
   {
     id: 'conspiracies',
     label: 'Conspirações',
-    description: 'Cartas especiais da zona de comando para formatos Conspiracy / Cube (t:conspiracy)',
+    description: 'Cartas especiais da zona de comando para Conspiração e Cubo',
     placeholder: 'Buscar conspiração (ex: Sovereign, Hymn, Power Play)...',
     icon: <Eye size={15} />,
   },
   {
     id: 'attractions',
-    label: 'Atrações & Engenhocas',
-    description: 'Decks extras de Atrações (Unfinity) e Contraptions (Unstable)',
+    label: 'Atrações',
+    description: 'Atrações de Unfinity e Engenhocas de Unstable',
     placeholder: 'Buscar atração ou engenhoca (ex: Ferris, Bumper, Roller)...',
     icon: <Cog size={15} />,
   },
@@ -116,7 +116,9 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedChipQuery, setSelectedChipQuery] = useState('__POPULAR_TOKENS__');
-  const [selectedColor, setSelectedColor] = useState('all');
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [isMultiOnly, setIsMultiOnly] = useState(false);
+  const [isColorlessOnly, setIsColorlessOnly] = useState(false);
   const [addedMap, setAddedMap] = useState<Record<string, boolean>>({});
 
   // Alternative Art Selector state for utility cards
@@ -126,6 +128,23 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
   const activeCategoryMeta =
     UTILITY_CATEGORIES.find((c) => c.id === category) || UTILITY_CATEGORIES[0];
 
+  const getColorQuery = () => {
+    if (isColorlessOnly) return 'c:c';
+    if (isMultiOnly) {
+      if (selectedColors.length > 0) {
+        return `c:m c<=${selectedColors.map((c) => c.toLowerCase()).join('')}`;
+      }
+      return 'c:m';
+    }
+    if (selectedColors.length === 1) {
+      return `c=${selectedColors[0].toLowerCase()}`;
+    }
+    if (selectedColors.length > 1) {
+      return `c<=${selectedColors.map((c) => c.toLowerCase()).join('')} c>=${selectedColors.map((c) => c.toLowerCase()).join('')}`;
+    }
+    return 'all';
+  };
+
   useEffect(() => {
     const effectiveQuery =
       searchQuery.trim() !== ''
@@ -133,8 +152,8 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
         : category === 'tokens'
           ? selectedChipQuery
           : '';
-    fetchUtilityData(category, effectiveQuery, category === 'tokens' ? selectedColor : 'all');
-  }, [category, selectedChipQuery, selectedColor]);
+    fetchUtilityData(category, effectiveQuery, category === 'tokens' ? getColorQuery() : 'all');
+  }, [category, selectedChipQuery, selectedColors, isMultiOnly, isColorlessOnly]);
 
   const fetchUtilityData = async (cat: UtilityCategory, query: string, color: string) => {
     const reqId = ++requestIdRef.current;
@@ -154,7 +173,9 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
   const handleCategoryChange = (nextCategory: UtilityCategory) => {
     setCategory(nextCategory);
     setSearchQuery('');
-    setSelectedColor('all');
+    setSelectedColors([]);
+    setIsMultiOnly(false);
+    setIsColorlessOnly(false);
     if (nextCategory === 'tokens') {
       setSelectedChipQuery('__POPULAR_TOKENS__');
     } else {
@@ -173,7 +194,31 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
         : category === 'tokens'
           ? selectedChipQuery
           : '';
-    fetchUtilityData(category, effectiveQuery, category === 'tokens' ? selectedColor : 'all');
+    fetchUtilityData(category, effectiveQuery, category === 'tokens' ? getColorQuery() : 'all');
+  };
+
+  const handleToggleColor = (col: string) => {
+    setIsColorlessOnly(false);
+    setSelectedColors((prev) =>
+      prev.includes(col) ? prev.filter((c) => c !== col) : [...prev, col]
+    );
+  };
+
+  const handleToggleMulti = () => {
+    setIsColorlessOnly(false);
+    setIsMultiOnly((prev) => !prev);
+  };
+
+  const handleToggleColorless = () => {
+    setSelectedColors([]);
+    setIsMultiOnly(false);
+    setIsColorlessOnly((prev) => !prev);
+  };
+
+  const handleResetColors = () => {
+    setSelectedColors([]);
+    setIsMultiOnly(false);
+    setIsColorlessOnly(false);
   };
 
   const handleAdd = (item: TokenCard, qty: number = 1) => {
@@ -321,26 +366,38 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
               <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                 <button
                   type="button"
-                  className={`btn btn-sm ${selectedColor === 'all' ? 'btn-primary' : 'btn-ghost'}`}
-                  onClick={() => setSelectedColor('all')}
+                  className={`btn btn-sm ${!isColorlessOnly && !isMultiOnly && selectedColors.length === 0 ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={handleResetColors}
                 >
                   Todas
                 </button>
-                {(['W', 'U', 'B', 'R', 'G'] as const).map((col) => (
-                  <button
-                    key={col}
-                    type="button"
-                    className={`btn btn-sm ${selectedColor === col ? 'btn-primary' : 'btn-ghost'}`}
-                    onClick={() => setSelectedColor(col)}
-                    title={`Filtrar cor ${col}`}
-                  >
-                    <span className={`mana-pip mana-pip-${col}`}>{col}</span>
-                  </button>
-                ))}
+                {(['W', 'U', 'B', 'R', 'G'] as const).map((col) => {
+                  const isSelected = selectedColors.includes(col);
+                  return (
+                    <button
+                      key={col}
+                      type="button"
+                      className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-ghost'}`}
+                      onClick={() => handleToggleColor(col)}
+                      title={`Filtrar cor ${col}`}
+                    >
+                      <span className={`mana-pip mana-pip-${col}`}>{col}</span>
+                    </button>
+                  );
+                })}
                 <button
                   type="button"
-                  className={`btn btn-sm ${selectedColor === 'C' ? 'btn-primary' : 'btn-ghost'}`}
-                  onClick={() => setSelectedColor('C')}
+                  className={`btn btn-sm ${isMultiOnly ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={handleToggleMulti}
+                  title="Multicolor"
+                >
+                  Multi
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${isColorlessOnly ? 'btn-primary' : 'btn-ghost'}`}
+                  onClick={handleToggleColorless}
+                  title="Incolor"
                 >
                   Incolor
                 </button>
