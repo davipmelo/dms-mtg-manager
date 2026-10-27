@@ -167,9 +167,9 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
       {
         label: 'Mágicas (Custo de Mana)',
         data: stats.cmcCurve,
-        backgroundColor: 'rgba(99, 102, 241, 0.8)',
-        hoverBackgroundColor: '#818cf8',
-        borderRadius: 6,
+        backgroundColor: '#ffbb00',
+        hoverBackgroundColor: '#ffd043',
+        borderRadius: 4,
       },
     ],
   };
@@ -183,12 +183,12 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
         backgroundColor: [
           '#10b981',
           '#38bdf8',
-          '#f59e0b',
+          '#ffbb00',
           '#94a3b8',
           '#ec4899',
           '#a855f7',
           '#84cc16',
-          '#64748b',
+          '#71717a',
         ],
         borderRadius: 4,
       },
@@ -205,11 +205,11 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
     },
     scales: {
       x: {
-        ticks: { color: '#64748b' },
+        ticks: { color: '#71717a' },
         grid: { color: 'rgba(255, 255, 255, 0.05)' },
       },
       y: {
-        ticks: { color: '#64748b', precision: 0 },
+        ticks: { color: '#71717a', precision: 0 },
         grid: { color: 'rgba(255, 255, 255, 0.05)' },
       },
     },
@@ -227,7 +227,7 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
           <div style={{ fontSize: '1.85rem', fontWeight: 700, marginTop: '10px', color: '#f8fafc' }}>
             {stats.totalCards}
           </div>
-          <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '6px' }}>
+          <div style={{ fontSize: '0.78rem', color: '#71717a', marginTop: '6px' }}>
             {stats.uniqueCards} cartas únicas
           </div>
         </div>
@@ -238,10 +238,10 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
               <span>Custo Médio (CMC)</span>
               <Activity size={16} />
             </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 700, marginTop: '10px', color: '#818cf8' }}>
+            <div style={{ fontSize: '1.85rem', fontWeight: 700, marginTop: '10px', color: '#ffbb00' }}>
               {stats.avgCmc}
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '6px' }}>
+            <div style={{ fontSize: '0.78rem', color: '#71717a', marginTop: '6px' }}>
               Excluindo terrenos
             </div>
           </div>

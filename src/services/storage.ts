@@ -219,14 +219,8 @@ export function getStoredCollection(): CollectionItem[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.COLLECTION);
     if (!raw) {
-      const initial: CollectionItem[] = SAMPLE_STARTER_CARDS.map((card, idx) => ({
-        id: `col-${idx + 1}`,
-        card,
-        quantity: idx === 1 ? 4 : idx === 3 ? 3 : 1,
-        dateAdded: new Date().toISOString(),
-      }));
-      localStorage.setItem(STORAGE_KEYS.COLLECTION, JSON.stringify(initial));
-      return initial;
+      localStorage.setItem(STORAGE_KEYS.COLLECTION, JSON.stringify([]));
+      return [];
     }
 
     const parsed: CollectionItem[] = JSON.parse(raw);
@@ -259,37 +253,8 @@ export function getStoredDecks(): Deck[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.DECKS);
     if (!raw) {
-      const atraxaCard = SAMPLE_STARTER_CARDS[4];
-      const solRing = SAMPLE_STARTER_CARDS[0];
-      const rhystic = SAMPLE_STARTER_CARDS[2];
-      const counter = SAMPLE_STARTER_CARDS[3];
-      const demonic = SAMPLE_STARTER_CARDS[5];
-      const birds = SAMPLE_STARTER_CARDS[6];
-      const cyclonic = SAMPLE_STARTER_CARDS[7];
-
-      const initialDecks: Deck[] = [
-        {
-          id: 'deck-1',
-          name: 'Atraxa Proliferate Control',
-          format: 'commander',
-          description: 'Commander deck focado em contadores +1/+1 e planeswalkers',
-          commanderCard: atraxaCard,
-          coverImageUrl: atraxaCard.imageUrlArtCrop || atraxaCard.imageUrl,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          cards: [
-            { card: atraxaCard, quantity: 1, category: 'commander' },
-            { card: solRing, quantity: 1, category: 'main' },
-            { card: rhystic, quantity: 1, category: 'main' },
-            { card: counter, quantity: 1, category: 'main' },
-            { card: demonic, quantity: 1, category: 'main' },
-            { card: birds, quantity: 1, category: 'main' },
-            { card: cyclonic, quantity: 1, category: 'main' },
-          ],
-        },
-      ];
-      localStorage.setItem(STORAGE_KEYS.DECKS, JSON.stringify(initialDecks));
-      return initialDecks;
+      localStorage.setItem(STORAGE_KEYS.DECKS, JSON.stringify([]));
+      return [];
     }
 
     const parsed: Deck[] = JSON.parse(raw);
@@ -392,27 +357,44 @@ export function saveProxies(proxies: ProxyItem[]): void {
 }
 
 /**
- * Computes "inUseQuantity", "availableQuantity", and "usedInDecks" for all cards in collection.
+ * Computes "inUseQuantity", "availableQuantity", and "usedInDecks" for each card/art print in collection.
+ * Different arts are tracked separately so that each printing shows its own accurate availability.
  */
-export function calculateCollectionDeckUsage(collection: CollectionItem[], decks: Deck[]): CollectionItem[] {
-  const usageMap = new Map<string, Array<{ deckId: string; deckName: string; count: number }>>();
+export function calculateCollectionDeckUsage(
+  collection: CollectionItem[],
+  decks: Deck[]
+): CollectionItem[] {
+  const usageMapByColId = new Map<string, Array<{ deckId: string; deckName: string; count: number }>>();
+  const usageMapByCardId = new Map<string, Array<{ deckId: string; deckName: string; count: number }>>();
 
   for (const deck of decks) {
     for (const item of deck.cards) {
-      const cardKey = item.card.name.toLowerCase();
-      const existing = usageMap.get(cardKey) || [];
-      existing.push({
+      const usageEntry = {
         deckId: deck.id,
         deckName: deck.name,
         count: item.quantity,
-      });
-      usageMap.set(cardKey, existing);
+      };
+
+      if (item.collectionItemId) {
+        const existing = usageMapByColId.get(item.collectionItemId) || [];
+        existing.push(usageEntry);
+        usageMapByColId.set(item.collectionItemId, existing);
+      }
+
+      if (item.card?.id) {
+        const existing = usageMapByCardId.get(item.card.id) || [];
+        existing.push(usageEntry);
+        usageMapByCardId.set(item.card.id, existing);
+      }
     }
   }
 
   return collection.map((colItem) => {
-    const cardKey = colItem.card.name.toLowerCase();
-    const usedInDecks = usageMap.get(cardKey) || [];
+    // Exact match by collectionItemId or card.id (distinct print/art)
+    const usedInDecks =
+      usageMapByColId.get(colItem.id) ||
+      usageMapByCardId.get(colItem.card.id) ||
+      [];
     const inUseQuantity = usedInDecks.reduce((sum, d) => sum + d.count, 0);
     const availableQuantity = Math.max(0, colItem.quantity - inUseQuantity);
 

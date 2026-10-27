@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CollectionItem, Deck, ProxyItem, CardCategory, Card, SystemBackup } from '../../types';
+import { CollectionItem, Deck, ProxyItem, CardCategory, Card, SystemBackup, DeckFormat } from '../../types';
 import {
   parseCardList,
   exportToMtgArena,
@@ -22,6 +22,7 @@ import {
   HardDriveUpload,
   AlertCircle,
   CheckCircle2,
+  Crown,
 } from 'lucide-react';
 
 interface ImportExportModalProps {
@@ -35,7 +36,9 @@ interface ImportExportModalProps {
   onImportComplete: (
     cards: Array<{ card: Card; quantity: number; category: CardCategory; isFoil?: boolean }>,
     destination: 'collection' | 'new_deck' | string,
-    newDeckName?: string
+    newDeckName?: string,
+    newDeckFormat?: DeckFormat,
+    newDeckCommanderName?: string
   ) => void;
   onRestoreSystemBackup: (backup: SystemBackup, mode: 'replace' | 'merge') => void;
 }
@@ -59,6 +62,8 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
     defaultDeckId ? defaultDeckId : 'collection'
   );
   const [newDeckName, setNewDeckName] = useState('');
+  const [newDeckFormat, setNewDeckFormat] = useState<DeckFormat>('commander');
+  const [newDeckCommanderName, setNewDeckCommanderName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressText, setProgressText] = useState('');
   const [parsedPreviewCount, setParsedPreviewCount] = useState<number>(0);
@@ -83,6 +88,8 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
       setActiveTab(defaultMode);
       setImportDestination(defaultDeckId ? defaultDeckId : 'collection');
       setExportSource(defaultDeckId ? defaultDeckId : 'collection');
+      setNewDeckFormat('commander');
+      setNewDeckCommanderName('');
       setPendingBackup(null);
       setBackupFileName('');
       setBackupError('');
@@ -196,7 +203,13 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
           : importDestination === 'collection'
             ? 'collection'
             : importDestination;
-      onImportComplete(importedResults, dest, newDeckName || 'Novo Deck Importado');
+      onImportComplete(
+        importedResults,
+        dest,
+        newDeckName || 'Novo Deck Importado',
+        newDeckFormat,
+        newDeckCommanderName.trim() || undefined
+      );
       onClose();
     }
   };
@@ -322,14 +335,14 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
               className={`btn btn-sm ${activeTab === 'import' ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => setActiveTab('import')}
             >
-              <Upload size={16} /> Importar Listas
+              <Download size={16} /> Importar Listas
             </button>
             <button
               type="button"
               className={`btn btn-sm ${activeTab === 'export' ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => setActiveTab('export')}
             >
-              <Download size={16} /> Exportar Listas
+              <Upload size={16} /> Exportar Listas
             </button>
           </div>
           <button
@@ -687,25 +700,84 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
                 </div>
 
                 {importDestination === 'new_deck' && (
-                  <div>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontSize: '0.8rem',
-                        color: '#94a3b8',
-                        marginBottom: '6px',
-                      }}
-                    >
-                      Nome do Novo Deck
-                    </label>
-                    <input
-                      type="text"
-                      className="input-text"
-                      placeholder="Ex: Atraxa Reanimator..."
-                      value={newDeckName}
-                      onChange={(e) => setNewDeckName(e.target.value)}
-                    />
-                  </div>
+                  <>
+                    <div>
+                      <label
+                        style={{
+                          display: 'block',
+                          fontSize: '0.8rem',
+                          color: '#94a3b8',
+                          marginBottom: '6px',
+                        }}
+                      >
+                        Nome do Novo Deck
+                      </label>
+                      <input
+                        type="text"
+                        className="input-text"
+                        placeholder="Ex: Atraxa Reanimator..."
+                        value={newDeckName}
+                        onChange={(e) => setNewDeckName(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: 'block',
+                          fontSize: '0.8rem',
+                          color: '#94a3b8',
+                          marginBottom: '6px',
+                        }}
+                      >
+                        Formato do Deck
+                      </label>
+                      <select
+                        className="select-field"
+                        value={newDeckFormat}
+                        onChange={(e) => setNewDeckFormat(e.target.value as DeckFormat)}
+                      >
+                        <option value="commander">Commander / EDH (100 cartas)</option>
+                        <option value="brawl">Brawl (60 cartas com comandante)</option>
+                        <option value="standard">Standard (60 cartas)</option>
+                        <option value="modern">Modern (60 cartas)</option>
+                        <option value="pioneer">Pioneer (60 cartas)</option>
+                        <option value="pauper">Pauper (60 cartas)</option>
+                        <option value="legacy">Legacy (60 cartas)</option>
+                        <option value="vintage">Vintage (60 cartas)</option>
+                        <option value="casual">Casual (Livre)</option>
+                      </select>
+                    </div>
+
+                    {(newDeckFormat === 'commander' || newDeckFormat === 'brawl') && (
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '0.8rem',
+                            color: '#ffbb00',
+                            fontWeight: 600,
+                            marginBottom: '6px',
+                          }}
+                        >
+                          <Crown size={14} />
+                          Comandante do Deck
+                        </label>
+                        <input
+                          type="text"
+                          className="input-text"
+                          placeholder="Digite o nome do comandante (ex: Atraxa, Praetors' Voice)..."
+                          value={newDeckCommanderName}
+                          onChange={(e) => setNewDeckCommanderName(e.target.value)}
+                        />
+                        <span style={{ fontSize: '0.75rem', color: '#71717a', marginTop: '4px', display: 'block' }}>
+                          Será definido como comandante oficial e capa do novo deck.
+                        </span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 

@@ -135,11 +135,11 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
-              className={`btn btn-sm ${showCharts ? 'btn-primary' : 'btn-secondary'}`}
+              className={`btn btn-sm ${showCharts ? 'btn-secondary' : 'btn-ghost'}`}
               onClick={() => setShowCharts(!showCharts)}
             >
               <BarChart3 size={15} />
-              {showCharts ? 'Ocultar Gráficos' : 'Ver Gráficos Interativos'}
+              {showCharts ? 'Ocultar Estatísticas' : 'Ver Estatísticas Globais'}
             </button>
 
             <button className="btn btn-primary btn-sm" onClick={onOpenAddModal}>
@@ -172,28 +172,47 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
 
           <div style={{ fontSize: '0.85rem' }}>
             <span style={{ color: '#94a3b8' }}>🟡 Em uso nos decks: </span>
-            <strong style={{ color: '#f59e0b' }}>{totalInUseCount}</strong>
+            <strong style={{ color: '#ffbb00' }}>{totalInUseCount}</strong>
           </div>
         </div>
       </div>
 
-      {/* Interactive Charts Collapsible Section (Requirement 5) */}
-      {showCharts && (
-        <div className="glass-panel" style={{ padding: '28px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc' }}>
-              Estatísticas da Coleção
-            </h2>
-            <button className="btn btn-ghost btn-sm" onClick={() => setShowCharts(false)}>
-              <ChevronUp size={16} /> Ocultar
-            </button>
-          </div>
+      {/* Estatísticas Globais da Coleção & Pool */}
+      <div className="glass-panel" style={{ padding: '24px' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: showCharts ? '22px' : '0px',
+          }}
+        >
+          <h2
+            style={{
+              fontSize: '1.15rem',
+              fontWeight: 700,
+              color: '#f8fafc',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <BarChart3 className="text-primary" size={18} />
+            Estatísticas Globais da Coleção & Pool
+          </h2>
+          <button className="btn btn-ghost btn-sm" onClick={() => setShowCharts(!showCharts)}>
+            {showCharts ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {showCharts ? 'Ocultar' : 'Expandir'}
+          </button>
+        </div>
+
+        {showCharts && (
           <InteractiveCharts
             cards={collection.map((i) => ({ card: i.card, quantity: i.quantity }))}
             showDeckMetrics={false}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Filter & View Switcher Bar */}
       <div className="glass-panel" style={{ padding: '16px 20px' }}>

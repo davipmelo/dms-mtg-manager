@@ -166,11 +166,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           className="glass-panel"
           style={{
             padding: '20px',
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(18, 23, 34, 0.7) 100%)',
-            border: '1px solid rgba(99, 102, 241, 0.3)',
+            background: 'var(--bg-card)',
+            border: '1px solid rgba(255, 187, 0, 0.35)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#818cf8', fontSize: '0.85rem', fontWeight: 600 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', color: '#ffbb00', fontSize: '0.85rem', fontWeight: 600 }}>
             <Shield size={16} />
             <span>COMANDANTE(S) DO DECK</span>
           </div>

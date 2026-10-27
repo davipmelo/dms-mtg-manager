@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   CollectionItem,
   Deck,
+  DeckCard,
   ProxyItem,
   Card,
   CardPrint,
   CardCategory,
+  DeckFormat,
   TokenCard,
   SystemBackup,
 } from './types';
@@ -18,36 +20,34 @@ import {
   saveProxies,
   calculateCollectionDeckUsage,
 } from './services/storage';
+import { getCardByName } from './services/scryfall';
 
 import { CollectionView } from './components/Collection/CollectionView';
 import { DeckManager } from './components/Decks/DeckManager';
 import { DeckBuilder } from './components/Decks/DeckBuilder';
 import { UtilitiesTab } from './components/Utilities/UtilitiesTab';
 import { ProxyStudio } from './components/Proxies/ProxyStudio';
-import { InteractiveCharts } from './components/Analytics/InteractiveCharts';
 
 import { AddCardModal } from './components/Modals/AddCardModal';
 import { DeckCreationModal } from './components/Modals/DeckCreationModal';
 import { ArtSelectorModal } from './components/Modals/ArtSelectorModal';
 import { ImportExportModal } from './components/Modals/ImportExportModal';
+import { MtgLogo } from './components/Common/MtgLogo';
 
 import {
   FolderArchive,
   Swords,
   Compass,
   Printer,
-  BarChart3,
   Plus,
   Upload,
   Download,
-  Sparkles,
-  Globe,
   Database,
 } from 'lucide-react';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<
-    'collection' | 'decks' | 'utilities' | 'proxies' | 'stats'
+    'collection' | 'decks' | 'utilities' | 'proxies'
   >('collection');
   const [rawCollection, setRawCollection] = useState<CollectionItem[]>([]);
   const [decks, setDecks] = useState<Deck[]>([]);
@@ -113,16 +113,14 @@ export function App() {
       return;
     }
 
-    // Merge mode
+    // Merge mode: distinguish different card arts
     const mergedCollection = [...rawCollection];
     for (const incoming of backup.collection) {
       const idx = mergedCollection.findIndex(
         (existing) =>
-          (existing.card.oracleId &&
-            incoming.card.oracleId &&
-            existing.card.oracleId === incoming.card.oracleId) ||
           existing.card.id === incoming.card.id ||
-          existing.card.name.toLowerCase() === incoming.card.name.toLowerCase()
+          (existing.card.setCode.toLowerCase() === incoming.card.setCode.toLowerCase() &&
+            existing.card.collectorNumber === incoming.card.collectorNumber)
       );
       if (idx >= 0) {
         mergedCollection[idx] = {
@@ -177,24 +175,27 @@ export function App() {
     isFoil: boolean,
     targetDeckId?: string
   ) => {
+    // Check if EXACT print already in collection (distinct arts treated separately)
     const existingColIdx = rawCollection.findIndex(
       (item) =>
-        (item.card.oracleId && card.oracleId && item.card.oracleId === card.oracleId) ||
         item.card.id === card.id ||
-        item.card.name.toLowerCase() === card.name.toLowerCase()
+        (item.card.setCode.toLowerCase() === card.setCode.toLowerCase() &&
+          item.card.collectorNumber === card.collectorNumber)
     );
 
+    let colItemId: string;
     const nextCollection = [...rawCollection];
     if (existingColIdx >= 0) {
+      colItemId = nextCollection[existingColIdx].id;
       nextCollection[existingColIdx] = {
         ...nextCollection[existingColIdx],
-        card,
         quantity: nextCollection[existingColIdx].quantity + quantity,
         isFoil: isFoil || nextCollection[existingColIdx].isFoil,
       };
     } else {
+      colItemId = `col-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       nextCollection.push({
-        id: `col-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        id: colItemId,
         card,
         quantity,
         isFoil,
@@ -206,18 +207,22 @@ export function App() {
     if (targetDeckId) {
       const nextDecks = decks.map((d) => {
         if (d.id !== targetDeckId) return d;
-        const existingCardIdx = d.cards.findIndex((c) => c.card.name === card.name);
+        const existingCardIdx = d.cards.findIndex(
+          (c) => c.collectionItemId === colItemId || c.card.id === card.id
+        );
         const nextCards = [...d.cards];
         if (existingCardIdx >= 0) {
           nextCards[existingCardIdx] = {
             ...nextCards[existingCardIdx],
             quantity: nextCards[existingCardIdx].quantity + quantity,
+            collectionItemId: colItemId,
           };
         } else {
           nextCards.push({
             card,
             quantity,
             category: 'main',
+            collectionItemId: colItemId,
           });
         }
         return { ...d, cards: nextCards, updatedAt: new Date().toISOString() };
@@ -239,6 +244,35 @@ export function App() {
 
   // Create Deck Handler
   const handleCreateDeck = (deckData: Partial<Deck>) => {
+    const nextCollection = [...rawCollection];
+    const linkedCards: DeckCard[] = [];
+
+    for (const c of deckData.cards || []) {
+      const colIdx = nextCollection.findIndex(
+        (col) =>
+          col.card.id === c.card.id ||
+          (col.card.setCode.toLowerCase() === c.card.setCode.toLowerCase() &&
+            col.card.collectorNumber === c.card.collectorNumber)
+      );
+      let colId: string;
+      if (colIdx >= 0) {
+        colId = nextCollection[colIdx].id;
+      } else {
+        colId = `col-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        nextCollection.push({
+          id: colId,
+          card: c.card,
+          quantity: c.quantity,
+          dateAdded: new Date().toISOString(),
+        });
+      }
+      linkedCards.push({
+        ...c,
+        collectionItemId: colId,
+      });
+    }
+    updateCollectionState(nextCollection);
+
     const newDeck: Deck = {
       id: `deck-${Date.now()}`,
       name: deckData.name || 'Novo Deck',
@@ -246,29 +280,11 @@ export function App() {
       description: deckData.description,
       commanderCard: deckData.commanderCard,
       partnerCard: deckData.partnerCard,
-      cards: deckData.cards || [],
+      cards: linkedCards,
       coverImageUrl: deckData.coverImageUrl,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-
-    const nextCollection = [...rawCollection];
-    for (const c of newDeck.cards) {
-      const exists = nextCollection.some(
-        (col) =>
-          (col.card.oracleId && col.card.oracleId === c.card.oracleId) ||
-          col.card.name === c.card.name
-      );
-      if (!exists) {
-        nextCollection.push({
-          id: `col-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          card: c.card,
-          quantity: c.quantity,
-          dateAdded: new Date().toISOString(),
-        });
-      }
-    }
-    updateCollectionState(nextCollection);
 
     const nextDecks = [...decks, newDeck];
     updateDecksState(nextDecks);
@@ -277,7 +293,7 @@ export function App() {
   };
 
   // Plain-text list import handler
-  const handleImportComplete = (
+  const handleImportComplete = async (
     importedCards: Array<{
       card: Card;
       quantity: number;
@@ -285,16 +301,22 @@ export function App() {
       isFoil?: boolean;
     }>,
     destination: 'collection' | 'new_deck' | string,
-    newDeckName?: string
+    newDeckName?: string,
+    newDeckFormat?: DeckFormat,
+    newDeckCommanderName?: string
   ) => {
     const nextCollection = [...rawCollection];
+    const cardToColId = new Map<string, string>();
+
     for (const item of importedCards) {
       const idx = nextCollection.findIndex(
         (col) =>
-          (col.card.oracleId && col.card.oracleId === item.card.oracleId) ||
-          col.card.name === item.card.name
+          col.card.id === item.card.id ||
+          (col.card.setCode.toLowerCase() === item.card.setCode.toLowerCase() &&
+            col.card.collectorNumber === item.card.collectorNumber)
       );
       if (idx >= 0) {
+        cardToColId.set(item.card.id, nextCollection[idx].id);
         if (destination === 'collection') {
           nextCollection[idx] = {
             ...nextCollection[idx],
@@ -302,8 +324,10 @@ export function App() {
           };
         }
       } else {
+        const newColId = `col-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        cardToColId.set(item.card.id, newColId);
         nextCollection.push({
-          id: `col-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          id: newColId,
           card: item.card,
           quantity: item.quantity,
           isFoil: item.isFoil,
@@ -314,18 +338,65 @@ export function App() {
     updateCollectionState(nextCollection);
 
     if (destination === 'new_deck') {
-      const commanderCard = importedCards.find((c) => c.category === 'commander')?.card;
+      const format = newDeckFormat || 'commander';
+      let commanderCard: Card | undefined;
+
+      // If user typed commander name
+      if (newDeckCommanderName?.trim()) {
+        const qName = newDeckCommanderName.trim().toLowerCase();
+        const match = importedCards.find((c) => c.card.name.toLowerCase() === qName);
+        if (match) {
+          commanderCard = match.card;
+          match.category = 'commander';
+        } else {
+          const fetched = await getCardByName(newDeckCommanderName.trim());
+          if (fetched) {
+            commanderCard = fetched;
+            const newColId = `col-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+            nextCollection.push({
+              id: newColId,
+              card: fetched,
+              quantity: 1,
+              dateAdded: new Date().toISOString(),
+            });
+            updateCollectionState([...nextCollection]);
+            cardToColId.set(fetched.id, newColId);
+            importedCards.unshift({
+              card: fetched,
+              quantity: 1,
+              category: 'commander',
+            });
+          }
+        }
+      }
+
+      if (!commanderCard) {
+        commanderCard = importedCards.find((c) => c.category === 'commander')?.card;
+      }
+      if (!commanderCard && (format === 'commander' || format === 'brawl')) {
+        const legend = importedCards.find((c) =>
+          c.card.typeLine.toLowerCase().includes('legendary')
+        );
+        if (legend) {
+          commanderCard = legend.card;
+          legend.category = 'commander';
+        }
+      }
+
       const newDeck: Deck = {
         id: `deck-${Date.now()}`,
         name: newDeckName || 'Deck Importado',
-        format: commanderCard ? 'commander' : 'standard',
+        format,
         commanderCard,
         coverImageUrl:
-          commanderCard?.imageUrlArtCrop || importedCards[0]?.card.imageUrlArtCrop,
+          commanderCard?.imageUrlArtCrop ||
+          commanderCard?.imageUrl ||
+          importedCards[0]?.card.imageUrlArtCrop,
         cards: importedCards.map((c) => ({
           card: c.card,
           quantity: c.quantity,
           category: c.category,
+          collectionItemId: cardToColId.get(c.card.id),
         })),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -345,6 +416,7 @@ export function App() {
               card: c.card,
               quantity: c.quantity,
               category: c.category,
+              collectionItemId: cardToColId.get(c.card.id),
             })),
           ],
           updatedAt: new Date().toISOString(),
@@ -377,11 +449,61 @@ export function App() {
     };
 
     if (artSelectorContext.collectionItemId) {
-      updateCollectionState(
-        rawCollection.map((i) =>
-          i.id === artSelectorContext.collectionItemId ? { ...i, card: newCardData } : i
-        )
+      // 1. Update collection
+      const nextCol = rawCollection.map((i) =>
+        i.id === artSelectorContext.collectionItemId ? { ...i, card: newCardData } : i
       );
+      updateCollectionState(nextCol);
+
+      // 2. Real link between collection card and all decks!
+      // Requirement 2: "se eu mudo uma arte de uma carta na coleção e essa carta está dentro de algum deck, quando eu entrar na lista do deck ela deve estar com a arte nova lá também."
+      const targetColId = artSelectorContext.collectionItemId;
+      const oldCardId = artSelectorCard.id;
+
+      const nextDecks = decks.map((d) => {
+        let deckUpdated = false;
+        const nextCards = d.cards.map((dc) => {
+          if (dc.collectionItemId === targetColId || dc.card.id === oldCardId) {
+            deckUpdated = true;
+            return { ...dc, card: newCardData, collectionItemId: targetColId };
+          }
+          return dc;
+        });
+
+        let commanderCard = d.commanderCard;
+        let coverImageUrl = d.coverImageUrl;
+        if (
+          commanderCard &&
+          (commanderCard.id === oldCardId ||
+            nextCards.some(
+              (c) => c.category === 'commander' && c.card.id === newCardData.id
+            ))
+        ) {
+          commanderCard = newCardData;
+          coverImageUrl = newCardData.imageUrlArtCrop || newCardData.imageUrl;
+          deckUpdated = true;
+        }
+
+        let partnerCard = d.partnerCard;
+        if (partnerCard && partnerCard.id === oldCardId) {
+          partnerCard = newCardData;
+          deckUpdated = true;
+        }
+
+        if (deckUpdated) {
+          return {
+            ...d,
+            cards: nextCards,
+            commanderCard,
+            partnerCard,
+            coverImageUrl,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return d;
+      });
+
+      updateDecksState(nextDecks);
     }
 
     if (artSelectorContext.proxyItemId) {
@@ -423,6 +545,24 @@ export function App() {
               : d
           )
         );
+
+        // Also update linked collection item
+        if (targetEntry.collectionItemId) {
+          updateCollectionState(
+            rawCollection.map((c) =>
+              c.id === targetEntry.collectionItemId ? { ...c, card: newCardData } : c
+            )
+          );
+        } else {
+          const matchedCol = rawCollection.find((c) => c.card.id === targetEntry.card.id);
+          if (matchedCol) {
+            updateCollectionState(
+              rawCollection.map((c) =>
+                c.id === matchedCol.id ? { ...c, card: newCardData } : c
+              )
+            );
+          }
+        }
       }
     }
   };
@@ -466,6 +606,20 @@ export function App() {
   };
 
   const activeDeck = activeDeckId ? decks.find((d) => d.id === activeDeckId) : null;
+  const syncedActiveDeck = useMemo(() => {
+    if (!activeDeck) return null;
+    const colMap = new Map(rawCollection.map((c) => [c.id, c.card]));
+    const syncedCards = activeDeck.cards.map((dc) => {
+      if (dc.collectionItemId && colMap.has(dc.collectionItemId)) {
+        return { ...dc, card: colMap.get(dc.collectionItemId)! };
+      }
+      return dc;
+    });
+    return {
+      ...activeDeck,
+      cards: syncedCards,
+    };
+  }, [activeDeck, rawCollection]);
   const totalProxyCount = proxies.reduce((sum, p) => sum + p.quantity, 0);
 
   return (
@@ -494,37 +648,27 @@ export function App() {
               width: '38px',
               height: '38px',
               borderRadius: '10px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+              background: '#ffbb00',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)',
+              boxShadow: '0 2px 10px rgba(255, 187, 0, 0.3)',
             }}
           >
-            <Sparkles size={20} className="text-white" />
+            <MtgLogo size={22} color="#111114" />
           </div>
           <div>
             <h1
               style={{
-                fontSize: '1.15rem',
+                fontSize: '1.2rem',
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
                 color: '#f8fafc',
+                lineHeight: 1.1,
               }}
             >
-              DMS MTG Manager
+              DM`S MTG MANAGER
             </h1>
-            <div
-              style={{
-                fontSize: '0.7rem',
-                color: '#818cf8',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
-              <Globe size={11} /> Web Edition
-            </div>
           </div>
         </div>
 
@@ -581,16 +725,6 @@ export function App() {
               </span>
             )}
           </button>
-
-          <button
-            className={`btn btn-sm ${activeTab === 'stats' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => {
-              setActiveDeckId(null);
-              setActiveTab('stats');
-            }}
-          >
-            <BarChart3 size={16} /> Estatísticas
-          </button>
         </nav>
 
         {/* Global Action Buttons */}
@@ -615,7 +749,7 @@ export function App() {
               setIsImportExportModalOpen(true);
             }}
           >
-            <Upload size={14} /> Importar
+            <Download size={14} /> Importar
           </button>
 
           <button
@@ -626,7 +760,7 @@ export function App() {
               setIsImportExportModalOpen(true);
             }}
           >
-            <Download size={14} /> Exportar
+            <Upload size={14} /> Exportar
           </button>
 
           <button
@@ -663,9 +797,9 @@ export function App() {
         )}
 
         {activeTab === 'decks' &&
-          (activeDeck ? (
+          (syncedActiveDeck ? (
             <DeckBuilder
-              deck={activeDeck}
+              deck={syncedActiveDeck}
               onBack={() => setActiveDeckId(null)}
               onUpdateDeck={(updatedDeck) => {
                 updateDecksState(decks.map((d) => (d.id === updatedDeck.id ? updatedDeck : d)));
@@ -744,25 +878,6 @@ export function App() {
             }}
             decks={decks}
           />
-        )}
-
-        {activeTab === 'stats' && (
-          <div className="glass-panel" style={{ padding: '28px' }}>
-            <h2
-              style={{
-                fontSize: '1.3rem',
-                fontWeight: 700,
-                color: '#f8fafc',
-                marginBottom: '22px',
-              }}
-            >
-              Estatísticas Globais da Coleção & Pool
-            </h2>
-            <InteractiveCharts
-              cards={collectionWithUsage.map((i) => ({ card: i.card, quantity: i.quantity }))}
-              showDeckMetrics={false}
-            />
-          </div>
         )}
       </main>
 

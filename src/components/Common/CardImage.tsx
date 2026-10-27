@@ -73,8 +73,8 @@ export const CardImage: React.FC<CardImageProps> = ({
         style={{
           width: '100%',
           height: '100%',
-          background: 'linear-gradient(145deg, #161d2f 0%, #0b0e17 100%)',
-          border: '2px solid rgba(99, 102, 241, 0.35)',
+          background: '#17171c',
+          border: '1px solid rgba(255, 187, 0, 0.35)',
           borderRadius: '8px',
           display: 'flex',
           flexDirection: 'column',
@@ -83,7 +83,7 @@ export const CardImage: React.FC<CardImageProps> = ({
           padding: '14px',
           textAlign: 'center',
           gap: '8px',
-          color: '#e2e8f0',
+          color: '#f4f4f6',
           ...style,
         }}
       >
@@ -92,14 +92,14 @@ export const CardImage: React.FC<CardImageProps> = ({
             width: '36px',
             height: '36px',
             borderRadius: '50%',
-            background: 'rgba(99, 102, 241, 0.2)',
-            border: '1px solid rgba(99, 102, 241, 0.5)',
+            background: 'rgba(255, 187, 0, 0.15)',
+            border: '1px solid rgba(255, 187, 0, 0.45)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 800,
             fontSize: '0.85rem',
-            color: '#a5b4fc',
+            color: '#ffbb00',
           }}
         >
           MTG

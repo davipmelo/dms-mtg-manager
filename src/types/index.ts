@@ -82,6 +82,7 @@ export interface DeckCard {
   card: Card;
   quantity: number;
   category: CardCategory;
+  collectionItemId?: string;
 }
 
 export interface Deck {

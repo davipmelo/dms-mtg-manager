@@ -3,37 +3,38 @@
   --font-display: 'Outfit', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Theme Palette */
-  --bg-darkest: #07090e;
-  --bg-darker: #0c0f17;
-  --bg-dark: #121722;
-  --bg-surface: #18202f;
-  --bg-surface-hover: #1f2a3e;
-  --bg-card: rgba(24, 32, 47, 0.7);
+  /* Theme Palette - Dark Grayscale */
+  --bg-darkest: #0e0e11;
+  --bg-darker: #141418;
+  --bg-dark: #1a1a20;
+  --bg-surface: #222228;
+  --bg-surface-hover: #2c2c34;
+  --bg-card: #18181d;
 
   /* Borders & Dividers */
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-medium: rgba(255, 255, 255, 0.15);
-  --border-glow: rgba(99, 102, 241, 0.35);
+  --border-subtle: #292932;
+  --border-medium: #3a3a46;
+  --border-glow: rgba(255, 187, 0, 0.45);
 
-  /* Primary & Accent */
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --primary-glow: rgba(99, 102, 241, 0.25);
-  --accent: #8b5cf6;
+  /* Primary & Accent - Yellow #ffbb00 */
+  --primary: #ffbb00;
+  --primary-hover: #e6a800;
+  --primary-glow: rgba(255, 187, 0, 0.22);
+  --primary-text: #111114;
+  --accent: #ffcc33;
 
   /* Status */
   --success: #10b981;
   --success-glow: rgba(16, 185, 129, 0.2);
-  --warning: #f59e0b;
-  --warning-glow: rgba(245, 158, 11, 0.2);
+  --warning: #ffbb00;
+  --warning-glow: rgba(255, 187, 0, 0.2);
   --danger: #ef4444;
-  --info: #0ea5e9;
+  --info: #38bdf8;
 
   /* Typography */
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
+  --text-main: #f4f4f6;
+  --text-muted: #a0a0ab;
+  --text-dim: #71717a;
 
   /* MTG Mana Colors */
   --mana-w: #f8f6d8;
@@ -42,18 +43,18 @@
   --mana-r: #f43f5e;
   --mana-g: #22c55e;
   --mana-c: #94a3b8;
-  --mana-gold: #eab308;
+  --mana-gold: #ffbb00;
 
-  /* Glassmorphism */
+  /* Glassmorphism / Flat */
   --glass-blur: blur(12px);
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 22px;
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 25px rgba(99, 102, 241, 0.25);
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 20px rgba(255, 187, 0, 0.25);
 }
 
 * {
@@ -95,15 +96,12 @@ h1, h2, h3, h4, .font-display {
 /* Glass Panels */
 .glass-panel {
   background: var(--bg-card);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
 }
 
 .glass-card {
-  background: rgba(24, 32, 47, 0.6);
-  backdrop-filter: var(--glass-blur);
+  background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -135,34 +133,34 @@ h1, h2, h3, h4, .font-display {
 .badge-warning {
   background: var(--warning-glow);
   color: var(--warning);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  border: 1px solid rgba(255, 187, 0, 0.3);
 }
 
 .badge-primary {
-  background: var(--primary-glow);
-  color: #a5b4fc;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(255, 187, 0, 0.15);
+  color: #ffbb00;
+  border: 1px solid rgba(255, 187, 0, 0.35);
 }
 
 .badge-rarity-mythic {
-  background: rgba(245, 158, 11, 0.2);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: rgba(255, 187, 0, 0.2);
+  color: #ffbb00;
+  border: 1px solid rgba(255, 187, 0, 0.4);
 }
 .badge-rarity-rare {
-  background: rgba(234, 179, 8, 0.15);
+  background: rgba(250, 204, 21, 0.15);
   color: #facc15;
-  border: 1px solid rgba(234, 179, 8, 0.3);
+  border: 1px solid rgba(250, 204, 21, 0.3);
 }
 .badge-rarity-uncommon {
-  background: rgba(148, 163, 184, 0.2);
-  color: #cbd5e1;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(160, 160, 171, 0.2);
+  color: #d4d4d8;
+  border: 1px solid rgba(160, 160, 171, 0.3);
 }
 .badge-rarity-common {
-  background: rgba(100, 116, 139, 0.15);
-  color: #94a3b8;
-  border: 1px solid rgba(100, 116, 139, 0.25);
+  background: rgba(113, 113, 122, 0.15);
+  color: #a1a1aa;
+  border: 1px solid rgba(113, 113, 122, 0.25);
 }
 
 /* Buttons */
@@ -183,13 +181,16 @@ h1, h2, h3, h4, .font-display {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
-  color: white;
-  box-shadow: 0 2px 8px var(--primary-glow);
+  background: var(--primary);
+  color: var(--primary-text);
+  font-weight: 600;
+  border: 1px solid rgba(255, 187, 0, 0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+  background: var(--primary-hover);
+  color: var(--primary-text);
+  border-color: #ffbb00;
   transform: translateY(-1px);
 }
 
@@ -300,7 +301,7 @@ dialog.custom-modal[open] {
 .card-item-container:hover {
   transform: translateY(-4px) scale(1.02);
   border-color: var(--border-glow);
-  box-shadow: var(--shadow-lg), 0 0 20px rgba(99, 102, 241, 0.2);
+  box-shadow: var(--shadow-lg), 0 0 16px rgba(255, 187, 0, 0.2);
   z-index: 5;
 }
 
@@ -361,7 +362,7 @@ dialog.custom-modal[open] {
 
 .stacked-column {
   flex: 0 0 240px;
-  background: rgba(18, 23, 34, 0.6);
+  background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 12px;
@@ -396,7 +397,7 @@ dialog.custom-modal[open] {
   margin-bottom: 12px;
   transform: scale(1.04);
   z-index: 10;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(255, 187, 0, 0.3);
   border-color: var(--primary);
 }
 
@@ -405,7 +406,7 @@ dialog.custom-modal[open] {
   align-items: center;
   justify-content: space-between;
   padding: 6px 10px;
-  background: rgba(12, 15, 23, 0.85);
+  background: #141418;
   font-size: 0.8rem;
   font-weight: 500;
   gap: 6px;
@@ -440,12 +441,12 @@ dialog.custom-modal[open] {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
-.text-indigo-400 { color: #818cf8; }
-.text-amber-400 { color: #fbbf24; }
+.text-primary, .text-yellow-400, .text-indigo-400 { color: #ffbb00; }
+.text-amber-400 { color: #ffbb00; }
 .text-emerald-400 { color: #34d399; }
 .text-red-400 { color: #f87171; }
 .text-slate-400 { color: #94a3b8; }
-.text-slate-600 { color: #475569; }
+.text-slate-600 { color: #71717a; }
 .text-white { color: #ffffff; }
 .inline { display: inline; vertical-align: middle; }
 
