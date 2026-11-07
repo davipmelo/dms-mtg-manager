@@ -226,44 +226,6 @@ export async function generateProxiesPdf(
         ctx.restore();
       }
 
-      // Draw Corner Marks on card
-      if (options.showCropMarks && options.showCornerMarks) {
-        ctx.save();
-        ctx.strokeStyle = options.cropMarksColor;
-        ctx.lineWidth = Math.max(1, Math.round(options.cropMarksThickness * SCALE));
-        const cLen = Math.round(4 * SCALE); // 4mm corner arm
-
-        // Top-Left
-        ctx.beginPath();
-        ctx.moveTo(cardX, cardY + cLen);
-        ctx.lineTo(cardX, cardY);
-        ctx.lineTo(cardX + cLen, cardY);
-        ctx.stroke();
-
-        // Top-Right
-        ctx.beginPath();
-        ctx.moveTo(cardX + wPx - cLen, cardY);
-        ctx.lineTo(cardX + wPx, cardY);
-        ctx.lineTo(cardX + wPx, cardY + cLen);
-        ctx.stroke();
-
-        // Bottom-Left
-        ctx.beginPath();
-        ctx.moveTo(cardX, cardY + hPx - cLen);
-        ctx.lineTo(cardX, cardY + hPx);
-        ctx.lineTo(cardX + cLen, cardY + hPx);
-        ctx.stroke();
-
-        // Bottom-Right
-        ctx.beginPath();
-        ctx.moveTo(cardX + wPx - cLen, cardY + hPx);
-        ctx.lineTo(cardX + wPx, cardY + hPx);
-        ctx.lineTo(cardX + wPx, cardY + hPx - cLen);
-        ctx.stroke();
-
-        ctx.restore();
-      }
-
       loadedCards++;
       if (onProgress) {
         onProgress({
@@ -272,6 +234,50 @@ export async function generateProxiesPdf(
           percentage: Math.round((loadedCards / totalCards) * 100),
         });
       }
+    }
+
+    // 4. Draw Junction Crosses at Card Intersections (Single-stroke exact thickness, no doubling)
+    if (options.showCropMarks && options.showCornerMarks) {
+      ctx.save();
+      ctx.strokeStyle = options.cropMarksColor;
+      ctx.lineWidth = Math.max(1, Math.round(options.cropMarksThickness * SCALE));
+      const armPx = Math.round(3.5 * SCALE); // 3.5mm cross arm
+
+      const vCols = [startX, startX + cardWPx, startX + 2 * cardWPx, startX + 3 * cardWPx];
+      const hRows = [startY, startY + cardHPx, startY + 2 * cardHPx, startY + 3 * cardHPx];
+
+      for (let c = 0; c < 4; c++) {
+        for (let r = 0; r < 4; r++) {
+          const jX = Math.round(vCols[c]);
+          const jY = Math.round(hRows[r]);
+
+          const hasLeft = c > 0;
+          const hasRight = c < 3;
+          const hasUp = r > 0;
+          const hasDown = r < 3;
+
+          // Horizontal segment
+          const x1 = hasLeft ? jX - armPx : jX;
+          const x2 = hasRight ? jX + armPx : jX;
+          if (x1 !== x2) {
+            ctx.beginPath();
+            ctx.moveTo(x1, jY);
+            ctx.lineTo(x2, jY);
+            ctx.stroke();
+          }
+
+          // Vertical segment
+          const y1 = hasUp ? jY - armPx : jY;
+          const y2 = hasDown ? jY + armPx : jY;
+          if (y1 !== y2) {
+            ctx.beginPath();
+            ctx.moveTo(jX, y1);
+            ctx.lineTo(jX, y2);
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.restore();
     }
 
     // Add page to PDF
@@ -285,3 +291,4 @@ export async function generateProxiesPdf(
 
   return pdf.output('blob');
 }
+

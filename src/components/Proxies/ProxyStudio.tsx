@@ -380,7 +380,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                 className="btn btn-secondary btn-sm"
                 onClick={() => applyPreset('guillotine')}
                 style={{ fontSize: '0.72rem', padding: '3px 8px' }}
-                title="Linhas contínuas pretas + réguas de margem longas"
+                title="Linhas contínuas pretas + réguas de margem longas + cruzes nas junções"
               >
                 Guilhotina / Régua
               </button>
@@ -389,7 +389,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                 className="btn btn-secondary btn-sm"
                 onClick={() => applyPreset('hobbyknife')}
                 style={{ fontSize: '0.72rem', padding: '3px 8px' }}
-                title="Linhas tracejadas cinzas + cantoneiras nos cards"
+                title="Linhas tracejadas cinzas + cruzes nas junções"
               >
                 Estilete Manual
               </button>
@@ -398,7 +398,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                 className="btn btn-secondary btn-sm"
                 onClick={() => applyPreset('minimal')}
                 style={{ fontSize: '0.72rem', padding: '3px 8px' }}
-                title="Sem bordas, apenas marcas de corte"
+                title="Sem bordas, apenas cruzes finas nas junções e marcas de corte"
               >
                 Minimalista
               </button>
@@ -620,7 +620,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '0.76rem', color: '#cbd5e1', paddingTop: '2px' }}>
+                    <div style={{ display: 'flex', gap: '14px', fontSize: '0.76rem', color: '#cbd5e1', paddingTop: '2px', flexWrap: 'wrap' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
@@ -628,7 +628,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                           onChange={(e) => setShowMarginTicks(e.target.checked)}
                           style={{ accentColor: '#ffbb00' }}
                         />
-                        <span>Réguas de Margem</span>
+                        <span>Réguas de Margem na Folha</span>
                       </label>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                         <input
@@ -637,7 +637,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                           onChange={(e) => setShowCornerMarks(e.target.checked)}
                           style={{ accentColor: '#ffbb00' }}
                         />
-                        <span>Cantoneiras nos Cards</span>
+                        <span>Cruzes nas Junções das Cartas (Espessura Exata)</span>
                       </label>
                     </div>
                   </>
@@ -915,66 +915,125 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                   '--card-bleed-bg': cardBleedBg === 'white' ? '#ffffff' : '#000000',
                 } as React.CSSProperties}
               >
-                {/* Margin crop marks for sheet cutters */}
-                {showCropMarks && showMarginTicks && (
-                  <>
-                    {/* Top edge margin ticks (pointing down) */}
-                    {[10.5, 73.5, 136.5, 199.5].map((x, i) => (
-                      <span
-                        key={`tick-top-${i}`}
-                        className="sheet-margin-mark"
-                        style={{
-                          top: 0,
-                          left: `${x}mm`,
-                          width: `${cropMarksThickness}mm`,
-                          height: `${cropMarksLength}mm`,
-                          backgroundColor: cropMarksColor,
-                        }}
-                      />
-                    ))}
-                    {/* Bottom edge margin ticks (pointing up) */}
-                    {[10.5, 73.5, 136.5, 199.5].map((x, i) => (
-                      <span
-                        key={`tick-bottom-${i}`}
-                        className="sheet-margin-mark"
-                        style={{
-                          bottom: 0,
-                          left: `${x}mm`,
-                          width: `${cropMarksThickness}mm`,
-                          height: `${cropMarksLength}mm`,
-                          backgroundColor: cropMarksColor,
-                        }}
-                      />
-                    ))}
-                    {/* Left edge margin ticks (pointing right) */}
-                    {[16.5, 104.5, 192.5, 280.5].map((y, i) => (
-                      <span
-                        key={`tick-left-${i}`}
-                        className="sheet-margin-mark"
-                        style={{
-                          left: 0,
-                          top: `${y}mm`,
-                          height: `${cropMarksThickness}mm`,
-                          width: `${cropMarksLength}mm`,
-                          backgroundColor: cropMarksColor,
-                        }}
-                      />
-                    ))}
-                    {/* Right edge margin ticks (pointing left) */}
-                    {[16.5, 104.5, 192.5, 280.5].map((y, i) => (
-                      <span
-                        key={`tick-right-${i}`}
-                        className="sheet-margin-mark"
-                        style={{
-                          right: 0,
-                          top: `${y}mm`,
-                          height: `${cropMarksThickness}mm`,
-                          width: `${cropMarksLength}mm`,
-                          backgroundColor: cropMarksColor,
-                        }}
-                      />
-                    ))}
-                  </>
+                {/* Crop marks overlay: Sheet Margin Ruler Ticks & Exact-Thickness Card Junction Crosses */}
+                {showCropMarks && (
+                  <svg
+                    viewBox="0 0 210 297"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '210mm',
+                      height: '297mm',
+                      pointerEvents: 'none',
+                      zIndex: 15,
+                    }}
+                  >
+                    {/* 1. Sheet margin ruler ticks */}
+                    {showMarginTicks && (
+                      <>
+                        {/* Top edge ticks (pointing down) */}
+                        {[10.5, 73.5, 136.5, 199.5].map((x, i) => (
+                          <line
+                            key={`tick-top-${i}`}
+                            x1={x}
+                            y1={0}
+                            x2={x}
+                            y2={cropMarksLength}
+                            stroke={cropMarksColor}
+                            strokeWidth={cropMarksThickness}
+                            strokeLinecap="square"
+                          />
+                        ))}
+                        {/* Bottom edge ticks (pointing up) */}
+                        {[10.5, 73.5, 136.5, 199.5].map((x, i) => (
+                          <line
+                            key={`tick-bot-${i}`}
+                            x1={x}
+                            y1={297 - cropMarksLength}
+                            x2={x}
+                            y2={297}
+                            stroke={cropMarksColor}
+                            strokeWidth={cropMarksThickness}
+                            strokeLinecap="square"
+                          />
+                        ))}
+                        {/* Left edge ticks (pointing right) */}
+                        {[16.5, 104.5, 192.5, 280.5].map((y, i) => (
+                          <line
+                            key={`tick-left-${i}`}
+                            x1={0}
+                            y1={y}
+                            x2={cropMarksLength}
+                            y2={y}
+                            stroke={cropMarksColor}
+                            strokeWidth={cropMarksThickness}
+                            strokeLinecap="square"
+                          />
+                        ))}
+                        {/* Right edge ticks (pointing left) */}
+                        {[16.5, 104.5, 192.5, 280.5].map((y, i) => (
+                          <line
+                            key={`tick-right-${i}`}
+                            x1={210 - cropMarksLength}
+                            y1={y}
+                            x2={210}
+                            y2={y}
+                            stroke={cropMarksColor}
+                            strokeWidth={cropMarksThickness}
+                            strokeLinecap="square"
+                          />
+                        ))}
+                      </>
+                    )}
+
+                    {/* 2. Grid Junction Crosses (Cruzes nas Junções dos Cards - Espessura Exata de Linha Única) */}
+                    {showCornerMarks && (
+                      <>
+                        {[10.5, 73.5, 136.5, 199.5].flatMap((x, col) =>
+                          [16.5, 104.5, 192.5, 280.5].map((y, row) => {
+                            const arm = 3.5;
+                            const hasLeft = col > 0;
+                            const hasRight = col < 3;
+                            const hasUp = row > 0;
+                            const hasDown = row < 3;
+
+                            const x1 = hasLeft ? x - arm : x;
+                            const x2 = hasRight ? x + arm : x;
+                            const y1 = hasUp ? y - arm : y;
+                            const y2 = hasDown ? y + arm : y;
+
+                            return (
+                              <g key={`cross-${col}-${row}`}>
+                                {x1 !== x2 && (
+                                  <line
+                                    x1={x1}
+                                    y1={y}
+                                    x2={x2}
+                                    y2={y}
+                                    stroke={cropMarksColor}
+                                    strokeWidth={cropMarksThickness}
+                                    strokeLinecap="square"
+                                  />
+                                )}
+                                {y1 !== y2 && (
+                                  <line
+                                    x1={x}
+                                    y1={y1}
+                                    x2={x}
+                                    y2={y2}
+                                    stroke={cropMarksColor}
+                                    strokeWidth={cropMarksThickness}
+                                    strokeLinecap="square"
+                                  />
+                                )}
+                              </g>
+                            );
+                          })
+                        )}
+                      </>
+                    )}
+                  </svg>
                 )}
 
                 {/* Sheet Metadata Header outside of cutting area */}
@@ -1025,16 +1084,6 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                           objectFit: isPlanar ? 'contain' : 'cover',
                         }}
                       />
-
-                      {/* Corner crop marks */}
-                      {showCropMarks && showCornerMarks && (
-                        <>
-                          <span className="crop-corner crop-corner-tl" />
-                          <span className="crop-corner crop-corner-tr" />
-                          <span className="crop-corner crop-corner-bl" />
-                          <span className="crop-corner crop-corner-br" />
-                        </>
-                      )}
                     </div>
                   );
                 })}
