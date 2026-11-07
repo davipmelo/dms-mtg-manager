@@ -190,13 +190,52 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
   const targetCards = deckFormat === 'commander' ? 100 : deckFormat === 'brawl' ? 60 : 60;
 
   return (
-    <div className="modal-backdrop">
+    <div
+      className="modal-backdrop"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(5, 7, 11, 0.85)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isProcessing) onClose();
+      }}
+    >
       <div
-        className="modal-container"
-        style={{ maxWidth: '780px', width: '94%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+        className="modal-container glass-panel"
+        style={{
+          width: '780px',
+          maxWidth: '95vw',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#0c0f17',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.15)',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          animation: 'modal-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        }}
       >
         {/* Header */}
-        <div className="modal-header">
+        <div
+          className="modal-header"
+          style={{
+            padding: '18px 24px',
+            borderBottom: '1px solid var(--border-subtle)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: 'rgba(18, 23, 34, 0.8)',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
@@ -227,7 +266,17 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="modal-body" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', padding: '20px' }}>
+        <div
+          className="modal-body"
+          style={{
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            padding: '20px',
+            flex: 1,
+          }}
+        >
           {errorMessage && (
             <div
               style={{

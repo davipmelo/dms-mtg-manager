@@ -32,6 +32,7 @@ import { AddCardModal } from './components/Modals/AddCardModal';
 import { DeckCreationModal } from './components/Modals/DeckCreationModal';
 import { ArtSelectorModal } from './components/Modals/ArtSelectorModal';
 import { ImportExportModal } from './components/Modals/ImportExportModal';
+import { EditDeckModal } from './components/Modals/EditDeckModal';
 import { MtgLogo } from './components/Common/MtgLogo';
 
 import {
@@ -59,6 +60,7 @@ export function App() {
   // Modals state
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false);
   const [isCreateDeckModalOpen, setIsCreateDeckModalOpen] = useState(false);
+  const [editingDeck, setEditingDeck] = useState<Deck | null>(null);
   const [isImportExportModalOpen, setIsImportExportModalOpen] = useState(false);
   const [importExportMode, setImportExportMode] = useState<'import' | 'export' | 'backup'>(
     'import'
@@ -931,6 +933,7 @@ export function App() {
                 updateDecksState(decks.filter((d) => d.id !== deckId));
               }}
               onSendDeckToProxies={handleAddDeckToProxies}
+              onEditDeck={(deck) => setEditingDeck(deck)}
             />
           ))}
 
@@ -1016,6 +1019,19 @@ export function App() {
         onImportComplete={handleImportComplete}
         onRestoreSystemBackup={handleRestoreSystemBackup}
       />
+
+      {editingDeck && (
+        <EditDeckModal
+          isOpen={Boolean(editingDeck)}
+          onClose={() => setEditingDeck(null)}
+          deck={editingDeck}
+          collection={collectionWithUsage}
+          onSaveDeck={(updated) => {
+            updateDecksState(decks.map((d) => (d.id === updated.id ? updated : d)));
+            setEditingDeck(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Deck } from '../../types';
-import { Shield, Plus, Upload, Trash2, ExternalLink, Calendar, Layers, Printer } from 'lucide-react';
+import { Shield, Plus, Upload, Trash2, Printer, Edit3 } from 'lucide-react';
 
 interface DeckManagerProps {
   decks: Deck[];
@@ -9,6 +9,7 @@ interface DeckManagerProps {
   onOpenImportModal: () => void;
   onDeleteDeck: (deckId: string) => void;
   onSendDeckToProxies: (deck: Deck) => void;
+  onEditDeck?: (deck: Deck) => void;
 }
 
 export const DeckManager: React.FC<DeckManagerProps> = ({
@@ -18,6 +19,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
   onOpenImportModal,
   onDeleteDeck,
   onSendDeckToProxies,
+  onEditDeck,
 }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -187,8 +189,17 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                       <Printer size={14} /> Imprimir Proxies
                     </button>
 
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => (onEditDeck ? onEditDeck(deck) : onOpenDeck(deck.id))}
+                        title="Editar nome, formato ou lista de cartas"
+                      >
+                        <Edit3 size={14} /> Editar
+                      </button>
+                      <button
+                        type="button"
                         className="btn btn-ghost btn-icon text-red-400"
                         onClick={() => {
                           if (confirm(`Tem certeza que deseja excluir o deck "${deck.name}"?`)) {
@@ -200,6 +211,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                         <Trash2 size={16} />
                       </button>
                       <button
+                        type="button"
                         className="btn btn-primary btn-sm"
                         onClick={() => onOpenDeck(deck.id)}
                       >
