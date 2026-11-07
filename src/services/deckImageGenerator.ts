@@ -343,3 +343,4 @@ export function downloadDeckPoster(blob: Blob, deckName: string) {
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+
