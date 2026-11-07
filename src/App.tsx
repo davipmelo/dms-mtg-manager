@@ -587,23 +587,69 @@ export function App() {
   };
 
   const handleAddDeckToProxies = (deck: Deck) => {
-    const nextProxies = [...proxies];
+    // 1. Separate commander(s) and other cards
+    const commanderCards: Array<{ card: Card; quantity: number }> = [];
+    const otherCards: Array<{ card: Card; quantity: number }> = [];
+
+    const cmdId = deck.commanderCard?.id;
+    const cmdName = deck.commanderCard?.name.toLowerCase();
+    const partnerId = deck.partnerCard?.id;
+    const partnerName = deck.partnerCard?.name.toLowerCase();
+
     for (const item of deck.cards) {
-      const idx = nextProxies.findIndex((p) => p.card.id === item.card.id);
-      if (idx >= 0) {
-        nextProxies[idx] = {
-          ...nextProxies[idx],
-          quantity: nextProxies[idx].quantity + item.quantity,
-        };
+      const isCmd =
+        item.category === 'commander' ||
+        (cmdId && item.card.id === cmdId) ||
+        (cmdName && item.card.name.toLowerCase() === cmdName);
+
+      const isPartner =
+        item.category === 'partner' ||
+        (partnerId && item.card.id === partnerId) ||
+        (partnerName && item.card.name.toLowerCase() === partnerName);
+
+      if (isCmd) {
+        commanderCards.unshift({ card: item.card, quantity: item.quantity });
+      } else if (isPartner) {
+        commanderCards.push({ card: item.card, quantity: item.quantity });
       } else {
-        nextProxies.push({
-          id: `proxy-${Date.now()}-${Math.random()}`,
-          card: item.card,
-          quantity: item.quantity,
-        });
+        otherCards.push({ card: item.card, quantity: item.quantity });
       }
     }
-    updateProxiesState(nextProxies);
+
+    // Ensure commanderCard is present even if omitted from deck.cards
+    if (deck.commanderCard && !commanderCards.some((c) => c.card.name.toLowerCase() === cmdName)) {
+      commanderCards.unshift({ card: deck.commanderCard, quantity: 1 });
+    }
+    if (deck.partnerCard && !commanderCards.some((c) => c.card.name.toLowerCase() === partnerName)) {
+      commanderCards.push({ card: deck.partnerCard, quantity: 1 });
+    }
+
+    // Sort other cards alphabetically by card name
+    otherCards.sort((a, b) =>
+      a.card.name.localeCompare(b.card.name, 'en', { sensitivity: 'base' })
+    );
+
+    // Combined deck proxy items in exact requested order: Commander(s) first, then remaining 99 alphabetically
+    const sortedDeckEntries = [...commanderCards, ...otherCards];
+    const deckProxyItems: ProxyItem[] = sortedDeckEntries.map((entry, idx) => ({
+      id: `proxy-deck-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`,
+      card: entry.card,
+      quantity: entry.quantity,
+    }));
+
+    if (proxies.length > 0) {
+      const shouldReplace = window.confirm(
+        `Sua fila de proxies já possui ${proxies.reduce((s, p) => s + p.quantity, 0)} carta(s).\n\nDeseja SUBSTITUIR a fila atual pelo deck completo "${deck.name}" para que o Comandante fique exatamente em 1º lugar na página 1?\n\n[OK = Substituir e colocar Comandante em 1º lugar]\n[Cancelar = Adicionar cartas ao final da fila atual]`
+      );
+      if (shouldReplace) {
+        updateProxiesState(deckProxyItems);
+      } else {
+        updateProxiesState([...proxies, ...deckProxyItems]);
+      }
+    } else {
+      updateProxiesState(deckProxyItems);
+    }
+
     setActiveTab('proxies');
   };
 

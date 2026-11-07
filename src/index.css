@@ -456,7 +456,7 @@ dialog.custom-modal[open] {
 .a4-page-sheet {
   width: 210mm;
   height: 297mm;
-  padding: 10mm;
+  padding: 16.5mm 10.5mm;
   background: white;
   margin: 0 auto 30px auto;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
@@ -468,51 +468,85 @@ dialog.custom-modal[open] {
   align-content: center;
   position: relative;
   page-break-after: always;
+  break-after: page;
   box-sizing: border-box;
 }
 
 .a4-card-slot {
   width: 63mm;
   height: 88mm;
+  min-width: 63mm;
+  max-width: 63mm;
+  min-height: 88mm;
+  max-height: 88mm;
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
+  border: none;
+  background: transparent;
+}
+
+/* Requirement 6: Fill empty space and rounded corners with black ONLY when there is a card */
+.a4-card-slot.has-card {
+  background: #000000;
+}
+
+.a4-card-slot.is-empty {
+  background: #ffffff;
 }
 
 .a4-card-slot img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
   display: block;
 }
 
-/* Crop marks / Cutting guides */
+/* Requirement 4: Cut lines as thin black lines on the outside of the arts */
 .show-cut-lines .a4-card-slot {
-  border: 0.15mm solid rgba(0, 0, 0, 0.45);
+  outline: 0.2mm solid #000000;
+  outline-offset: 0;
+  z-index: 2;
 }
 
-.show-crop-marks .a4-card-slot::before,
-.show-crop-marks .a4-card-slot::after {
-  content: '';
+/* Requirement 7: Crop marks (marcas de enquadramento) with customizable color */
+.crop-corner {
   position: absolute;
+  width: 3.5mm;
+  height: 3.5mm;
   pointer-events: none;
   z-index: 10;
+  box-sizing: border-box;
 }
-.show-crop-marks .a4-card-slot::before {
+.crop-corner-tl {
   top: 0;
   left: 0;
-  width: 4mm;
-  height: 4mm;
-  border-top: 0.3mm solid #000;
-  border-left: 0.3mm solid #000;
+  border-top: 0.35mm solid;
+  border-left: 0.35mm solid;
 }
-.show-crop-marks .a4-card-slot::after {
+.crop-corner-tr {
+  top: 0;
+  right: 0;
+  border-top: 0.35mm solid;
+  border-right: 0.35mm solid;
+}
+.crop-corner-bl {
+  bottom: 0;
+  left: 0;
+  border-bottom: 0.35mm solid;
+  border-left: 0.35mm solid;
+}
+.crop-corner-br {
   bottom: 0;
   right: 0;
-  width: 4mm;
-  height: 4mm;
-  border-bottom: 0.3mm solid #000;
-  border-right: 0.3mm solid #000;
+  border-bottom: 0.35mm solid;
+  border-right: 0.35mm solid;
+}
+
+/* Sheet margin ruler marks for cutting */
+.sheet-margin-mark {
+  position: absolute;
+  pointer-events: none;
+  z-index: 15;
 }
 
 @media print {
@@ -521,11 +555,12 @@ dialog.custom-modal[open] {
     margin: 0;
   }
 
-  body {
-    background: white !important;
-    color: black !important;
+  html, body {
+    width: 210mm !important;
+    height: 297mm !important;
     margin: 0 !important;
     padding: 0 !important;
+    background: #ffffff !important;
   }
 
   /* Hide everything except the proxy printing sheet container */
@@ -548,16 +583,48 @@ dialog.custom-modal[open] {
   .a4-page-sheet {
     box-shadow: none !important;
     margin: 0 !important;
-    padding: 10mm !important;
+    padding: 16.5mm 10.5mm !important;
     width: 210mm !important;
     height: 297mm !important;
     page-break-after: always !important;
     break-after: page !important;
+    box-sizing: border-box !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .a4-card-slot {
     width: 63mm !important;
     height: 88mm !important;
+    min-width: 63mm !important;
+    max-width: 63mm !important;
+    min-height: 88mm !important;
+    max-height: 88mm !important;
+    box-sizing: border-box !important;
+    border: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .a4-card-slot.has-card {
+    background: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .a4-card-slot.is-empty {
+    background: #ffffff !important;
+  }
+
+  .show-cut-lines .a4-card-slot {
+    outline: 0.2mm solid #000000 !important;
+    outline-offset: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .crop-corner,
+  .sheet-margin-mark {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }

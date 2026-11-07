@@ -157,6 +157,34 @@ export async function getCardByNameAndSet(name: string, setCode: string): Promis
   }
 }
 
+/**
+ * Fetch a card by set code and name (e.g. set "CLB", name "Lightning Bolt").
+ */
+export async function getCardBySetAndName(setCode: string, name: string): Promise<Card | null> {
+  const cleanName = name.trim();
+  const cleanSet = setCode.trim().toLowerCase();
+  const cacheKey = `setname:${cleanSet}:${cleanName.toLowerCase()}`;
+  if (cardCache.has(cacheKey)) {
+    return cardCache.get(cacheKey)!;
+  }
+
+  try {
+    const url = `${API_BASE}/cards/search?q=${encodeURIComponent(`!"${cleanName}" set:${cleanSet}`)}&unique=prints`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.data || !Array.isArray(data.data) || data.data.length === 0) return null;
+
+    const card = parseScryfallCard(data.data[0]);
+    cardCache.set(cacheKey, card);
+    cardCache.set(`id:${card.id}`, card);
+    return card;
+  } catch (err) {
+    console.error(`Error fetching card ${name} in set ${setCode}:`, err);
+    return null;
+  }
+}
+
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function isValidUuid(value?: string): boolean {

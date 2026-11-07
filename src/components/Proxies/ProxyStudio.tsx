@@ -11,7 +11,17 @@ import {
   CheckSquare,
   Square,
   Image as ImageIcon,
+  Palette,
 } from 'lucide-react';
+
+const CROP_COLOR_PRESETS = [
+  { label: 'Preto', color: '#000000' },
+  { label: 'Branco', color: '#ffffff' },
+  { label: 'Cinza', color: '#94a3b8' },
+  { label: 'Vermelho', color: '#ef4444' },
+  { label: 'Azul', color: '#3b82f6' },
+  { label: 'Amarelo', color: '#eab308' },
+];
 
 interface ProxyStudioProps {
   proxies: ProxyItem[];
@@ -34,6 +44,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 }) => {
   const [showCutLines, setShowCutLines] = useState(true);
   const [showCropMarks, setShowCropMarks] = useState(true);
+  const [cropMarksColor, setCropMarksColor] = useState('#000000');
   const [selectedDeckId, setSelectedDeckId] = useState('');
 
   // Flatten proxies into individual card instances for exact 9-card page chunks
@@ -108,14 +119,70 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
               {showCutLines ? 'Bordas de Corte: Ativas' : 'Bordas de Corte: Desativadas'}
             </button>
 
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => setShowCropMarks(!showCropMarks)}
-            >
-              {showCropMarks ? <CheckSquare size={14} /> : <Square size={14} />}
-              Marcas de Enquadramento
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowCropMarks(!showCropMarks)}
+              >
+                {showCropMarks ? <CheckSquare size={14} /> : <Square size={14} />}
+                Marcas de Enquadramento
+              </button>
+
+              {showCropMarks && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    background: 'rgba(0,0,0,0.4)',
+                    padding: '3px 8px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                  title="Escolher a cor das marcas de enquadramento"
+                >
+                  <Palette size={13} style={{ color: '#94a3b8' }} />
+                  {CROP_COLOR_PRESETS.map((preset) => (
+                    <button
+                      key={preset.color}
+                      type="button"
+                      onClick={() => setCropMarksColor(preset.color)}
+                      title={`Cor: ${preset.label}`}
+                      style={{
+                        width: '15px',
+                        height: '15px',
+                        borderRadius: '50%',
+                        backgroundColor: preset.color,
+                        border:
+                          cropMarksColor === preset.color
+                            ? '2px solid #818cf8'
+                            : '1px solid rgba(255,255,255,0.3)',
+                        cursor: 'pointer',
+                        padding: 0,
+                        transform: cropMarksColor === preset.color ? 'scale(1.2)' : 'scale(1)',
+                        transition: 'transform 0.1s ease',
+                      }}
+                    />
+                  ))}
+                  <input
+                    type="color"
+                    value={cropMarksColor}
+                    onChange={(e) => setCropMarksColor(e.target.value)}
+                    title="Selecionar cor personalizada"
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      padding: 0,
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      background: 'transparent',
+                    }}
+                  />
+                </div>
+              )}
+            </div>
 
             {proxies.length > 0 && (
               <button
@@ -345,29 +412,120 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                   showCropMarks ? 'show-crop-marks' : ''
                 }`}
               >
-                {pageCards.map((c, cardIdx) => (
-                  <div key={cardIdx} className="a4-card-slot">
-                    <CardImage
-                      name={c.card.name}
-                      imageUrl={c.card.imageUrl}
-                      imageUrlLarge={c.card.imageUrlLarge}
-                      setCode={c.card.setCode}
-                      collectorNumber={c.card.collectorNumber}
-                      preferLarge
-                      loading="eager"
-                    />
-                  </div>
-                ))}
+                {/* Margin crop marks for the sheet cutters */}
+                {showCropMarks && (
+                  <>
+                    {/* Top edge margin ticks (pointing down) */}
+                    {[10.5, 73.5, 136.5, 199.5].map((x, i) => (
+                      <span
+                        key={`tick-top-${i}`}
+                        className="sheet-margin-mark"
+                        style={{
+                          top: 0,
+                          left: `${x}mm`,
+                          width: '0.3mm',
+                          height: '8mm',
+                          backgroundColor: cropMarksColor,
+                        }}
+                      />
+                    ))}
+                    {/* Bottom edge margin ticks (pointing up) */}
+                    {[10.5, 73.5, 136.5, 199.5].map((x, i) => (
+                      <span
+                        key={`tick-bottom-${i}`}
+                        className="sheet-margin-mark"
+                        style={{
+                          bottom: 0,
+                          left: `${x}mm`,
+                          width: '0.3mm',
+                          height: '8mm',
+                          backgroundColor: cropMarksColor,
+                        }}
+                      />
+                    ))}
+                    {/* Left edge margin ticks (pointing right) */}
+                    {[16.5, 104.5, 192.5, 280.5].map((y, i) => (
+                      <span
+                        key={`tick-left-${i}`}
+                        className="sheet-margin-mark"
+                        style={{
+                          left: 0,
+                          top: `${y}mm`,
+                          height: '0.3mm',
+                          width: '6mm',
+                          backgroundColor: cropMarksColor,
+                        }}
+                      />
+                    ))}
+                    {/* Right edge margin ticks (pointing left) */}
+                    {[16.5, 104.5, 192.5, 280.5].map((y, i) => (
+                      <span
+                        key={`tick-right-${i}`}
+                        className="sheet-margin-mark"
+                        style={{
+                          right: 0,
+                          top: `${y}mm`,
+                          height: '0.3mm',
+                          width: '6mm',
+                          backgroundColor: cropMarksColor,
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
+
+                {pageCards.map((c, cardIdx) => {
+                  const typeLine = (c.card.typeLine || '').toLowerCase();
+                  const isPlanar =
+                    typeLine.includes('plane') ||
+                    typeLine.includes('phenomenon');
+
+                  return (
+                    <div key={cardIdx} className="a4-card-slot has-card">
+                      <CardImage
+                        name={c.card.name}
+                        imageUrl={c.card.imageUrl}
+                        imageUrlLarge={c.card.imageUrlLarge}
+                        setCode={c.card.setCode}
+                        collectorNumber={c.card.collectorNumber}
+                        preferLarge
+                        loading="eager"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: isPlanar ? 'contain' : 'cover',
+                        }}
+                      />
+
+                      {showCropMarks && (
+                        <>
+                          <span
+                            className="crop-corner crop-corner-tl"
+                            style={{ borderColor: cropMarksColor }}
+                          />
+                          <span
+                            className="crop-corner crop-corner-tr"
+                            style={{ borderColor: cropMarksColor }}
+                          />
+                          <span
+                            className="crop-corner crop-corner-bl"
+                            style={{ borderColor: cropMarksColor }}
+                          />
+                          <span
+                            className="crop-corner crop-corner-br"
+                            style={{ borderColor: cropMarksColor }}
+                          />
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
 
                 {/* Fill remaining empty slots on the last page up to 9 cards */}
                 {Array.from({ length: 9 - pageCards.length }).map((_, emptyIdx) => (
                   <div
                     key={`empty-${emptyIdx}`}
-                    className="a4-card-slot"
-                    style={{
-                      background: '#fafafa',
-                      border: showCutLines ? '0.15mm dashed #ddd' : 'none',
-                    }}
+                    className="a4-card-slot is-empty"
                   />
                 ))}
               </div>

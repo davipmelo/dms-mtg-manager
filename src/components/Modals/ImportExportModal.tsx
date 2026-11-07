@@ -8,7 +8,7 @@ import {
   exportCollectionToCsv,
 } from '../../services/importer';
 import { createSystemBackup, parseSystemBackup } from '../../services/storage';
-import { getCardByName, getCardBySetAndNumber, getCardByNameAndSet } from '../../services/scryfall';
+import { getCardByName, getCardBySetAndNumber, getCardBySetAndName } from '../../services/scryfall';
 import {
   Download,
   Upload,
@@ -21,9 +21,17 @@ import {
   HardDriveDownload,
   HardDriveUpload,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Crown,
 } from 'lucide-react';
+
+export interface UnmatchedArtNotice {
+  name: string;
+  requested: string;
+  found?: string;
+  reason: 'art_not_found' | 'card_not_found';
+}
 
 interface ImportExportModalProps {
   isOpen: boolean;
@@ -67,6 +75,14 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressText, setProgressText] = useState('');
   const [parsedPreviewCount, setParsedPreviewCount] = useState<number>(0);
+  const [importWarnings, setImportWarnings] = useState<UnmatchedArtNotice[] | null>(null);
+  const [pendingImportData, setPendingImportData] = useState<{
+    cards: Array<{ card: Card; quantity: number; category: CardCategory; isFoil?: boolean }>;
+    destination: string;
+    deckName?: string;
+    deckFormat?: DeckFormat;
+    deckCommanderName?: string;
+  } | null>(null);
 
   // Export list state
   const [exportSource, setExportSource] = useState<string>(defaultDeckId || 'collection');
@@ -94,6 +110,8 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
       setBackupFileName('');
       setBackupError('');
       setBackupExportedNotice(false);
+      setImportWarnings(null);
+      setPendingImportData(null);
     }
   }, [isOpen, defaultMode, defaultDeckId]);
 
@@ -162,12 +180,15 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
     if (parsedLines.length === 0) return;
 
     setIsProcessing(true);
+    setImportWarnings(null);
+    setPendingImportData(null);
     const importedResults: Array<{
       card: Card;
       quantity: number;
       category: CardCategory;
       isFoil?: boolean;
     }> = [];
+    const unmatchedArtList: UnmatchedArtNotice[] = [];
 
     for (let i = 0; i < parsedLines.length; i++) {
       const item = parsedLines[i];
@@ -176,18 +197,42 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
       );
 
       let card: Card | null = null;
+      let exactArtMatched = false;
+
+      // 1. If setCode and collectorNumber were requested, try exact print first
       if (item.setCode && item.collectorNumber) {
         card = await getCardBySetAndNumber(item.setCode, item.collectorNumber);
+        if (card) {
+          exactArtMatched = true;
+        }
+      } else if (item.setCode) {
+        // 2. If only setCode was specified, search card within that set
+        card = await getCardBySetAndName(item.setCode, item.name);
+        if (card) {
+          exactArtMatched = true;
+        }
       }
-      if (!card && item.setCode) {
-        card = await getCardByNameAndSet(item.name, item.setCode);
-      }
+
+      // 3. Fallback to default card by name if not found in exact print
       if (!card) {
         card = await getCardByName(item.name);
       }
 
       if (card) {
         const isFoil = item.isFoil || card.isFoil;
+
+        // Check if a specific edition/art was requested but had to use fallback
+        if (item.setCode && !exactArtMatched) {
+          const reqStr = `${item.setCode}${item.collectorNumber ? ` #${item.collectorNumber}` : ''}`;
+          const foundStr = `${card.setCode} #${card.collectorNumber}`;
+          unmatchedArtList.push({
+            name: item.name,
+            requested: reqStr,
+            found: foundStr,
+            reason: 'art_not_found',
+          });
+        }
+
         importedResults.push({
           card: {
             ...card,
@@ -196,6 +241,13 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
           quantity: item.quantity,
           category: item.category,
           isFoil,
+        });
+      } else {
+        const reqStr = item.setCode ? `${item.setCode}${item.collectorNumber ? ` #${item.collectorNumber}` : ''}` : '';
+        unmatchedArtList.push({
+          name: item.name,
+          requested: reqStr,
+          reason: 'card_not_found',
         });
       }
     }
@@ -210,15 +262,51 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
           : importDestination === 'collection'
             ? 'collection'
             : importDestination;
+
+      if (unmatchedArtList.length > 0) {
+        // We have unmatched art warnings - show warning screen so user is clearly notified
+        setImportWarnings(unmatchedArtList);
+        setPendingImportData({
+          cards: importedResults,
+          destination: dest,
+          deckName: newDeckName || 'Novo Deck Importado',
+          deckFormat: newDeckFormat,
+          deckCommanderName: newDeckCommanderName.trim() || undefined,
+        });
+      } else {
+        // All cards found in exact art requested (or no specific art requested)
+        onImportComplete(
+          importedResults,
+          dest,
+          newDeckName || 'Novo Deck Importado',
+          newDeckFormat,
+          newDeckCommanderName.trim() || undefined
+        );
+        onClose();
+      }
+    } else if (unmatchedArtList.length > 0) {
+      setImportWarnings(unmatchedArtList);
+    }
+  };
+
+  const handleConfirmImportWithWarnings = () => {
+    if (pendingImportData) {
       onImportComplete(
-        importedResults,
-        dest,
-        newDeckName || 'Novo Deck Importado',
-        newDeckFormat,
-        newDeckCommanderName.trim() || undefined
+        pendingImportData.cards,
+        pendingImportData.destination,
+        pendingImportData.deckName,
+        pendingImportData.deckFormat,
+        pendingImportData.deckCommanderName
       );
+      setPendingImportData(null);
+      setImportWarnings(null);
       onClose();
     }
+  };
+
+  const handleCancelImportWarnings = () => {
+    setPendingImportData(null);
+    setImportWarnings(null);
   };
 
   // --- List Export Handlers ---
@@ -658,193 +746,279 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
               </div>
             </div>
           ) : activeTab === 'import' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#f8fafc' }}>
-                    Importação de Texto (Arena, Moxfield, LigaMagic, EDHREC)
-                  </h3>
-                  <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                    Cole sua lista em texto. O sistema reconhece formatos Arena, Moxfield, LigaMagic (inclusive nomes em português) e plain text.
-                  </p>
+            importWarnings ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                <div
+                  style={{
+                    padding: '16px',
+                    borderRadius: '12px',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                  }}
+                >
+                  <AlertTriangle
+                    size={24}
+                    className="text-amber-400"
+                    style={{ flexShrink: 0, marginTop: '2px' }}
+                  />
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc' }}>
+                      Aviso: {importWarnings.length} carta(s) não foram encontradas na arte pedida
+                    </h3>
+                    <p style={{ fontSize: '0.84rem', color: '#cbd5e1', marginTop: '4px' }}>
+                      A busca no Scryfall não localizou a edição/número específico solicitado para as cartas listadas abaixo.
+                      {pendingImportData
+                        ? ' Elas foram associadas à arte padrão disponível para que você não perca nenhuma carta.'
+                        : ''}
+                    </p>
+                  </div>
                 </div>
+
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8' }}>
+                  Lista de cartas com arte divergente ou não encontradas:
+                </div>
+
+                <div
+                  style={{
+                    maxHeight: '320px',
+                    overflowY: 'auto',
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-medium)',
+                  }}
+                >
+                  {importWarnings.map((item, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '10px 14px',
+                        borderBottom:
+                          idx < importWarnings.length - 1
+                            ? '1px solid rgba(255,255,255,0.06)'
+                            : undefined,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '8px',
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, color: '#f8fafc', fontSize: '0.9rem' }}>
+                        {item.name}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', textAlign: 'right' }}>
+                        {item.reason === 'art_not_found' ? (
+                          <span>
+                            <span style={{ color: '#f87171' }}>Pedida: {item.requested}</span>
+                            <span style={{ color: '#64748b' }}> ➔ </span>
+                            <span style={{ color: '#34d399' }}>Usada: {item.found}</span>
+                          </span>
+                        ) : (
+                          <span style={{ color: '#f87171' }}>
+                            Não encontrada no Scryfall {item.requested ? `(${item.requested})` : ''}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                  * Você pode trocar as artes de qualquer carta a qualquer momento através do botão de ilustrações (ícone de imagem).
+                </p>
               </div>
-
-              {/* Destination selector */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: '14px',
-                }}
-              >
-                <div>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: '0.8rem',
-                      color: '#94a3b8',
-                      marginBottom: '6px',
-                    }}
-                  >
-                    Destino da Importação
-                  </label>
-                  <select
-                    className="select-field"
-                    value={importDestination}
-                    onChange={(e) => setImportDestination(e.target.value)}
-                  >
-                    <option value="collection">Apenas Minha Coleção (Pool)</option>
-                    <option value="new_deck">
-                      + Criar como Novo Deck (adiciona também à coleção)
-                    </option>
-                    {decks.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        Adicionar ao Deck: {d.name}
-                      </option>
-                    ))}
-                  </select>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#f8fafc' }}>
+                      Importação de Texto (Arena, Moxfield, LigaMagic, EDHREC)
+                    </h3>
+                    <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                      Cole sua lista em texto. O sistema reconhece formatos Arena, Moxfield, LigaMagic (inclusive nomes em português) e plain text.
+                    </p>
+                  </div>
                 </div>
 
-                {importDestination === 'new_deck' && (
-                  <>
-                    <div>
-                      <label
-                        style={{
-                          display: 'block',
-                          fontSize: '0.8rem',
-                          color: '#94a3b8',
-                          marginBottom: '6px',
-                        }}
-                      >
-                        Nome do Novo Deck
-                      </label>
-                      <input
-                        type="text"
-                        className="input-text"
-                        placeholder="Ex: Atraxa Reanimator..."
-                        value={newDeckName}
-                        onChange={(e) => setNewDeckName(e.target.value)}
-                      />
-                    </div>
+                {/* Destination selector */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '14px',
+                  }}
+                >
+                  <div>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.8rem',
+                        color: '#94a3b8',
+                        marginBottom: '6px',
+                      }}
+                    >
+                      Destino da Importação
+                    </label>
+                    <select
+                      className="select-field"
+                      value={importDestination}
+                      onChange={(e) => setImportDestination(e.target.value)}
+                    >
+                      <option value="collection">Apenas Minha Coleção (Pool)</option>
+                      <option value="new_deck">
+                        + Criar como Novo Deck (adiciona também à coleção)
+                      </option>
+                      {decks.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          Adicionar ao Deck: {d.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                    <div>
-                      <label
-                        style={{
-                          display: 'block',
-                          fontSize: '0.8rem',
-                          color: '#94a3b8',
-                          marginBottom: '6px',
-                        }}
-                      >
-                        Formato do Deck
-                      </label>
-                      <select
-                        className="select-field"
-                        value={newDeckFormat}
-                        onChange={(e) => setNewDeckFormat(e.target.value as DeckFormat)}
-                      >
-                        <option value="commander">Commander / EDH (100 cartas)</option>
-                        <option value="brawl">Brawl (60 cartas com comandante)</option>
-                        <option value="standard">Standard (60 cartas)</option>
-                        <option value="modern">Modern (60 cartas)</option>
-                        <option value="pioneer">Pioneer (60 cartas)</option>
-                        <option value="pauper">Pauper (60 cartas)</option>
-                        <option value="legacy">Legacy (60 cartas)</option>
-                        <option value="vintage">Vintage (60 cartas)</option>
-                        <option value="casual">Casual (Livre)</option>
-                      </select>
-                    </div>
-
-                    {(newDeckFormat === 'commander' || newDeckFormat === 'brawl') && (
-                      <div style={{ gridColumn: '1 / -1' }}>
+                  {importDestination === 'new_deck' && (
+                    <>
+                      <div>
                         <label
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
+                            display: 'block',
                             fontSize: '0.8rem',
-                            color: '#ffbb00',
-                            fontWeight: 600,
+                            color: '#94a3b8',
                             marginBottom: '6px',
                           }}
                         >
-                          <Crown size={14} />
-                          Comandante do Deck
+                          Nome do Novo Deck
                         </label>
                         <input
                           type="text"
                           className="input-text"
-                          placeholder="Digite o nome do comandante (ex: Atraxa, Praetors' Voice)..."
-                          value={newDeckCommanderName}
-                          onChange={(e) => setNewDeckCommanderName(e.target.value)}
+                          placeholder="Ex: Atraxa Reanimator..."
+                          value={newDeckName}
+                          onChange={(e) => setNewDeckName(e.target.value)}
                         />
-                        <span style={{ fontSize: '0.75rem', color: '#71717a', marginTop: '4px', display: 'block' }}>
-                          Será definido como comandante oficial e capa do novo deck.
-                        </span>
                       </div>
-                    )}
-                  </>
-                )}
-              </div>
 
-              {/* Text Area */}
-              <div>
-                <textarea
-                  className="textarea-field"
-                  rows={10}
-                  placeholder={`Exemplo MTG Arena:\n4 Lightning Bolt (CLB) 187\n1 Sol Ring (C21) 263\n\nExemplo Moxfield / LigaMagic:\n4x Raio\n1 Sol Ring\n1 Atraxa, Praetors' Voice`}
-                  value={importText}
-                  onChange={(e) => handleTextChange(e.target.value)}
-                  style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}
-                />
-              </div>
+                      <div>
+                        <label
+                          style={{
+                            display: 'block',
+                            fontSize: '0.8rem',
+                            color: '#94a3b8',
+                            marginBottom: '6px',
+                          }}
+                        >
+                          Formato do Deck
+                        </label>
+                        <select
+                          className="select-field"
+                          value={newDeckFormat}
+                          onChange={(e) => setNewDeckFormat(e.target.value as DeckFormat)}
+                        >
+                          <option value="commander">Commander / EDH (100 cartas)</option>
+                          <option value="brawl">Brawl (60 cartas com comandante)</option>
+                          <option value="standard">Standard (60 cartas)</option>
+                          <option value="modern">Modern (60 cartas)</option>
+                          <option value="pioneer">Pioneer (60 cartas)</option>
+                          <option value="pauper">Pauper (60 cartas)</option>
+                          <option value="legacy">Legacy (60 cartas)</option>
+                          <option value="vintage">Vintage (60 cartas)</option>
+                          <option value="casual">Casual (Livre)</option>
+                        </select>
+                      </div>
 
-              {/* Summary / Status */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '10px 14px',
-                  background: 'rgba(18, 23, 34, 0.6)',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-subtle)',
-                }}
-              >
+                      {(newDeckFormat === 'commander' || newDeckFormat === 'brawl') && (
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '0.8rem',
+                              color: '#ffbb00',
+                              fontWeight: 600,
+                              marginBottom: '6px',
+                            }}
+                          >
+                            <Crown size={14} />
+                            Comandante do Deck
+                          </label>
+                          <input
+                            type="text"
+                            className="input-text"
+                            placeholder="Digite o nome do comandante (ex: Atraxa, Praetors' Voice)..."
+                            value={newDeckCommanderName}
+                            onChange={(e) => setNewDeckCommanderName(e.target.value)}
+                          />
+                          <span style={{ fontSize: '0.75rem', color: '#71717a', marginTop: '4px', display: 'block' }}>
+                            Será definido como comandante oficial e capa do novo deck.
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Text Area */}
+                <div>
+                  <textarea
+                    className="textarea-field"
+                    rows={10}
+                    placeholder={`Exemplo MTG Arena:\n4 Lightning Bolt (CLB) 187\n1 Sol Ring (C21) 263\n\nExemplo Moxfield / LigaMagic:\n4x Raio\n1 Sol Ring\n1 Atraxa, Praetors' Voice`}
+                    value={importText}
+                    onChange={(e) => handleTextChange(e.target.value)}
+                    style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}
+                  />
+                </div>
+
+                {/* Summary / Status */}
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '0.85rem',
-                    color: '#cbd5e1',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    background: 'rgba(18, 23, 34, 0.6)',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-subtle)',
                   }}
                 >
-                  <FileText size={16} className="text-indigo-400" />
-                  <span>
-                    {parsedPreviewCount > 0
-                      ? `${parsedPreviewCount} cartas detectadas prontas para importar`
-                      : 'Cole uma lista acima para iniciar a leitura'}
-                  </span>
-                </div>
-
-                {isProcessing && (
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      color: '#a5b4fc',
                       fontSize: '0.85rem',
+                      color: '#cbd5e1',
                     }}
                   >
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>{progressText}</span>
+                    <FileText size={16} className="text-indigo-400" />
+                    <span>
+                      {parsedPreviewCount > 0
+                        ? `${parsedPreviewCount} cartas detectadas prontas para importar`
+                        : 'Cole uma lista acima para iniciar a leitura'}
+                    </span>
                   </div>
-                )}
+
+                  {isProcessing && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: '#a5b4fc',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>{progressText}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )
           ) : (
             /* Export Tab */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -955,30 +1129,53 @@ export const ImportExportModal: React.FC<ImportExportModalProps> = ({
               background: 'rgba(18, 23, 34, 0.8)',
             }}
           >
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={onClose}
-              disabled={isProcessing}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={isProcessing || parsedPreviewCount === 0}
-              onClick={handleStartImport}
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" /> Processando...
-                </>
-              ) : (
-                <>
-                  <Upload size={16} /> Iniciar Importação
-                </>
-              )}
-            </button>
+            {importWarnings ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={handleCancelImportWarnings}
+                >
+                  Voltar e Editar Lista
+                </button>
+                {pendingImportData && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleConfirmImportWithWarnings}
+                  >
+                    <Check size={16} /> Concluir e Salvar Importação ({pendingImportData.cards.length} cartas)
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={onClose}
+                  disabled={isProcessing}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={isProcessing || parsedPreviewCount === 0}
+                  onClick={handleStartImport}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Processando...
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={16} /> Iniciar Importação
+                    </>
+                  )}
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
