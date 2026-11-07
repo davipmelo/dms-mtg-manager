@@ -472,12 +472,17 @@ dialog.custom-modal[open] {
 /* =========================================================================
    A4 PROXY PRINTING STYLES (9 Cards Per Page: 3 cols x 3 rows, 63mm x 88mm)
    ========================================================================= */
+.a4-page-wrapper {
+  margin-bottom: 30px;
+  display: block;
+}
+
 .a4-page-sheet {
   width: 210mm;
   height: 297mm;
   padding: 16.5mm 10.5mm;
-  background: white;
-  margin: 0 auto 30px auto;
+  background: #ffffff;
+  margin: 0 auto;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
   display: grid;
   grid-template-columns: repeat(3, 63mm);
@@ -486,8 +491,6 @@ dialog.custom-modal[open] {
   justify-content: center;
   align-content: center;
   position: relative;
-  page-break-after: always;
-  break-after: page;
   box-sizing: border-box;
 }
 
@@ -505,9 +508,9 @@ dialog.custom-modal[open] {
   background: transparent;
 }
 
-/* Requirement 6: Fill empty space and rounded corners with black ONLY when there is a card */
+/* Fill empty space and rounded corners with black/white bleed ONLY when there is a card */
 .a4-card-slot.has-card {
-  background: #000000;
+  background: var(--card-bleed-bg, #000000);
 }
 
 .a4-card-slot.is-empty {
@@ -518,20 +521,21 @@ dialog.custom-modal[open] {
   width: 100%;
   height: 100%;
   display: block;
+  object-fit: cover;
 }
 
-/* Requirement 4: Cut lines as thin black lines on the outside of the arts */
+/* Cut lines as thin lines on the outside of the arts (customizable) */
 .show-cut-lines .a4-card-slot {
-  outline: 0.2mm solid #000000;
+  outline: var(--cut-line-width, 0.25mm) var(--cut-line-style, solid) var(--cut-line-color, #000000);
   outline-offset: 0;
   z-index: 2;
 }
 
-/* Requirement 7: Crop marks (marcas de enquadramento) with customizable color */
+/* Crop marks (marcas de enquadramento) with customizable color and thickness */
 .crop-corner {
   position: absolute;
-  width: 3.5mm;
-  height: 3.5mm;
+  width: var(--crop-corner-size, 4mm);
+  height: var(--crop-corner-size, 4mm);
   pointer-events: none;
   z-index: 10;
   box-sizing: border-box;
@@ -539,26 +543,26 @@ dialog.custom-modal[open] {
 .crop-corner-tl {
   top: 0;
   left: 0;
-  border-top: 0.35mm solid;
-  border-left: 0.35mm solid;
+  border-top: var(--crop-mark-width, 0.35mm) solid var(--crop-mark-color, #000000);
+  border-left: var(--crop-mark-width, 0.35mm) solid var(--crop-mark-color, #000000);
 }
 .crop-corner-tr {
   top: 0;
   right: 0;
-  border-top: 0.35mm solid;
-  border-right: 0.35mm solid;
+  border-top: var(--crop-mark-width, 0.35mm) solid var(--crop-mark-color, #000000);
+  border-right: var(--crop-mark-width, 0.35mm) solid var(--crop-mark-color, #000000);
 }
 .crop-corner-bl {
   bottom: 0;
   left: 0;
-  border-bottom: 0.35mm solid;
-  border-left: 0.35mm solid;
+  border-bottom: var(--crop-mark-width, 0.35mm) solid var(--crop-mark-color, #000000);
+  border-left: var(--crop-mark-width, 0.35mm) solid var(--crop-mark-color, #000000);
 }
 .crop-corner-br {
   bottom: 0;
   right: 0;
-  border-bottom: 0.35mm solid;
-  border-right: 0.35mm solid;
+  border-bottom: var(--crop-mark-width, 0.35mm) solid var(--crop-mark-color, #000000);
+  border-right: var(--crop-mark-width, 0.35mm) solid var(--crop-mark-color, #000000);
 }
 
 /* Sheet margin ruler marks for cutting */
@@ -688,33 +692,60 @@ dialog.custom-modal[open] {
 
 @media print {
   @page {
-    size: A4 portrait;
+    size: 210mm 297mm;
     margin: 0;
   }
 
   html, body {
     width: 210mm !important;
-    height: 297mm !important;
+    height: auto !important;
+    min-height: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
+    overflow: visible !important;
   }
 
-  /* Hide everything except the proxy printing sheet container */
+  /* CRITICAL: Reset all ancestor layout containers to prevent extra margins from triggering blank pages */
+  .app-container,
+  .main-content-container,
+  main,
+  .glass-panel {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    width: 210mm !important;
+    max-width: 210mm !important;
+    overflow: visible !important;
+  }
+
+  /* Hide everything except printable sheets */
   .no-print,
   nav,
   header,
   footer,
   aside,
   button,
+  .modal-backdrop,
   .print-hide {
     display: none !important;
   }
 
   .a4-print-container {
     display: block !important;
+    width: 210mm !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+
+  .a4-page-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    display: block !important;
   }
 
   .a4-page-sheet {
@@ -723,11 +754,23 @@ dialog.custom-modal[open] {
     padding: 16.5mm 10.5mm !important;
     width: 210mm !important;
     height: 297mm !important;
+    max-height: 297mm !important;
+    min-height: 297mm !important;
+    overflow: hidden !important; /* CRITICAL: prevents any 0.01px subpixel overflow from pushing an empty page! */
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
     page-break-after: always !important;
     break-after: page !important;
-    box-sizing: border-box !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* CRITICAL: Prevent blank page after the last sheet! */
+  .a4-page-wrapper:last-child .a4-page-sheet,
+  .a4-page-sheet:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 
   .a4-card-slot {
@@ -744,7 +787,7 @@ dialog.custom-modal[open] {
   }
 
   .a4-card-slot.has-card {
-    background: #000000 !important;
+    background: var(--card-bleed-bg, #000000) !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -754,7 +797,7 @@ dialog.custom-modal[open] {
   }
 
   .show-cut-lines .a4-card-slot {
-    outline: 0.2mm solid #000000 !important;
+    outline: var(--cut-line-width, 0.25mm) var(--cut-line-style, solid) var(--cut-line-color, #000000) !important;
     outline-offset: 0 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;

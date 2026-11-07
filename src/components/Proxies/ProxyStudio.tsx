@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { ProxyItem, Deck, Card, TokenCard } from '../../types';
 import { CardImage } from '../Common/CardImage';
 import {
+  generateProxiesPdf,
+  ProxyPdfOptions,
+  DEFAULT_PROXY_PDF_OPTIONS,
+} from '../../services/proxyPdfService';
+import {
   Printer,
   Trash2,
   Plus,
@@ -12,12 +17,21 @@ import {
   Square,
   Image as ImageIcon,
   Palette,
+  Sliders,
+  Download,
+  Loader2,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  HelpCircle,
 } from 'lucide-react';
 
-const CROP_COLOR_PRESETS = [
+const COLOR_PRESETS = [
   { label: 'Preto', color: '#000000' },
+  { label: 'Cinza Escuro', color: '#475569' },
+  { label: 'Cinza Claro', color: '#cbd5e1' },
   { label: 'Branco', color: '#ffffff' },
-  { label: 'Cinza', color: '#94a3b8' },
   { label: 'Vermelho', color: '#ef4444' },
   { label: 'Azul', color: '#3b82f6' },
   { label: 'Amarelo', color: '#eab308' },
@@ -42,10 +56,29 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
   onOpenArtSelector,
   decks,
 }) => {
-  const [showCutLines, setShowCutLines] = useState(true);
-  const [showCropMarks, setShowCropMarks] = useState(true);
-  const [cropMarksColor, setCropMarksColor] = useState('#000000');
-  const [selectedDeckId, setSelectedDeckId] = useState('');
+  // Cut lines state
+  const [showCutLines, setShowCutLines] = useState<boolean>(true);
+  const [cutLinesColor, setCutLinesColor] = useState<string>('#000000');
+  const [cutLinesThickness, setCutLinesThickness] = useState<number>(0.25);
+  const [cutLinesStyle, setCutLinesStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
+
+  // Crop marks state
+  const [showCropMarks, setShowCropMarks] = useState<boolean>(true);
+  const [cropMarksColor, setCropMarksColor] = useState<string>('#000000');
+  const [cropMarksThickness, setCropMarksThickness] = useState<number>(0.35);
+  const [cropMarksLength, setCropMarksLength] = useState<number>(8);
+  const [showMarginTicks, setShowMarginTicks] = useState<boolean>(true);
+  const [showCornerMarks, setShowCornerMarks] = useState<boolean>(true);
+
+  // Card finish & metadata
+  const [cardBleedBg, setCardBleedBg] = useState<'black' | 'white'>('black');
+  const [showSheetMetadata, setShowSheetMetadata] = useState<boolean>(true);
+
+  // UI state
+  const [isAdvancedControlsOpen, setIsAdvancedControlsOpen] = useState<boolean>(true);
+  const [selectedDeckId, setSelectedDeckId] = useState<string>('');
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
+  const [pdfProgress, setPdfProgress] = useState<{ current: number; total: number; percentage: number } | null>(null);
 
   // Flatten proxies into individual card instances for exact 9-card page chunks
   // If an un-split double-faced card is present in the queue, expand each copy to Front then Back
@@ -87,8 +120,52 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
     pages.push(expandedCards.slice(p * 9, (p + 1) * 9));
   }
 
+  // Print using clean native print dialog (no blank pages)
   const handlePrint = () => {
     window.print();
+  };
+
+  // Direct PDF download using jsPDF
+  const handleDownloadPdf = async () => {
+    if (pages.length === 0 || expandedCards.length === 0) return;
+    setIsDownloadingPdf(true);
+    setPdfProgress({ current: 0, total: expandedCards.length, percentage: 0 });
+
+    try {
+      const pdfOptions: ProxyPdfOptions = {
+        showCutLines,
+        cutLinesColor,
+        cutLinesThickness,
+        cutLinesStyle,
+        showCropMarks,
+        cropMarksColor,
+        cropMarksThickness,
+        cropMarksLength,
+        showMarginTicks,
+        showCornerMarks,
+        cardBleedBg,
+        showSheetMetadata,
+      };
+
+      const blob = await generateProxiesPdf(pages, pdfOptions, (prog) => {
+        setPdfProgress(prog);
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `proxies_mtg_A4_${expandedCards.length}_cartas.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } catch (err: any) {
+      console.error('Error generating proxy PDF:', err);
+      alert(err?.message || 'Erro ao gerar o PDF de proxies.');
+    } finally {
+      setIsDownloadingPdf(false);
+      setPdfProgress(null);
+    }
   };
 
   const handleAddDeck = () => {
@@ -96,6 +173,64 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
     if (deck) {
       onAddDeckToProxies(deck);
       setSelectedDeckId('');
+    }
+  };
+
+  // 1-Click Presets
+  const applyPreset = (preset: 'guillotine' | 'hobbyknife' | 'minimal' | 'economical') => {
+    switch (preset) {
+      case 'guillotine':
+        setShowCutLines(true);
+        setCutLinesColor('#000000');
+        setCutLinesThickness(0.25);
+        setCutLinesStyle('solid');
+        setShowCropMarks(true);
+        setCropMarksColor('#000000');
+        setCropMarksThickness(0.35);
+        setCropMarksLength(12);
+        setShowMarginTicks(true);
+        setShowCornerMarks(true);
+        setCardBleedBg('black');
+        break;
+
+      case 'hobbyknife':
+        setShowCutLines(true);
+        setCutLinesColor('#475569');
+        setCutLinesThickness(0.2);
+        setCutLinesStyle('dashed');
+        setShowCropMarks(true);
+        setCropMarksColor('#000000');
+        setCropMarksThickness(0.35);
+        setCropMarksLength(8);
+        setShowMarginTicks(true);
+        setShowCornerMarks(true);
+        setCardBleedBg('black');
+        break;
+
+      case 'minimal':
+        setShowCutLines(false);
+        setShowCropMarks(true);
+        setCropMarksColor('#000000');
+        setCropMarksThickness(0.3);
+        setCropMarksLength(8);
+        setShowMarginTicks(true);
+        setShowCornerMarks(false);
+        setCardBleedBg('black');
+        break;
+
+      case 'economical':
+        setShowCutLines(true);
+        setCutLinesColor('#cbd5e1');
+        setCutLinesThickness(0.2);
+        setCutLinesStyle('solid');
+        setShowCropMarks(true);
+        setCropMarksColor('#94a3b8');
+        setCropMarksThickness(0.25);
+        setCropMarksLength(6);
+        setShowMarginTicks(true);
+        setShowCornerMarks(true);
+        setCardBleedBg('white');
+        break;
     }
   };
 
@@ -123,98 +258,24 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                 gap: '10px',
               }}
             >
-              <Printer className="text-indigo-400" size={24} />
+              <Printer className="text-amber-400" size={24} />
               Estúdio de Impressão de Proxies (A4 — 9 cartas por folha)
             </h2>
             <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '4px' }}>
-              Diagramação exata de 63mm × 88mm com guias de corte. Total:{' '}
-              <strong>{expandedCards.length} cartas</strong> em{' '}
-              <strong>{totalPages} página(s) A4</strong>. Dica: na janela de impressão, escolha{' '}
-              <em>"Salvar como PDF"</em>, escala <em>100%</em> e margens <em>Nenhuma</em>.
+              Diagramação exata de 63mm × 88mm com guias de corte e sem páginas em branco. Total:{' '}
+              <strong style={{ color: '#f8fafc' }}>{expandedCards.length} cartas</strong> em{' '}
+              <strong style={{ color: '#ffbb00' }}>{totalPages} folha(s) A4</strong>.
             </p>
           </div>
 
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => setShowCutLines(!showCutLines)}
-            >
-              <Scissors size={14} />
-              {showCutLines ? 'Bordas de Corte: Ativas' : 'Bordas de Corte: Desativadas'}
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => setShowCropMarks(!showCropMarks)}
-              >
-                {showCropMarks ? <CheckSquare size={14} /> : <Square size={14} />}
-                Marcas de Enquadramento
-              </button>
-
-              {showCropMarks && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    background: 'rgba(0,0,0,0.4)',
-                    padding: '3px 8px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border-subtle)',
-                  }}
-                  title="Escolher a cor das marcas de enquadramento"
-                >
-                  <Palette size={13} style={{ color: '#94a3b8' }} />
-                  {CROP_COLOR_PRESETS.map((preset) => (
-                    <button
-                      key={preset.color}
-                      type="button"
-                      onClick={() => setCropMarksColor(preset.color)}
-                      title={`Cor: ${preset.label}`}
-                      style={{
-                        width: '15px',
-                        height: '15px',
-                        borderRadius: '50%',
-                        backgroundColor: preset.color,
-                        border:
-                          cropMarksColor === preset.color
-                            ? '2px solid #818cf8'
-                            : '1px solid rgba(255,255,255,0.3)',
-                        cursor: 'pointer',
-                        padding: 0,
-                        transform: cropMarksColor === preset.color ? 'scale(1.2)' : 'scale(1)',
-                        transition: 'transform 0.1s ease',
-                      }}
-                    />
-                  ))}
-                  <input
-                    type="color"
-                    value={cropMarksColor}
-                    onChange={(e) => setCropMarksColor(e.target.value)}
-                    title="Selecionar cor personalizada"
-                    style={{
-                      width: '18px',
-                      height: '18px',
-                      padding: 0,
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      background: 'transparent',
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
             {proxies.length > 0 && (
               <button
                 type="button"
                 className="btn btn-ghost btn-sm text-red-400"
                 onClick={onClearAll}
+                disabled={isDownloadingPdf}
               >
                 <Trash2 size={14} /> Limpar Fila
               </button>
@@ -222,9 +283,28 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
             <button
               type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleDownloadPdf}
+              disabled={expandedCards.length === 0 || isDownloadingPdf}
+              title="Baixar arquivo PDF A4 compilado pronto para impressão"
+            >
+              {isDownloadingPdf ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" /> Gerando PDF ({pdfProgress?.percentage || 0}%)...
+                </>
+              ) : (
+                <>
+                  <Download size={14} /> Baixar PDF Direto (A4)
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
               className="btn btn-primary"
               onClick={handlePrint}
-              disabled={expandedCards.length === 0}
+              disabled={expandedCards.length === 0 || isDownloadingPdf}
+              title="Abrir diálogo de impressão do navegador ou salvar PDF com escala 100%"
             >
               <Printer size={16} /> Imprimir / Salvar PDF (A4)
             </button>
@@ -267,6 +347,368 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
           >
             <Plus size={14} /> Adicionar Deck à Fila
           </button>
+        </div>
+
+        {/* Customizable Cut Lines & Crop Marks Controls Bar */}
+        <div
+          style={{
+            marginTop: '18px',
+            paddingTop: '16px',
+            borderTop: '1px solid var(--border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setIsAdvancedControlsOpen(!isAdvancedControlsOpen)}
+              style={{ padding: '4px 8px', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Sliders size={15} className="text-amber-400" />
+              <span style={{ fontWeight: 600 }}>Controles Avançados de Corte e Enquadramento</span>
+              {isAdvancedControlsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+
+            {/* Quick 1-Click Presets */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Presets:</span>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => applyPreset('guillotine')}
+                style={{ fontSize: '0.72rem', padding: '3px 8px' }}
+                title="Linhas contínuas pretas + réguas de margem longas"
+              >
+                Guilhotina / Régua
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => applyPreset('hobbyknife')}
+                style={{ fontSize: '0.72rem', padding: '3px 8px' }}
+                title="Linhas tracejadas cinzas + cantoneiras nos cards"
+              >
+                Estilete Manual
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => applyPreset('minimal')}
+                style={{ fontSize: '0.72rem', padding: '3px 8px' }}
+                title="Sem bordas, apenas marcas de corte"
+              >
+                Minimalista
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => applyPreset('economical')}
+                style={{ fontSize: '0.72rem', padding: '3px 8px' }}
+                title="Linhas cinza claro + cantos brancos para economia de tinta"
+              >
+                Econômico
+              </button>
+            </div>
+          </div>
+
+          {isAdvancedControlsOpen && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '16px',
+                background: 'rgba(0, 0, 0, 0.25)',
+                padding: '16px',
+                borderRadius: '12px',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              {/* 1. Bordas de Corte */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Scissors size={15} className="text-amber-400" /> Bordas de Corte das Cartas
+                  </label>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${showCutLines ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setShowCutLines(!showCutLines)}
+                    style={{ fontSize: '0.72rem', padding: '2px 8px' }}
+                  >
+                    {showCutLines ? 'Ativadas' : 'Desativadas'}
+                  </button>
+                </div>
+
+                {showCutLines && (
+                  <>
+                    {/* Cut lines color */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                      <span style={{ color: '#94a3b8' }}>Cor da linha:</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        {COLOR_PRESETS.map((p) => (
+                          <button
+                            key={p.color}
+                            type="button"
+                            onClick={() => setCutLinesColor(p.color)}
+                            title={`Cor: ${p.label}`}
+                            style={{
+                              width: '15px',
+                              height: '15px',
+                              borderRadius: '50%',
+                              backgroundColor: p.color,
+                              border: cutLinesColor === p.color ? '2px solid #ffbb00' : '1px solid rgba(255,255,255,0.3)',
+                              cursor: 'pointer',
+                              padding: 0,
+                              transform: cutLinesColor === p.color ? 'scale(1.2)' : 'scale(1)',
+                            }}
+                          />
+                        ))}
+                        <input
+                          type="color"
+                          value={cutLinesColor}
+                          onChange={(e) => setCutLinesColor(e.target.value)}
+                          title="Cor personalizada"
+                          style={{ width: '18px', height: '18px', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Cut lines thickness */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                      <span style={{ color: '#94a3b8' }}>Espessura:</span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {[
+                          { label: '0.15mm (Fina)', val: 0.15 },
+                          { label: '0.25mm (Padrão)', val: 0.25 },
+                          { label: '0.40mm (Média)', val: 0.4 },
+                          { label: '0.60mm (Grossa)', val: 0.6 },
+                        ].map((th) => (
+                          <button
+                            key={th.val}
+                            type="button"
+                            className={`btn btn-sm ${cutLinesThickness === th.val ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => setCutLinesThickness(th.val)}
+                            style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                          >
+                            {th.val}mm
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Cut lines style */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                      <span style={{ color: '#94a3b8' }}>Estilo de linha:</span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {[
+                          { label: 'Sólida', val: 'solid' as const },
+                          { label: 'Tracejada', val: 'dashed' as const },
+                          { label: 'Pontilhada', val: 'dotted' as const },
+                        ].map((st) => (
+                          <button
+                            key={st.val}
+                            type="button"
+                            className={`btn btn-sm ${cutLinesStyle === st.val ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => setCutLinesStyle(st.val)}
+                            style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                          >
+                            {st.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* 2. Marcas de Enquadramento */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckSquare size={15} className="text-amber-400" /> Marcas de Enquadramento (Crop Marks)
+                  </label>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${showCropMarks ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setShowCropMarks(!showCropMarks)}
+                    style={{ fontSize: '0.72rem', padding: '2px 8px' }}
+                  >
+                    {showCropMarks ? 'Ativadas' : 'Desativadas'}
+                  </button>
+                </div>
+
+                {showCropMarks && (
+                  <>
+                    {/* Crop marks color */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                      <span style={{ color: '#94a3b8' }}>Cor das marcas:</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        {COLOR_PRESETS.map((p) => (
+                          <button
+                            key={`crop-${p.color}`}
+                            type="button"
+                            onClick={() => setCropMarksColor(p.color)}
+                            title={`Cor: ${p.label}`}
+                            style={{
+                              width: '15px',
+                              height: '15px',
+                              borderRadius: '50%',
+                              backgroundColor: p.color,
+                              border: cropMarksColor === p.color ? '2px solid #ffbb00' : '1px solid rgba(255,255,255,0.3)',
+                              cursor: 'pointer',
+                              padding: 0,
+                              transform: cropMarksColor === p.color ? 'scale(1.2)' : 'scale(1)',
+                            }}
+                          />
+                        ))}
+                        <input
+                          type="color"
+                          value={cropMarksColor}
+                          onChange={(e) => setCropMarksColor(e.target.value)}
+                          title="Cor personalizada"
+                          style={{ width: '18px', height: '18px', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Crop marks thickness */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                      <span style={{ color: '#94a3b8' }}>Espessura:</span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {[
+                          { label: '0.20mm', val: 0.2 },
+                          { label: '0.35mm', val: 0.35 },
+                          { label: '0.50mm', val: 0.5 },
+                          { label: '0.75mm', val: 0.75 },
+                        ].map((th) => (
+                          <button
+                            key={th.val}
+                            type="button"
+                            className={`btn btn-sm ${cropMarksThickness === th.val ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => setCropMarksThickness(th.val)}
+                            style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                          >
+                            {th.val}mm
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Crop marks length & toggles */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                      <span style={{ color: '#94a3b8' }}>Comprimento:</span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {[
+                          { label: '5mm', val: 5 },
+                          { label: '8mm', val: 8 },
+                          { label: '12mm', val: 12 },
+                          { label: '16mm', val: 16 },
+                        ].map((len) => (
+                          <button
+                            key={len.val}
+                            type="button"
+                            className={`btn btn-sm ${cropMarksLength === len.val ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => setCropMarksLength(len.val)}
+                            style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+                          >
+                            {len.val}mm
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '0.76rem', color: '#cbd5e1', paddingTop: '2px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={showMarginTicks}
+                          onChange={(e) => setShowMarginTicks(e.target.checked)}
+                          style={{ accentColor: '#ffbb00' }}
+                        />
+                        <span>Réguas de Margem</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={showCornerMarks}
+                          onChange={(e) => setShowCornerMarks(e.target.checked)}
+                          style={{ accentColor: '#ffbb00' }}
+                        />
+                        <span>Cantoneiras nos Cards</span>
+                      </label>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* 3. Acabamento & Sangria */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Palette size={15} className="text-amber-400" /> Acabamento & Sangria
+                </label>
+
+                {/* Card Bleed Background */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                  <span style={{ color: '#94a3b8' }}>Sangria dos cantos:</span>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${cardBleedBg === 'black' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setCardBleedBg('black')}
+                      style={{ fontSize: '0.7rem', padding: '2px 8px' }}
+                      title="Preenchimento preto em volta dos cantos arredondados (padrão MTG)"
+                    >
+                      Preto (MTG)
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${cardBleedBg === 'white' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setCardBleedBg('white')}
+                      style={{ fontSize: '0.7rem', padding: '2px 8px' }}
+                      title="Preenchimento branco para economia de toner/tinta"
+                    >
+                      Branco (Econômico)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sheet Metadata Toggle */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#cbd5e1', cursor: 'pointer', marginTop: '4px' }}>
+                  <input
+                    type="checkbox"
+                    checked={showSheetMetadata}
+                    onChange={(e) => setShowSheetMetadata(e.target.checked)}
+                    style={{ accentColor: '#ffbb00' }}
+                  />
+                  <span>Exibir rodapé de identificação (Folha X de Y) na margem externa</span>
+                </label>
+
+                {/* Printing Tip */}
+                <div
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 187, 0, 0.08)',
+                    border: '1px solid rgba(255, 187, 0, 0.25)',
+                    fontSize: '0.72rem',
+                    color: '#ffdd66',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '6px',
+                    marginTop: 'auto',
+                  }}
+                >
+                  <HelpCircle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
+                  <span>
+                    No diálogo de impressão: selecione <strong>Escala: 100% (Padrão)</strong> e <strong>Margens: Nenhuma</strong> para cartas exatamente em 63mm × 88mm sem páginas em branco.
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -448,7 +890,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
           </div>
         ) : (
           pages.map((pageCards, pageIdx) => (
-            <div key={pageIdx} style={{ marginBottom: '30px' }}>
+            <div key={pageIdx} className="a4-page-wrapper">
               <div
                 className="print-hide"
                 style={{
@@ -458,17 +900,23 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                   fontSize: '0.85rem',
                 }}
               >
-                Página {pageIdx + 1} de {totalPages} ({pageCards.length} cartas)
+                Folha {pageIdx + 1} de {totalPages} ({pageCards.length} cartas)
               </div>
 
               {/* The exact A4 Sheet element */}
               <div
-                className={`a4-page-sheet ${showCutLines ? 'show-cut-lines' : ''} ${
-                  showCropMarks ? 'show-crop-marks' : ''
-                }`}
+                className={`a4-page-sheet ${showCutLines ? 'show-cut-lines' : ''}`}
+                style={{
+                  '--cut-line-color': cutLinesColor,
+                  '--cut-line-width': `${cutLinesThickness}mm`,
+                  '--cut-line-style': cutLinesStyle,
+                  '--crop-mark-color': cropMarksColor,
+                  '--crop-mark-width': `${cropMarksThickness}mm`,
+                  '--card-bleed-bg': cardBleedBg === 'white' ? '#ffffff' : '#000000',
+                } as React.CSSProperties}
               >
-                {/* Margin crop marks for the sheet cutters */}
-                {showCropMarks && (
+                {/* Margin crop marks for sheet cutters */}
+                {showCropMarks && showMarginTicks && (
                   <>
                     {/* Top edge margin ticks (pointing down) */}
                     {[10.5, 73.5, 136.5, 199.5].map((x, i) => (
@@ -478,8 +926,8 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                         style={{
                           top: 0,
                           left: `${x}mm`,
-                          width: '0.3mm',
-                          height: '8mm',
+                          width: `${cropMarksThickness}mm`,
+                          height: `${cropMarksLength}mm`,
                           backgroundColor: cropMarksColor,
                         }}
                       />
@@ -492,8 +940,8 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                         style={{
                           bottom: 0,
                           left: `${x}mm`,
-                          width: '0.3mm',
-                          height: '8mm',
+                          width: `${cropMarksThickness}mm`,
+                          height: `${cropMarksLength}mm`,
                           backgroundColor: cropMarksColor,
                         }}
                       />
@@ -506,8 +954,8 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                         style={{
                           left: 0,
                           top: `${y}mm`,
-                          height: '0.3mm',
-                          width: '6mm',
+                          height: `${cropMarksThickness}mm`,
+                          width: `${cropMarksLength}mm`,
                           backgroundColor: cropMarksColor,
                         }}
                       />
@@ -520,8 +968,8 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                         style={{
                           right: 0,
                           top: `${y}mm`,
-                          height: '0.3mm',
-                          width: '6mm',
+                          height: `${cropMarksThickness}mm`,
+                          width: `${cropMarksLength}mm`,
                           backgroundColor: cropMarksColor,
                         }}
                       />
@@ -529,6 +977,31 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                   </>
                 )}
 
+                {/* Sheet Metadata Header outside of cutting area */}
+                {showSheetMetadata && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '6mm',
+                      left: '10.5mm',
+                      right: '10.5mm',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '8px',
+                      color: '#64748b',
+                      pointerEvents: 'none',
+                      zIndex: 12,
+                      letterSpacing: '0.4px',
+                    }}
+                  >
+                    <span>DMS MTG MANAGER • PROXY STUDIO (A4)</span>
+                    <span style={{ fontWeight: 700 }}>FOLHA {pageIdx + 1} DE {totalPages}</span>
+                    <span>{pageCards.length} CARTAS (63mm × 88mm)</span>
+                  </div>
+                )}
+
+                {/* The 9 Card Slots */}
                 {pageCards.map((c, cardIdx) => {
                   const typeLine = (c.card.typeLine || '').toLowerCase();
                   const isPlanar =
@@ -553,24 +1026,13 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                         }}
                       />
 
-                      {showCropMarks && (
+                      {/* Corner crop marks */}
+                      {showCropMarks && showCornerMarks && (
                         <>
-                          <span
-                            className="crop-corner crop-corner-tl"
-                            style={{ borderColor: cropMarksColor }}
-                          />
-                          <span
-                            className="crop-corner crop-corner-tr"
-                            style={{ borderColor: cropMarksColor }}
-                          />
-                          <span
-                            className="crop-corner crop-corner-bl"
-                            style={{ borderColor: cropMarksColor }}
-                          />
-                          <span
-                            className="crop-corner crop-corner-br"
-                            style={{ borderColor: cropMarksColor }}
-                          />
+                          <span className="crop-corner crop-corner-tl" />
+                          <span className="crop-corner crop-corner-tr" />
+                          <span className="crop-corner crop-corner-bl" />
+                          <span className="crop-corner crop-corner-br" />
                         </>
                       )}
                     </div>
