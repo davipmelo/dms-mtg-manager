@@ -1,4 +1,4 @@
-import { Card, CardPrint, TokenCard, UtilityCategory } from '../types';
+import { Card, CardPrint, TokenCard, UtilityCategory, CardFace } from '../types';
 
 const API_BASE = 'https://api.scryfall.com';
 const cardCache = new Map<string, Card>();
@@ -17,6 +17,34 @@ export function parseScryfallCard(raw: any): Card {
   const largeImg = imageUris.large || imageUris.png || normalImg;
   const smallImg = imageUris.small || normalImg;
   const artCropImg = imageUris.art_crop || normalImg;
+
+  // Extract distinct card faces if this is a true double-faced card (Transform, MDFC, Battle, etc.)
+  let cardFaces: CardFace[] | undefined = undefined;
+  if (Array.isArray(raw.card_faces) && raw.card_faces.length > 1) {
+    const parsedFaces = raw.card_faces.map((f: any) => {
+      const fUris = f.image_uris || {};
+      const fNorm = fUris.normal || fUris.large || fUris.small || '';
+      return {
+        name: f.name || '',
+        manaCost: f.mana_cost || '',
+        typeLine: f.type_line || '',
+        oracleText: f.oracle_text || '',
+        colors: f.colors || [],
+        power: f.power,
+        toughness: f.toughness,
+        imageUrl: fNorm,
+        imageUrlLarge: fUris.large || fUris.png || fNorm,
+        imageUrlSmall: fUris.small || fNorm,
+        imageUrlArtCrop: fUris.art_crop || fNorm,
+        artist: f.artist,
+      };
+    });
+
+    // Only set cardFaces if both/all faces have their own individual artwork image
+    if (parsedFaces.every((f: CardFace) => Boolean(f.imageUrl))) {
+      cardFaces = parsedFaces;
+    }
+  }
 
   return {
     id: raw.id,
@@ -48,6 +76,7 @@ export function parseScryfallCard(raw: any): Card {
       : undefined,
     isFoil: raw.foil === true || (Array.isArray(raw.finishes) && raw.finishes.includes('foil') && !raw.finishes.includes('nonfoil')),
     printsSearchUri: raw.prints_search_uri,
+    cardFaces,
   };
 }
 
@@ -407,6 +436,7 @@ export async function searchUtilityCards(
           setCode: parsed.setCode,
           setName: parsed.setName,
           collectorNumber: parsed.collectorNumber,
+          cardFaces: parsed.cardFaces,
         };
       })
       .filter((item: TokenCard | null): item is TokenCard => item !== null);
@@ -442,4 +472,38 @@ export async function searchUtilityCards(
  */
 export async function searchTokens(query: string = '', color?: string): Promise<TokenCard[]> {
   return searchUtilityCards('tokens', query, color);
+}
+
+/**
+ * Resolves both faces for a double-faced card (DFCs / MDFCs / Transform / Battles).
+ * Returns an array of [frontFace, backFace] or null if single-faced.
+ */
+export async function resolveCardFaces(card: Card | TokenCard): Promise<CardFace[] | null> {
+  if (card.cardFaces && card.cardFaces.length > 1) {
+    return card.cardFaces;
+  }
+
+  // Only cards with ' // ' in their name or transform keywords could be true DFCs
+  if (!card.name.includes(' // ')) {
+    return null;
+  }
+
+  try {
+    let resolved: Card | null = null;
+    if (card.setCode && card.collectorNumber) {
+      resolved = await getCardBySetAndNumber(card.setCode, card.collectorNumber);
+    }
+    if (!resolved) {
+      resolved = await getCardByName(card.name);
+    }
+
+    if (resolved && resolved.cardFaces && resolved.cardFaces.length > 1) {
+      card.cardFaces = resolved.cardFaces;
+      return resolved.cardFaces;
+    }
+  } catch (err) {
+    console.error('Error resolving card faces for', card.name, err);
+  }
+
+  return null;
 }

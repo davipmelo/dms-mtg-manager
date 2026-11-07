@@ -3,6 +3,8 @@ import { Deck, DeckCard, ViewMode, Card, CollectionItem } from '../../types';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
 import { InteractiveCharts } from '../Analytics/InteractiveCharts';
+import { EditDeckModal } from '../Modals/EditDeckModal';
+import { generateDeckPosterA4, downloadDeckPoster } from '../../services/deckImageGenerator';
 import {
   ArrowLeft,
   Grid,
@@ -12,7 +14,7 @@ import {
   Minus,
   Trash2,
   Printer,
-  Download,
+  Upload,
   BarChart3,
   Sparkles,
   Shield,
@@ -20,6 +22,10 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
+  Edit3,
+  Loader2,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 
 interface DeckBuilderProps {
@@ -72,6 +78,41 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   // Sorting state (matches Collection)
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Edit Deck Modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Deck Poster / Image Generation state
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imageProgress, setImageProgress] = useState<{ loaded: number; total: number; percentage: number } | null>(null);
+
+  // Grid Scale state (persisted across sessions)
+  const [gridCardSize, setGridCardSize] = useState<number>(() => {
+    const saved = localStorage.getItem('dms_grid_card_size');
+    return saved ? Math.min(340, Math.max(110, Number(saved))) : 200;
+  });
+
+  const handleGridCardSizeChange = (val: number) => {
+    setGridCardSize(val);
+    localStorage.setItem('dms_grid_card_size', String(val));
+  };
+
+  const handleGenerateDeckImage = async () => {
+    setIsGeneratingImage(true);
+    setImageProgress({ loaded: 0, total: totalCardsCount, percentage: 0 });
+    try {
+      const blob = await generateDeckPosterA4(deck, (prog) => {
+        setImageProgress(prog);
+      });
+      downloadDeckPoster(blob, deck.name);
+    } catch (err: any) {
+      console.error('Error generating deck poster:', err);
+      alert(err?.message || 'Erro ao gerar imagem do deck.');
+    } finally {
+      setIsGeneratingImage(false);
+      setImageProgress(null);
+    }
+  };
 
   // Counts
   const totalCardsCount = useMemo(() => {
@@ -365,6 +406,31 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               className="btn btn-secondary btn-sm"
+              onClick={() => setIsEditModalOpen(true)}
+              title="Editar nome, formato, comandante ou lista de cartas do deck"
+            >
+              <Edit3 size={15} /> Editar
+            </button>
+
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={handleGenerateDeckImage}
+              disabled={isGeneratingImage || totalCardsCount === 0}
+              title="Gerar e baixar imagem A4 com todas as artes do deck em JPG (baixa compressão)"
+            >
+              {isGeneratingImage ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" /> Gerando Imagem ({imageProgress?.percentage || 0}%)...
+                </>
+              ) : (
+                <>
+                  <ImageIcon size={15} /> Gerar Imagem do Deck
+                </>
+              )}
+            </button>
+
+            <button
+              className="btn btn-secondary btn-sm"
               onClick={() => onSendDeckToProxies(deck)}
               title="Diagramar 9 cartas por folha A4 e imprimir"
             >
@@ -374,8 +440,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => onOpenExportModal(deck.id)}
+              title="Exportar lista de cartas para Moxfield, Arena, LigaMagic ou CSV"
             >
-              <Download size={15} /> Exportar Deck
+              <Upload size={15} /> Exportar Deck
             </button>
 
             <button
@@ -653,6 +720,37 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               <Columns size={16} />
             </button>
           </div>
+
+          {/* Grid Scale Zoom Slider */}
+          {viewMode === 'grid' && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'var(--bg-darkest)',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-subtle)',
+              }}
+              title={`Ajustar escala da grade (${gridCardSize}px)`}
+            >
+              <ZoomOut size={13} style={{ color: '#94a3b8' }} />
+              <input
+                type="range"
+                min={110}
+                max={340}
+                step={10}
+                value={gridCardSize}
+                onChange={(e) => handleGridCardSizeChange(Number(e.target.value))}
+                style={{ width: '85px', accentColor: '#818cf8', cursor: 'pointer' }}
+              />
+              <ZoomIn size={13} style={{ color: '#94a3b8' }} />
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '36px', textAlign: 'right' }}>
+                {gridCardSize}px
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -672,7 +770,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         </div>
       ) : viewMode === 'grid' ? (
         /* 1. VISUAL GRID VIEW */
-        <div className="cards-grid">
+        <div
+          className="cards-grid"
+          style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardSize}px, 1fr))` }}
+        >
           {sortedMainCards.map((c, idx) => {
             const isFoil = c.isFoil || c.card.isFoil;
             const linked = getCollectionItemForCard(c);
@@ -1450,7 +1551,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               </table>
             </div>
           ) : (
-            <div className="cards-grid">
+            <div
+              className="cards-grid"
+              style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardSize}px, 1fr))` }}
+            >
               {sortedSideCards.map((c, idx) => {
                 const isFoil = c.isFoil || c.card.isFoil;
                 return (
@@ -1533,6 +1637,18 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             style={{ width: '100%', height: 'auto', display: 'block' }}
           />
         </div>
+      )}
+      {/* Edit Deck Modal (Allows renaming, format changes and card list editing) */}
+      {isEditModalOpen && (
+        <EditDeckModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          deck={deck}
+          collection={collection}
+          onSaveDeck={(updated) => {
+            onUpdateDeck(updated);
+          }}
+        />
       )}
     </div>
   );

@@ -19,6 +19,8 @@ import {
   CheckCircle,
   AlertCircle,
   BarChart3,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 
 interface CollectionViewProps {
@@ -54,6 +56,15 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
   const [showCharts, setShowCharts] = useState(false);
   const [hoveredCardImg, setHoveredCardImg] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [gridCardSize, setGridCardSize] = useState<number>(() => {
+    const saved = localStorage.getItem('dms_grid_card_size');
+    return saved ? Math.min(340, Math.max(110, Number(saved))) : 200;
+  });
+
+  const handleGridCardSizeChange = (val: number) => {
+    setGridCardSize(val);
+    localStorage.setItem('dms_grid_card_size', String(val));
+  };
 
   const handleSort = (field: SortColumn) => {
     if (sortColumn === field) {
@@ -446,6 +457,37 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
               <Columns size={16} />
             </button>
           </div>
+
+          {/* Grid Scale Zoom Slider */}
+          {viewMode === 'grid' && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'var(--bg-darkest)',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-subtle)',
+              }}
+              title={`Ajustar escala da grade (${gridCardSize}px)`}
+            >
+              <ZoomOut size={13} style={{ color: '#94a3b8' }} />
+              <input
+                type="range"
+                min={110}
+                max={340}
+                step={10}
+                value={gridCardSize}
+                onChange={(e) => handleGridCardSizeChange(Number(e.target.value))}
+                style={{ width: '85px', accentColor: '#818cf8', cursor: 'pointer' }}
+              />
+              <ZoomIn size={13} style={{ color: '#94a3b8' }} />
+              <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '36px', textAlign: 'right' }}>
+                {gridCardSize}px
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -456,7 +498,10 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
         </div>
       ) : viewMode === 'grid' ? (
         /* 1. VISUAL GRID VIEW */
-        <div className="cards-grid">
+        <div
+          className="cards-grid"
+          style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardSize}px, 1fr))` }}
+        >
           {sortedItems.map((item) => (
             <div key={item.id} className="card-item-container">
               {/* Image & Sheen */}

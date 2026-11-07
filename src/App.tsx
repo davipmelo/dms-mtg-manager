@@ -20,7 +20,7 @@ import {
   saveProxies,
   calculateCollectionDeckUsage,
 } from './services/storage';
-import { getCardByName } from './services/scryfall';
+import { getCardByName, resolveCardFaces } from './services/scryfall';
 
 import { CollectionView } from './components/Collection/CollectionView';
 import { DeckManager } from './components/Decks/DeckManager';
@@ -586,7 +586,7 @@ export function App() {
     updateProxiesState(nextProxies);
   };
 
-  const handleAddDeckToProxies = (deck: Deck) => {
+  const handleAddDeckToProxies = async (deck: Deck) => {
     // 1. Separate commander(s) and other cards
     const commanderCards: Array<{ card: Card; quantity: number }> = [];
     const otherCards: Array<{ card: Card; quantity: number }> = [];
@@ -629,13 +629,62 @@ export function App() {
       a.card.name.localeCompare(b.card.name, 'en', { sensitivity: 'base' })
     );
 
-    // Combined deck proxy items in exact requested order: Commander(s) first, then remaining 99 alphabetically
+    // Combined deck entries: Commander(s) first, then remaining cards alphabetically
     const sortedDeckEntries = [...commanderCards, ...otherCards];
-    const deckProxyItems: ProxyItem[] = sortedDeckEntries.map((entry, idx) => ({
-      id: `proxy-deck-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`,
-      card: entry.card,
-      quantity: entry.quantity,
-    }));
+
+    // Expand double-faced cards (DFCs) into Front face first, immediately followed by Back face
+    const deckProxyItems: ProxyItem[] = [];
+
+    for (let idx = 0; idx < sortedDeckEntries.length; idx++) {
+      const entry = sortedDeckEntries[idx];
+      let faces = entry.card.cardFaces;
+
+      // If faces not yet cached and card has ' // ' in name, resolve faces
+      if ((!faces || faces.length < 2) && entry.card.name.includes(' // ')) {
+        const resolved = await resolveCardFaces(entry.card);
+        if (resolved) faces = resolved;
+      }
+
+      if (faces && faces.length >= 2) {
+        // Front face (printed first)
+        const frontCard: Card = {
+          ...entry.card,
+          name: faces[0].name || entry.card.name.split(' // ')[0].trim(),
+          typeLine: faces[0].typeLine || entry.card.typeLine,
+          imageUrl: faces[0].imageUrl || entry.card.imageUrl,
+          imageUrlLarge: faces[0].imageUrlLarge || entry.card.imageUrlLarge || entry.card.imageUrl,
+          faceLabel: 'frente',
+        };
+        deckProxyItems.push({
+          id: `proxy-deck-${Date.now()}-${idx}-front-${Math.random().toString(36).substring(2, 6)}`,
+          card: frontCard,
+          quantity: entry.quantity,
+        });
+
+        // Back face (immediately follows front face!)
+        const backCard: Card = {
+          ...entry.card,
+          id: `${entry.card.id}-back`,
+          name: faces[1].name || (entry.card.name.includes(' // ') ? entry.card.name.split(' // ')[1].trim() : `${entry.card.name} (Verso)`),
+          typeLine: faces[1].typeLine || entry.card.typeLine,
+          imageUrl: faces[1].imageUrl || `https://api.scryfall.com/cards/${entry.card.setCode.toLowerCase()}/${entry.card.collectorNumber}?format=image&version=large&face=back`,
+          imageUrlLarge: faces[1].imageUrlLarge || `https://api.scryfall.com/cards/${entry.card.setCode.toLowerCase()}/${entry.card.collectorNumber}?format=image&version=large&face=back`,
+          faceLabel: 'verso',
+        };
+        deckProxyItems.push({
+          id: `proxy-deck-${Date.now()}-${idx}-back-${Math.random().toString(36).substring(2, 6)}`,
+          card: backCard,
+          quantity: entry.quantity,
+        });
+      } else {
+        // Single-faced normal card
+        deckProxyItems.push({
+          id: `proxy-deck-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`,
+          card: entry.card,
+          quantity: entry.quantity,
+        });
+      }
+    }
 
     if (proxies.length > 0) {
       const shouldReplace = window.confirm(

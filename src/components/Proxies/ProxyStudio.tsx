@@ -48,10 +48,36 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
   const [selectedDeckId, setSelectedDeckId] = useState('');
 
   // Flatten proxies into individual card instances for exact 9-card page chunks
+  // If an un-split double-faced card is present in the queue, expand each copy to Front then Back
   const expandedCards: Array<{ item: ProxyItem; card: Card | TokenCard }> = [];
   proxies.forEach((item) => {
+    const faces = item.card.cardFaces;
+    const isUnsplitDfc = !item.card.faceLabel && faces && faces.length >= 2;
+
     for (let i = 0; i < item.quantity; i++) {
-      expandedCards.push({ item, card: item.card });
+      if (isUnsplitDfc && faces) {
+        const frontCard: Card | TokenCard = {
+          ...item.card,
+          name: faces[0].name || item.card.name.split(' // ')[0].trim(),
+          typeLine: faces[0].typeLine || item.card.typeLine,
+          imageUrl: faces[0].imageUrl || item.card.imageUrl,
+          imageUrlLarge: faces[0].imageUrlLarge || item.card.imageUrlLarge || item.card.imageUrl,
+          faceLabel: 'frente',
+        };
+        const backCard: Card | TokenCard = {
+          ...item.card,
+          id: `${item.card.id}-back`,
+          name: faces[1].name || (item.card.name.includes(' // ') ? item.card.name.split(' // ')[1].trim() : `${item.card.name} (Verso)`),
+          typeLine: faces[1].typeLine || item.card.typeLine,
+          imageUrl: faces[1].imageUrl,
+          imageUrlLarge: faces[1].imageUrlLarge || faces[1].imageUrl,
+          faceLabel: 'verso',
+        };
+        expandedCards.push({ item, card: frontCard });
+        expandedCards.push({ item, card: backCard });
+      } else {
+        expandedCards.push({ item, card: item.card });
+      }
     }
   });
 
@@ -294,6 +320,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                     imageUrlLarge={item.card.imageUrlLarge}
                     setCode={item.card.setCode}
                     collectorNumber={item.card.collectorNumber}
+                    face={item.card.faceLabel === 'verso' ? 'back' : 'front'}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 </div>
@@ -305,10 +332,38 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
                     }}
                     title={item.card.name}
                   >
-                    {item.card.name}
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.card.name}
+                    </span>
+                    {item.card.faceLabel && (
+                      <span
+                        style={{
+                          fontSize: '0.62rem',
+                          padding: '1px 5px',
+                          borderRadius: '4px',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          background:
+                            item.card.faceLabel === 'verso'
+                              ? 'rgba(168, 85, 247, 0.25)'
+                              : 'rgba(59, 130, 246, 0.25)',
+                          color: item.card.faceLabel === 'verso' ? '#c084fc' : '#93c5fd',
+                          border: `1px solid ${
+                            item.card.faceLabel === 'verso'
+                              ? 'rgba(168, 85, 247, 0.4)'
+                              : 'rgba(59, 130, 246, 0.4)'
+                          }`,
+                        }}
+                      >
+                        {item.card.faceLabel}
+                      </span>
+                    )}
                   </div>
                   <div
                     style={{
@@ -489,6 +544,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                         setCode={c.card.setCode}
                         collectorNumber={c.card.collectorNumber}
                         preferLarge
+                        face={c.card.faceLabel === 'verso' ? 'back' : 'front'}
                         loading="eager"
                         style={{
                           width: '100%',

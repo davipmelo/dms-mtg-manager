@@ -18,6 +18,8 @@ import {
   Flame,
   Eye,
   Cog,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 
 interface UtilitiesTabProps {
@@ -124,6 +126,16 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
   // Alternative Art Selector state for utility cards
   const [artTargetIndex, setArtTargetIndex] = useState<number | null>(null);
   const requestIdRef = useRef(0);
+
+  const [gridCardSize, setGridCardSize] = useState<number>(() => {
+    const saved = localStorage.getItem('dms_grid_card_size');
+    return saved ? Math.min(340, Math.max(110, Number(saved))) : 200;
+  });
+
+  const handleGridCardSizeChange = (val: number) => {
+    setGridCardSize(val);
+    localStorage.setItem('dms_grid_card_size', String(val));
+  };
 
   const activeCategoryMeta =
     UTILITY_CATEGORIES.find((c) => c.id === category) || UTILITY_CATEGORIES[0];
@@ -430,6 +442,37 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
         </div>
       </div>
 
+      {/* Grid Scale Zoom Controller */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '-10px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'var(--bg-darkest)',
+            padding: '4px 10px',
+            borderRadius: '8px',
+            border: '1px solid var(--border-subtle)',
+          }}
+          title={`Ajustar escala da grade (${gridCardSize}px)`}
+        >
+          <ZoomOut size={13} style={{ color: '#94a3b8' }} />
+          <input
+            type="range"
+            min={110}
+            max={340}
+            step={10}
+            value={gridCardSize}
+            onChange={(e) => handleGridCardSizeChange(Number(e.target.value))}
+            style={{ width: '85px', accentColor: '#818cf8', cursor: 'pointer' }}
+          />
+          <ZoomIn size={13} style={{ color: '#94a3b8' }} />
+          <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '36px', textAlign: 'right' }}>
+            {gridCardSize}px
+          </span>
+        </div>
+      </div>
+
       {/* Results Grid */}
       {loading ? (
         <div
@@ -451,7 +494,10 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
           Nenhum item encontrado para esta busca. Experimente termos em inglês (ex: "Treasure", "Dominaria", "Teferi", "Monarch").
         </div>
       ) : (
-        <div className="cards-grid">
+        <div
+          className="cards-grid"
+          style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardSize}px, 1fr))` }}
+        >
           {items.map((item, idx) => {
             const isAdded = !!addedMap[item.id];
             return (

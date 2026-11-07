@@ -10,6 +10,7 @@ interface CardImageProps {
   className?: string;
   style?: React.CSSProperties;
   loading?: 'lazy' | 'eager';
+  face?: 'front' | 'back';
 }
 
 /**
@@ -31,6 +32,7 @@ export const CardImage: React.FC<CardImageProps> = ({
   className = '',
   style,
   loading = 'lazy',
+  face = 'front',
 }) => {
   const version = preferLarge ? 'large' : 'normal';
 
@@ -42,21 +44,23 @@ export const CardImage: React.FC<CardImageProps> = ({
     if (primary && primary.startsWith('http')) list.push(primary);
     if (secondary && secondary.startsWith('http') && secondary !== primary) list.push(secondary);
 
+    const faceParam = face === 'back' ? '&face=back' : '';
+
     if (setCode && collectorNumber) {
       list.push(
-        `https://api.scryfall.com/cards/${encodeURIComponent(setCode.toLowerCase())}/${encodeURIComponent(collectorNumber)}?format=image&version=${version}`
+        `https://api.scryfall.com/cards/${encodeURIComponent(setCode.toLowerCase())}/${encodeURIComponent(collectorNumber)}?format=image&version=${version}${faceParam}`
       );
     }
 
     if (name) {
       const frontName = name.includes('//') ? name.split('//')[0].trim() : name.trim();
       list.push(
-        `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(frontName)}&format=image&version=${version}`
+        `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(frontName)}&format=image&version=${version}${faceParam}`
       );
     }
 
     return list;
-  }, [name, imageUrl, imageUrlLarge, setCode, collectorNumber, preferLarge, version]);
+  }, [name, imageUrl, imageUrlLarge, setCode, collectorNumber, preferLarge, version, face]);
 
   const [attemptIndex, setAttemptIndex] = useState(0);
   const [allFailed, setAllFailed] = useState(false);

@@ -36,6 +36,21 @@ export interface CardPrint {
   priceUsd?: number;
 }
 
+export interface CardFace {
+  name: string;
+  manaCost?: string;
+  typeLine?: string;
+  oracleText?: string;
+  colors?: string[];
+  power?: string;
+  toughness?: string;
+  imageUrl: string;
+  imageUrlLarge?: string;
+  imageUrlSmall?: string;
+  imageUrlArtCrop?: string;
+  artist?: string;
+}
+
 export interface Card {
   id: string;
   oracleId?: string;
@@ -61,6 +76,8 @@ export interface Card {
   isFoil?: boolean;
   printsSearchUri?: string;
   allPrints?: CardPrint[];
+  cardFaces?: CardFace[];
+  faceLabel?: 'frente' | 'verso' | string;
 }
 
 export interface CollectionItem {
@@ -125,6 +142,8 @@ export interface TokenCard {
   setCode: string;
   setName: string;
   collectorNumber: string;
+  cardFaces?: CardFace[];
+  faceLabel?: 'frente' | 'verso' | string;
 }
 
 export interface ProxyItem {
