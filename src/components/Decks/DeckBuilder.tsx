@@ -4,7 +4,7 @@ import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
 import { InteractiveCharts } from '../Analytics/InteractiveCharts';
 import { EditDeckModal } from '../Modals/EditDeckModal';
-import { generateDeckPosterA4, downloadDeckPoster } from '../../services/deckImageGenerator';
+import { ExportDeckImageModal } from '../Modals/ExportDeckImageModal';
 import {
   ArrowLeft,
   Grid,
@@ -84,9 +84,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   // Edit Deck Modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // Deck Poster / Image Generation state
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [imageProgress, setImageProgress] = useState<{ loaded: number; total: number; percentage: number } | null>(null);
+  // Export Deck Poster / Image Modal state
+  const [isExportImageModalOpen, setIsExportImageModalOpen] = useState(false);
 
   // Grid Scale & Details state (persisted across sessions)
   const [gridCardSize, setGridCardSize] = useState<number>(() => {
@@ -108,23 +107,6 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       localStorage.setItem('dms_grid_show_details', String(next));
       return next;
     });
-  };
-
-  const handleGenerateDeckImage = async () => {
-    setIsGeneratingImage(true);
-    setImageProgress({ loaded: 0, total: totalCardsCount, percentage: 0 });
-    try {
-      const blob = await generateDeckPosterA4(deck, (prog) => {
-        setImageProgress(prog);
-      });
-      downloadDeckPoster(blob, deck.name);
-    } catch (err: any) {
-      console.error('Error generating deck poster:', err);
-      alert(err?.message || 'Erro ao gerar imagem do deck.');
-    } finally {
-      setIsGeneratingImage(false);
-      setImageProgress(null);
-    }
   };
 
   // Counts
@@ -397,19 +379,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
             <button
               className="btn btn-secondary btn-sm"
-              onClick={handleGenerateDeckImage}
-              disabled={isGeneratingImage || totalCardsCount === 0}
-              title="Gerar e baixar imagem A4 com todas as artes do deck em JPG (baixa compressão)"
+              onClick={() => setIsExportImageModalOpen(true)}
+              disabled={totalCardsCount === 0}
+              title="Personalizar e exportar imagem/pôster do deck (resoluções, JPG/PNG/PDF, agrupamento de artes)"
             >
-              {isGeneratingImage ? (
-                <>
-                  <Loader2 size={15} className="animate-spin" /> Gerando Imagem ({imageProgress?.percentage || 0}%)...
-                </>
-              ) : (
-                <>
-                  <ImageIcon size={15} /> Gerar Imagem do Deck
-                </>
-              )}
+              <ImageIcon size={15} /> Gerar Imagem do Deck
             </button>
 
             <button
@@ -1603,6 +1577,15 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           onSaveDeck={(updated) => {
             onUpdateDeck(updated);
           }}
+        />
+      )}
+
+      {/* Export Deck Poster / Custom Image Modal */}
+      {isExportImageModalOpen && (
+        <ExportDeckImageModal
+          isOpen={isExportImageModalOpen}
+          onClose={() => setIsExportImageModalOpen(false)}
+          deck={deck}
         />
       )}
     </div>
