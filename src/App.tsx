@@ -572,20 +572,83 @@ export function App() {
   };
 
   // Proxy Queue Handlers
-  const handleAddCardToProxies = (card: Card | TokenCard, qty: number = 1) => {
-    const existing = proxies.find((p) => p.card.id === card.id);
-    let nextProxies: ProxyItem[];
-    if (existing) {
-      nextProxies = proxies.map((p) =>
-        p.card.id === card.id ? { ...p, quantity: p.quantity + qty } : p
-      );
-    } else {
-      nextProxies = [
-        ...proxies,
-        { id: `proxy-${Date.now()}-${Math.random()}`, card, quantity: qty },
-      ];
+  const handleAddCardToProxies = async (card: Card | TokenCard, qty: number = 1) => {
+    let faces = card.cardFaces;
+    if ((!faces || faces.length < 2) && !card.faceLabel) {
+      faces = (await resolveCardFaces(card)) || undefined;
     }
-    updateProxiesState(nextProxies);
+
+    if (faces && faces.length >= 2 && !card.faceLabel) {
+      const frontCard: Card | TokenCard = {
+        ...card,
+        name: faces[0].name || card.name.split(' // ')[0].trim(),
+        typeLine: faces[0].typeLine || card.typeLine,
+        imageUrl: faces[0].imageUrl || card.imageUrl,
+        imageUrlLarge: faces[0].imageUrlLarge || card.imageUrlLarge || card.imageUrl,
+        faceLabel: 'frente',
+      };
+      const backCard: Card | TokenCard = {
+        ...card,
+        id: `${card.id}-back`,
+        name:
+          faces[1].name ||
+          (card.name.includes(' // ')
+            ? card.name.split(' // ')[1].trim()
+            : `${card.name} (Verso)`),
+        typeLine: faces[1].typeLine || card.typeLine,
+        imageUrl:
+          faces[1].imageUrl ||
+          `https://api.scryfall.com/cards/${card.setCode.toLowerCase()}/${card.collectorNumber}?format=image&version=large&face=back`,
+        imageUrlLarge:
+          faces[1].imageUrlLarge ||
+          faces[1].imageUrl ||
+          `https://api.scryfall.com/cards/${card.setCode.toLowerCase()}/${card.collectorNumber}?format=image&version=large&face=back`,
+        faceLabel: 'verso',
+      };
+
+      const nextProxies = [...proxies];
+      // Front face
+      const existingFront = nextProxies.find(
+        (p) => p.card.id === frontCard.id && p.card.faceLabel === 'frente'
+      );
+      if (existingFront) {
+        existingFront.quantity += qty;
+      } else {
+        nextProxies.push({
+          id: `proxy-${Date.now()}-front-${Math.random().toString(36).substring(2, 6)}`,
+          card: frontCard,
+          quantity: qty,
+        });
+      }
+      // Back face
+      const existingBack = nextProxies.find(
+        (p) => p.card.id === backCard.id && p.card.faceLabel === 'verso'
+      );
+      if (existingBack) {
+        existingBack.quantity += qty;
+      } else {
+        nextProxies.push({
+          id: `proxy-${Date.now()}-back-${Math.random().toString(36).substring(2, 6)}`,
+          card: backCard,
+          quantity: qty,
+        });
+      }
+      updateProxiesState(nextProxies);
+    } else {
+      const existing = proxies.find((p) => p.card.id === card.id);
+      let nextProxies: ProxyItem[];
+      if (existing) {
+        nextProxies = proxies.map((p) =>
+          p.card.id === card.id ? { ...p, quantity: p.quantity + qty } : p
+        );
+      } else {
+        nextProxies = [
+          ...proxies,
+          { id: `proxy-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, card, quantity: qty },
+        ];
+      }
+      updateProxiesState(nextProxies);
+    }
   };
 
   const handleAddDeckToProxies = async (deck: Deck) => {
@@ -634,15 +697,15 @@ export function App() {
     // Combined deck entries: Commander(s) first, then remaining cards alphabetically
     const sortedDeckEntries = [...commanderCards, ...otherCards];
 
-    // Expand double-faced cards (DFCs) into Front face first, immediately followed by Back face
+    // Expand double-faced cards (DFCs and Meld) into Front face first, immediately followed by Back face
     const deckProxyItems: ProxyItem[] = [];
 
     for (let idx = 0; idx < sortedDeckEntries.length; idx++) {
       const entry = sortedDeckEntries[idx];
       let faces = entry.card.cardFaces;
 
-      // If faces not yet cached and card has ' // ' in name, resolve faces
-      if ((!faces || faces.length < 2) && entry.card.name.includes(' // ')) {
+      // If faces not yet cached, resolve faces (supports DFCs, meld, battles, etc.)
+      if (!faces || faces.length < 2) {
         const resolved = await resolveCardFaces(entry.card);
         if (resolved) faces = resolved;
       }
@@ -667,10 +730,19 @@ export function App() {
         const backCard: Card = {
           ...entry.card,
           id: `${entry.card.id}-back`,
-          name: faces[1].name || (entry.card.name.includes(' // ') ? entry.card.name.split(' // ')[1].trim() : `${entry.card.name} (Verso)`),
+          name:
+            faces[1].name ||
+            (entry.card.name.includes(' // ')
+              ? entry.card.name.split(' // ')[1].trim()
+              : `${entry.card.name} (Verso)`),
           typeLine: faces[1].typeLine || entry.card.typeLine,
-          imageUrl: faces[1].imageUrl || `https://api.scryfall.com/cards/${entry.card.setCode.toLowerCase()}/${entry.card.collectorNumber}?format=image&version=large&face=back`,
-          imageUrlLarge: faces[1].imageUrlLarge || `https://api.scryfall.com/cards/${entry.card.setCode.toLowerCase()}/${entry.card.collectorNumber}?format=image&version=large&face=back`,
+          imageUrl:
+            faces[1].imageUrl ||
+            `https://api.scryfall.com/cards/${entry.card.setCode.toLowerCase()}/${entry.card.collectorNumber}?format=image&version=large&face=back`,
+          imageUrlLarge:
+            faces[1].imageUrlLarge ||
+            faces[1].imageUrl ||
+            `https://api.scryfall.com/cards/${entry.card.setCode.toLowerCase()}/${entry.card.collectorNumber}?format=image&version=large&face=back`,
           faceLabel: 'verso',
         };
         deckProxyItems.push({

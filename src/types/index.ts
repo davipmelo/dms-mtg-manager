@@ -78,6 +78,9 @@ export interface Card {
   allPrints?: CardPrint[];
   cardFaces?: CardFace[];
   faceLabel?: 'frente' | 'verso' | string;
+  layout?: string;
+  meldResultName?: string;
+  meldResultUri?: string;
 }
 
 export interface CollectionItem {
@@ -144,6 +147,9 @@ export interface TokenCard {
   collectorNumber: string;
   cardFaces?: CardFace[];
   faceLabel?: 'frente' | 'verso' | string;
+  layout?: string;
+  meldResultName?: string;
+  meldResultUri?: string;
 }
 
 export interface ProxyItem {

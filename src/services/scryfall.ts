@@ -46,6 +46,17 @@ export function parseScryfallCard(raw: any): Card {
     }
   }
 
+  // Detect Meld cards (e.g. Gisela, Bruna, Urza, Mishra, Titania, Hanweir, etc.)
+  let meldResultName: string | undefined = undefined;
+  let meldResultUri: string | undefined = undefined;
+  if (raw.layout === 'meld' && Array.isArray(raw.all_parts)) {
+    const meldPart = raw.all_parts.find((p: any) => p.component === 'meld_result');
+    if (meldPart && meldPart.name !== raw.name) {
+      meldResultName = meldPart.name;
+      meldResultUri = meldPart.uri;
+    }
+  }
+
   return {
     id: raw.id,
     oracleId: raw.oracle_id || primaryFace?.oracle_id,
@@ -77,6 +88,9 @@ export function parseScryfallCard(raw: any): Card {
     isFoil: raw.foil === true || (Array.isArray(raw.finishes) && raw.finishes.includes('foil') && !raw.finishes.includes('nonfoil')),
     printsSearchUri: raw.prints_search_uri,
     cardFaces,
+    layout: raw.layout,
+    meldResultName,
+    meldResultUri,
   };
 }
 
@@ -474,33 +488,125 @@ export async function searchTokens(query: string = '', color?: string): Promise<
   return searchUtilityCards('tokens', query, color);
 }
 
+export const MELD_PAIRS_MAP: Record<string, string> = {
+  'gisela, the broken blade': 'Brisela, Voice of Nightmares',
+  'bruna, the fading light': 'Brisela, Voice of Nightmares',
+  'urza, lord protector': 'Urza, Planeswalker',
+  'the mightstone and weakstone': 'Urza, Planeswalker',
+  'mishra, claimed by gix': 'Mishra, Lost to Phyrexia',
+  'phyrexian dragon engine': 'Mishra, Lost to Phyrexia',
+  'titania, voice of gaea': 'Titania, Gaea Incarnate',
+  'argoth, sanctum of nature': 'Titania, Gaea Incarnate',
+  'hanweir battlements': 'Hanweir, the Writhing Township',
+  'hanweir garrison': 'Hanweir, the Writhing Township',
+  'graf rats': 'Chittering Host',
+  'midnight scavengers': 'Chittering Host',
+  "fang, fearless l'cie": 'Ragnarok, Divine Deliverance',
+  "vanille, cheerful l'cie": 'Ragnarok, Divine Deliverance',
+};
+
+const singleFacedCache = new Set<string>();
+
 /**
- * Resolves both faces for a double-faced card (DFCs / MDFCs / Transform / Battles).
+ * Resolves both faces for a double-faced card (DFCs / MDFCs / Transform / Battles / Meld).
  * Returns an array of [frontFace, backFace] or null if single-faced.
  */
 export async function resolveCardFaces(card: Card | TokenCard): Promise<CardFace[] | null> {
+  // If faces are already resolved and cached, return them
   if (card.cardFaces && card.cardFaces.length > 1) {
     return card.cardFaces;
   }
 
-  // Only cards with ' // ' in their name or transform keywords could be true DFCs
-  if (!card.name.includes(' // ')) {
+  // If card is already a specific designated face ('frente' or 'verso'), don't re-resolve
+  if (card.faceLabel) {
     return null;
   }
 
+  const normalizedName = card.name.toLowerCase().trim();
+
+  // 1. Check if it's a known Meld card
+  const knownMeldResult =
+    card.meldResultName ||
+    MELD_PAIRS_MAP[normalizedName] ||
+    (card.layout === 'meld' && card.meldResultName);
+
+  if (knownMeldResult) {
+    try {
+      const meldResultCard = await getCardByName(knownMeldResult);
+      if (meldResultCard && meldResultCard.imageUrl) {
+        const faces: CardFace[] = [
+          {
+            name: card.name,
+            typeLine: card.typeLine,
+            imageUrl: card.imageUrl,
+            imageUrlLarge: card.imageUrlLarge || card.imageUrl,
+          },
+          {
+            name: meldResultCard.name,
+            typeLine: meldResultCard.typeLine,
+            imageUrl: meldResultCard.imageUrl,
+            imageUrlLarge: meldResultCard.imageUrlLarge || meldResultCard.imageUrl,
+          },
+        ];
+        card.cardFaces = faces;
+        return faces;
+      }
+    } catch (err) {
+      console.error('Error resolving meld result card for', card.name, err);
+    }
+  }
+
+  // 2. If already marked as single-faced in cache and doesn't contain ' // ', skip network
+  if (singleFacedCache.has(normalizedName) && !card.name.includes(' // ')) {
+    return null;
+  }
+
+  // 3. Query Scryfall to resolve potential DFC (transform, modal_dfc, battle, meld, reversible)
   try {
     let resolved: Card | null = null;
     if (card.setCode && card.collectorNumber) {
       resolved = await getCardBySetAndNumber(card.setCode, card.collectorNumber);
     }
     if (!resolved) {
-      resolved = await getCardByName(card.name);
+      const queryName = card.name.includes(' // ') ? card.name.split(' // ')[0].trim() : card.name;
+      resolved = await getCardByName(queryName);
     }
 
-    if (resolved && resolved.cardFaces && resolved.cardFaces.length > 1) {
-      card.cardFaces = resolved.cardFaces;
-      return resolved.cardFaces;
+    if (resolved) {
+      // Check standard DFC / MDFC / Battles / Reversible
+      if (resolved.cardFaces && resolved.cardFaces.length > 1) {
+        card.cardFaces = resolved.cardFaces;
+        return resolved.cardFaces;
+      }
+
+      // Check meld detected on resolved card
+      const meldResult =
+        resolved.meldResultName || MELD_PAIRS_MAP[resolved.name.toLowerCase().trim()];
+      if ((resolved.layout === 'meld' || meldResult) && meldResult) {
+        const meldResultCard = await getCardByName(meldResult);
+        if (meldResultCard && meldResultCard.imageUrl) {
+          const faces: CardFace[] = [
+            {
+              name: card.name,
+              typeLine: card.typeLine,
+              imageUrl: card.imageUrl,
+              imageUrlLarge: card.imageUrlLarge || card.imageUrl,
+            },
+            {
+              name: meldResultCard.name,
+              typeLine: meldResultCard.typeLine,
+              imageUrl: meldResultCard.imageUrl,
+              imageUrlLarge: meldResultCard.imageUrlLarge || meldResultCard.imageUrl,
+            },
+          ];
+          card.cardFaces = faces;
+          return faces;
+        }
+      }
     }
+
+    // Truly single-faced card
+    singleFacedCache.add(normalizedName);
   } catch (err) {
     console.error('Error resolving card faces for', card.name, err);
   }

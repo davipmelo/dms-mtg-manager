@@ -40,6 +40,7 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
       Green: 0,
       Colorless: 0,
       Multicolor: 0,
+      Lands: 0,
     };
 
     const typesCount = {
@@ -75,18 +76,22 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
         cmcCurve[bucket] += quantity;
       }
 
-      // Colors
-      const colors = card.colors || [];
-      if (colors.length === 0) {
-        colorsCount.Colorless += quantity;
-      } else if (colors.length === 1) {
-        if (colors[0] === 'W') colorsCount.White += quantity;
-        else if (colors[0] === 'U') colorsCount.Blue += quantity;
-        else if (colors[0] === 'B') colorsCount.Black += quantity;
-        else if (colors[0] === 'R') colorsCount.Red += quantity;
-        else if (colors[0] === 'G') colorsCount.Green += quantity;
+      // Colors (Lands separated as their own distinct category)
+      if (isLand) {
+        colorsCount.Lands += quantity;
       } else {
-        colorsCount.Multicolor += quantity;
+        const colors = card.colors || [];
+        if (colors.length === 0) {
+          colorsCount.Colorless += quantity;
+        } else if (colors.length === 1) {
+          if (colors[0] === 'W') colorsCount.White += quantity;
+          else if (colors[0] === 'U') colorsCount.Blue += quantity;
+          else if (colors[0] === 'B') colorsCount.Black += quantity;
+          else if (colors[0] === 'R') colorsCount.Red += quantity;
+          else if (colors[0] === 'G') colorsCount.Green += quantity;
+        } else {
+          colorsCount.Multicolor += quantity;
+        }
       }
 
       // Types
@@ -134,6 +139,7 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
       { label: 'Verde', count: stats.colorsCount.Green, bg: '#22c55e', border: '#0f141d' },
       { label: 'Incolor', count: stats.colorsCount.Colorless, bg: '#94a3b8', border: '#0f141d' },
       { label: 'Multicolor', count: stats.colorsCount.Multicolor, bg: '#eab308', border: '#0f141d' },
+      { label: 'Terrenos', count: stats.colorsCount.Lands, bg: '#96603a', border: '#0f141d' },
     ];
     return rawItems.filter((item) => item.count > 0);
   }, [stats.colorsCount]);
@@ -261,6 +267,9 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
           </div>
           <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '6px' }}>
             Aprox. R$ {stats.totalValueBrl}
+          </div>
+          <div style={{ fontSize: '0.70rem', color: '#64748b', marginTop: '5px', opacity: 0.85 }}>
+            Fonte: Cotação de mercado TCGplayer via Scryfall
           </div>
         </div>
 
