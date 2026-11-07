@@ -5,7 +5,6 @@ import { CardImage } from '../Common/CardImage';
 import { InteractiveCharts } from '../Analytics/InteractiveCharts';
 import {
   Grid,
-  Columns,
   List,
   Search,
   Filter,
@@ -22,6 +21,8 @@ import {
   BarChart3,
   ZoomIn,
   ZoomOut,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 interface CollectionViewProps {
@@ -61,10 +62,21 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
     const saved = localStorage.getItem('dms_grid_card_size');
     return saved ? Math.min(340, Math.max(110, Number(saved))) : 200;
   });
+  const [showGridDetails, setShowGridDetails] = useState<boolean>(() => {
+    return localStorage.getItem('dms_grid_show_details') !== 'false';
+  });
 
   const handleGridCardSizeChange = (val: number) => {
     setGridCardSize(val);
     localStorage.setItem('dms_grid_card_size', String(val));
+  };
+
+  const handleToggleGridDetails = () => {
+    setShowGridDetails((prev) => {
+      const next = !prev;
+      localStorage.setItem('dms_grid_show_details', String(next));
+      return next;
+    });
   };
 
   const handleSort = (field: SortColumn) => {
@@ -217,34 +229,6 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
   const totalCardsCount = useMemo(() => collection.reduce((sum, i) => sum + i.quantity, 0), [collection]);
   const totalAvailableCount = useMemo(() => collection.reduce((sum, i) => sum + (i.availableQuantity ?? i.quantity), 0), [collection]);
   const totalInUseCount = useMemo(() => collection.reduce((sum, i) => sum + (i.inUseQuantity ?? 0), 0), [collection]);
-
-  // Stacked Columns groupings (grouped by Type or CMC)
-  const stackedGroups = useMemo(() => {
-    const groups: Record<string, CollectionItem[]> = {
-      'Criaturas': [],
-      'Mágicas Instantâneas': [],
-      'Feitiços': [],
-      'Artefatos': [],
-      'Encantamentos': [],
-      'Planeswalkers': [],
-      'Terrenos': [],
-      'Outros': [],
-    };
-
-    sortedItems.forEach((item) => {
-      const t = item.card.typeLine.toLowerCase();
-      if (t.includes('creature') || t.includes('criatura')) groups['Criaturas'].push(item);
-      else if (t.includes('instant') || t.includes('instantânea')) groups['Mágicas Instantâneas'].push(item);
-      else if (t.includes('sorcery') || t.includes('feitiço')) groups['Feitiços'].push(item);
-      else if (t.includes('artifact') || t.includes('artefato')) groups['Artefatos'].push(item);
-      else if (t.includes('enchantment') || t.includes('encantamento')) groups['Encantamentos'].push(item);
-      else if (t.includes('planeswalker')) groups['Planeswalkers'].push(item);
-      else if (t.includes('land') || t.includes('terreno')) groups['Terrenos'].push(item);
-      else groups['Outros'].push(item);
-    });
-
-    return Object.entries(groups).filter(([_, items]) => items.length > 0);
-  }, [sortedItems]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -451,46 +435,49 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
             >
               <Grid size={16} />
             </button>
-            <button
-              className={`btn btn-icon ${viewMode === 'stacked' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => {
-                setHoveredCardImg(null);
-                setViewMode('stacked');
-              }}
-              title="Visualização em Colunas Stackadas (Moxfield/Archidekt)"
-            >
-              <Columns size={16} />
-            </button>
           </div>
 
-          {/* Grid Scale Zoom Slider */}
+          {/* Grid Scale Zoom Slider & Details Toggle */}
           {viewMode === 'grid' && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: 'var(--bg-darkest)',
-                padding: '4px 10px',
-                borderRadius: '8px',
-                border: '1px solid var(--border-subtle)',
-              }}
-              title={`Ajustar escala da grade (${gridCardSize}px)`}
-            >
-              <ZoomOut size={13} style={{ color: '#94a3b8' }} />
-              <input
-                type="range"
-                min={110}
-                max={340}
-                step={10}
-                value={gridCardSize}
-                onChange={(e) => handleGridCardSizeChange(Number(e.target.value))}
-                style={{ width: '85px', accentColor: '#818cf8', cursor: 'pointer' }}
-              />
-              <ZoomIn size={13} style={{ color: '#94a3b8' }} />
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '36px', textAlign: 'right' }}>
-                {gridCardSize}px
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                className={`btn btn-sm ${showGridDetails ? 'btn-secondary' : 'btn-primary'}`}
+                onClick={handleToggleGridDetails}
+                title={showGridDetails ? 'Ocultar detalhes (mostrar apenas artes)' : 'Mostrar detalhes completos das cartas'}
+                style={{ fontSize: '0.75rem', padding: '4px 10px', height: '32px' }}
+              >
+                {showGridDetails ? <EyeOff size={14} /> : <Eye size={14} />}
+                <span>{showGridDetails ? 'Só Artes' : 'Com Detalhes'}</span>
+              </button>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'var(--bg-darkest)',
+                  padding: '4px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-subtle)',
+                  height: '32px',
+                }}
+                title={`Ajustar escala da grade (${gridCardSize}px)`}
+              >
+                <ZoomOut size={13} style={{ color: '#94a3b8' }} />
+                <input
+                  type="range"
+                  min={110}
+                  max={340}
+                  step={10}
+                  value={gridCardSize}
+                  onChange={(e) => handleGridCardSizeChange(Number(e.target.value))}
+                  style={{ width: '85px', accentColor: '#818cf8', cursor: 'pointer' }}
+                />
+                <ZoomIn size={13} style={{ color: '#94a3b8' }} />
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '36px', textAlign: 'right' }}>
+                  {gridCardSize}px
+                </span>
+              </div>
             </div>
           )}
         </div>
@@ -557,164 +544,147 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                 >
                   {item.quantity}x
                 </div>
-              </div>
 
-              {/* Card Details & In Use / Available Indicators (Requirement 4) */}
-              <div style={{ padding: '12px', background: '#0c0f17', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {item.card.name}
-                  </div>
-                  <ManaCostRenderer manaCost={item.card.manaCost} />
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }}>
-                  <span>{item.card.setName} ({item.card.setCode})</span>
-                  {item.card.priceUsd && (
-                    <span style={{ color: '#10b981', fontWeight: 600 }}>
-                      ${(item.card.priceUsd * item.quantity).toFixed(2)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Requirement 4: Available vs In-Use Indicators */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px',
-                    padding: '8px',
-                    borderRadius: '6px',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid var(--border-subtle)',
-                    fontSize: '0.75rem',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-                      Disponíveis:
-                    </span>
-                    <strong style={{ color: '#f8fafc' }}>{item.availableQuantity ?? item.quantity}</strong>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b' }} />
-                      Em Decks:
-                    </span>
-                    <strong style={{ color: '#f8fafc' }}>{item.inUseQuantity ?? 0}</strong>
-                  </div>
-
-                  {/* Decks usage breakdown */}
-                  {item.usedInDecks && item.usedInDecks.length > 0 && (
-                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '4px', marginTop: '2px' }}>
-                      {item.usedInDecks.map((d, i) => (
-                        <div key={i} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          • {d.deckName} ({d.count}x)
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Buttons: Qty control, Change Art, Add to Proxies */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
-                  {/* Qty +/- */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {/* In Art-Only mode: Floating quick actions on hover/touch */}
+                {!showGridDetails && (
+                  <div className="card-art-actions-overlay">
                     <button
-                      className="btn btn-ghost btn-icon"
-                      style={{ padding: '3px' }}
-                      onClick={() => onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
-                    >
-                      <Minus size={13} />
-                    </button>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 600, minWidth: '18px', textAlign: 'center' }}>
-                      {item.quantity}
-                    </span>
-                    <button
-                      className="btn btn-ghost btn-icon"
-                      style={{ padding: '3px' }}
-                      onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                    >
-                      <Plus size={13} />
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    <button
-                      className="btn btn-ghost btn-icon"
-                      style={{ padding: '5px' }}
-                      onClick={() => onOpenArtSelector(item.card, item.id)}
-                      title="Mudar Arte / Edição (Scryfall)"
+                      className="btn btn-secondary btn-icon"
+                      style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenArtSelector(item.card, item.id);
+                      }}
+                      title="Mudar Arte / Edição"
                     >
                       <ImageIcon size={15} />
                     </button>
                     <button
-                      className="btn btn-ghost btn-icon"
-                      style={{ padding: '5px' }}
-                      onClick={() => onAddToProxies(item.card, 1)}
-                      title="Adicionar à Fila de Impressão (Proxy)"
+                      className="btn btn-secondary btn-icon"
+                      style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddToProxies(item.card, 1);
+                      }}
+                      title="Adicionar à Impressão"
                     >
                       <Printer size={15} />
                     </button>
                   </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : viewMode === 'stacked' ? (
-        /* 2. MOXFIELD / ARCHIDEKT STACKED COLUMNS VIEW */
-        <div className="stacked-board">
-          {stackedGroups.map(([groupName, items]) => (
-            <div key={groupName} className="stacked-column">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#f8fafc' }}>{groupName}</span>
-                <span className="badge badge-primary">{items.reduce((s, i) => s + i.quantity, 0)}</span>
+                )}
               </div>
 
-              <div className="stacked-cards-list">
-                {items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="stacked-card-entry"
-                    onMouseEnter={(e) => {
-                      setMousePos({ x: e.clientX, y: e.clientY });
-                      setHoveredCardImg(item.card.imageUrlLarge || item.card.imageUrl);
-                    }}
-                    onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
-                    onMouseLeave={() => setHoveredCardImg(null)}
-                  >
-                    <div className="stacked-card-header">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-                        <span style={{ color: '#818cf8', fontWeight: 700 }}>{item.quantity}x</span>
-                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#f8fafc' }}>
-                          {item.card.name}
-                        </span>
-                      </div>
-                      <ManaCostRenderer manaCost={item.card.manaCost} />
+              {/* Card Details & In Use / Available Indicators (Requirement 4) - Hidden in Art-Only mode */}
+              {showGridDetails && (
+                <div style={{ padding: '12px', background: '#0c0f17', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.card.name}
                     </div>
-                    <div style={{ aspectRatio: '5/7', overflow: 'hidden' }}>
-                      <CardImage
-                        name={item.card.name}
-                        imageUrl={item.card.imageUrl}
-                        imageUrlLarge={item.card.imageUrlLarge}
-                        setCode={item.card.setCode}
-                        collectorNumber={item.card.collectorNumber}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
+                    <ManaCostRenderer manaCost={item.card.manaCost} />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }}>
+                    <span>{item.card.setName} ({item.card.setCode})</span>
+                    {item.card.priceUsd && (
+                      <span style={{ color: '#10b981', fontWeight: 600 }}>
+                        ${(item.card.priceUsd * item.quantity).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Requirement 4: Available vs In-Use Indicators */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      padding: '8px',
+                      borderRadius: '6px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid var(--border-subtle)',
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                        Disponíveis:
+                      </span>
+                      <strong style={{ color: '#f8fafc' }}>{item.availableQuantity ?? item.quantity}</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b' }} />
+                        Em Decks:
+                      </span>
+                      <strong style={{ color: '#f8fafc' }}>{item.inUseQuantity ?? 0}</strong>
+                    </div>
+
+                    {/* Decks usage breakdown */}
+                    {item.usedInDecks && item.usedInDecks.length > 0 && (
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '4px', marginTop: '2px' }}>
+                        {item.usedInDecks.map((d, i) => (
+                          <div key={i} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            • {d.deckName} ({d.count}x)
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons: Qty control, Change Art, Add to Proxies */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                    {/* Qty +/- */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <button
+                        className="btn btn-ghost btn-icon"
+                        style={{ padding: '3px' }}
+                        onClick={() => onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                      >
+                        <Minus size={13} />
+                      </button>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, minWidth: '18px', textAlign: 'center' }}>
+                        {item.quantity}
+                      </span>
+                      <button
+                        className="btn btn-ghost btn-icon"
+                        style={{ padding: '3px' }}
+                        onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                      >
+                        <Plus size={13} />
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        className="btn btn-ghost btn-icon"
+                        style={{ padding: '5px' }}
+                        onClick={() => onOpenArtSelector(item.card, item.id)}
+                        title="Mudar Arte / Edição (Scryfall)"
+                      >
+                        <ImageIcon size={15} />
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-icon"
+                        style={{ padding: '5px' }}
+                        onClick={() => onAddToProxies(item.card, 1)}
+                        title="Adicionar à Fila de Impressão (Proxy)"
+                      >
+                        <Printer size={15} />
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
       ) : (
-        /* 3. TABLE / COMPACT LIST VIEW */
-        <div className="glass-panel" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+        /* 2. TABLE / COMPACT LIST VIEW */
+        <div className="glass-panel" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#94a3b8' }}>
                 <th

@@ -797,7 +797,7 @@ export function App() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Sleek Top Navigation Bar (Hidden during print) */}
       <header
-        className="glass-panel print-hide"
+        className="glass-panel print-hide app-header"
         style={{
           position: 'sticky',
           top: 0,
@@ -812,8 +812,9 @@ export function App() {
           gap: '16px',
         }}
       >
-        {/* Brand / Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="app-header-top" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Brand / Logo */}
+          <div className="app-brand" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div
             style={{
               width: '38px',
@@ -842,9 +843,10 @@ export function App() {
             </h1>
           </div>
         </div>
+        </div>
 
         {/* Navigation Tabs */}
-        <nav style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <nav className="app-header-nav" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
           <button
             className={`btn btn-sm ${activeTab === 'collection' ? 'btn-primary' : 'btn-ghost'}`}
             onClick={() => {
@@ -899,7 +901,7 @@ export function App() {
         </nav>
 
         {/* Global Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        <div className="app-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button
             className="btn btn-secondary btn-sm"
             onClick={() => {
@@ -939,6 +941,7 @@ export function App() {
 
       {/* Main App Body */}
       <main
+        className="main-content-container"
         style={{
           flex: 1,
           padding: '20px 24px',

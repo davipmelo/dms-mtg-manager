@@ -17,6 +17,7 @@ import {
   Crown,
   Flame,
   Eye,
+  EyeOff,
   Cog,
   ZoomIn,
   ZoomOut,
@@ -131,10 +132,21 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
     const saved = localStorage.getItem('dms_grid_card_size');
     return saved ? Math.min(340, Math.max(110, Number(saved))) : 200;
   });
+  const [showGridDetails, setShowGridDetails] = useState<boolean>(() => {
+    return localStorage.getItem('dms_grid_show_details') !== 'false';
+  });
 
   const handleGridCardSizeChange = (val: number) => {
     setGridCardSize(val);
     localStorage.setItem('dms_grid_card_size', String(val));
+  };
+
+  const handleToggleGridDetails = () => {
+    setShowGridDetails((prev) => {
+      const next = !prev;
+      localStorage.setItem('dms_grid_show_details', String(next));
+      return next;
+    });
   };
 
   const activeCategoryMeta =
@@ -442,8 +454,18 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
         </div>
       </div>
 
-      {/* Grid Scale Zoom Controller */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '-10px' }}>
+      {/* Grid Controls: Details Toggle & Scale Zoom Slider */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '-10px', gap: '8px', flexWrap: 'wrap' }}>
+        <button
+          className={`btn btn-sm ${showGridDetails ? 'btn-secondary' : 'btn-primary'}`}
+          onClick={handleToggleGridDetails}
+          title={showGridDetails ? 'Ocultar detalhes (mostrar apenas artes)' : 'Mostrar detalhes completos dos utilitários'}
+          style={{ fontSize: '0.75rem', padding: '4px 10px', height: '32px' }}
+        >
+          {showGridDetails ? <EyeOff size={14} /> : <Eye size={14} />}
+          <span>{showGridDetails ? 'Só Artes' : 'Com Detalhes'}</span>
+        </button>
+
         <div
           style={{
             display: 'flex',
@@ -453,6 +475,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
             padding: '4px 10px',
             borderRadius: '8px',
             border: '1px solid var(--border-subtle)',
+            height: '32px',
           }}
           title={`Ajustar escala da grade (${gridCardSize}px)`}
         >
@@ -512,110 +535,143 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
                     preferLarge
                     className="card-image"
                   />
+
+                  {/* Floating quick actions on Art-Only mode */}
+                  {!showGridDetails && (
+                    <div className="card-art-actions-overlay">
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-icon"
+                        style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setArtTargetIndex(idx);
+                        }}
+                        title="Escolher Arte Alternativa"
+                      >
+                        <ImageIcon size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-icon ${isAdded ? 'btn-secondary' : 'btn-primary'}`}
+                        style={{ padding: '6px', background: isAdded ? 'rgba(16, 185, 129, 0.9)' : undefined }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAdd(item, 1);
+                        }}
+                        title="Adicionar à Fila de Impressão"
+                      >
+                        {isAdded ? <Check size={15} /> : <Printer size={15} />}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                <div
-                  style={{
-                    padding: '12px',
-                    background: '#0e131d',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                    flex: 1,
-                  }}
-                >
-                  <div>
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        fontSize: '0.9rem',
-                        color: '#f8fafc',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                      title={item.name}
-                    >
-                      {item.name}
+                {/* Card Details Footer (Hidden in Art-Only mode) */}
+                {showGridDetails && (
+                  <div
+                    style={{
+                      padding: '12px',
+                      background: '#0e131d',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      flex: 1,
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          fontSize: '0.9rem',
+                          color: '#f8fafc',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                        title={item.name}
+                      >
+                        {item.name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '0.75rem',
+                          color: '#94a3b8',
+                          marginTop: '2px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                        title={item.typeLine}
+                      >
+                        {item.typeLine}
+                      </div>
                     </div>
+
                     <div
                       style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
                         fontSize: '0.75rem',
-                        color: '#94a3b8',
-                        marginTop: '2px',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
+                        color: '#64748b',
                       }}
-                      title={item.typeLine}
                     >
-                      {item.typeLine}
+                      <span
+                        style={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                        title={`${item.setName} (${item.setCode}) #${item.collectorNumber}`}
+                      >
+                        {item.setCode} • #{item.collectorNumber}
+                      </span>
+                      {item.power && item.toughness && (
+                        <span style={{ fontWeight: 700, color: '#f8fafc', flexShrink: 0 }}>
+                          {item.power}/{item.toughness}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Alternative Art Selector + Add to Proxies Buttons */}
+                    <div
+                      style={{
+                        marginTop: 'auto',
+                        paddingTop: '6px',
+                        display: 'flex',
+                        gap: '6px',
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setArtTargetIndex(idx)}
+                        title="Escolher arte alternativa / edição desta ficha ou utilitário"
+                        style={{ padding: '6px 10px', flexShrink: 0 }}
+                      >
+                        <ImageIcon size={14} /> Artes
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${isAdded ? 'btn-secondary' : 'btn-primary'}`}
+                        style={{ flex: 1 }}
+                        onClick={() => handleAdd(item, 1)}
+                      >
+                        {isAdded ? (
+                          <>
+                            <Check size={14} className="text-emerald-400" /> Na Fila!
+                          </>
+                        ) : (
+                          <>
+                            <Printer size={14} /> + Proxy
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
-
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      fontSize: '0.75rem',
-                      color: '#64748b',
-                    }}
-                  >
-                    <span
-                      style={{
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                      title={`${item.setName} (${item.setCode}) #${item.collectorNumber}`}
-                    >
-                      {item.setCode} • #{item.collectorNumber}
-                    </span>
-                    {item.power && item.toughness && (
-                      <span style={{ fontWeight: 700, color: '#f8fafc', flexShrink: 0 }}>
-                        {item.power}/{item.toughness}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Alternative Art Selector + Add to Proxies Buttons */}
-                  <div
-                    style={{
-                      marginTop: 'auto',
-                      paddingTop: '6px',
-                      display: 'flex',
-                      gap: '6px',
-                    }}
-                  >
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => setArtTargetIndex(idx)}
-                      title="Escolher arte alternativa / edição desta ficha ou utilitário"
-                      style={{ padding: '6px 10px', flexShrink: 0 }}
-                    >
-                      <ImageIcon size={14} /> Artes
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${isAdded ? 'btn-secondary' : 'btn-primary'}`}
-                      style={{ flex: 1 }}
-                      onClick={() => handleAdd(item, 1)}
-                    >
-                      {isAdded ? (
-                        <>
-                          <Check size={14} className="text-emerald-400" /> Na Fila!
-                        </>
-                      ) : (
-                        <>
-                          <Printer size={14} /> + Proxy
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
             );
           })}

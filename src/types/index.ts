@@ -168,4 +168,4 @@ export interface SystemBackup {
   proxies: ProxyItem[];
 }
 
-export type ViewMode = 'table' | 'grid' | 'stacked';
+export type ViewMode = 'table' | 'grid';

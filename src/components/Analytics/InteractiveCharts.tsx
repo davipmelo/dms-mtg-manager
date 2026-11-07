@@ -228,7 +228,7 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', marginTop: '8px' }}>
       {/* Metric summary badges */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(195px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: '16px' }}>
         <div className="glass-card" style={{ padding: '20px 22px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.82rem' }}>
             <span>Total de Cartas</span>
@@ -288,14 +288,23 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
       </div>
 
       {/* Charts Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '20px' }}>
         {/* Mana Curve */}
         <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <h3 style={{ fontSize: '0.98rem', fontWeight: 600, marginBottom: '12px', color: '#e2e8f0' }}>
             Curva de Mana
           </h3>
           <div style={{ height: '240px', width: '100%' }}>
-            <Bar data={cmcData} options={chartOptionsDark} />
+            <Bar
+              data={cmcData}
+              options={{
+                ...chartOptionsDark,
+                plugins: {
+                  ...chartOptionsDark.plugins,
+                  legend: { display: false },
+                },
+              }}
+            />
           </div>
         </div>
 

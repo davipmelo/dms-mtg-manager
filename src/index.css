@@ -401,64 +401,34 @@ dialog.custom-modal[open] {
   100% { transform: translateY(30%) rotate(25deg); }
 }
 
-/* Stacked Columns View (Moxfield / Archidekt style) */
-.stacked-board {
+/* Card Art Actions Overlay (Visual Grid "Só Artes" mode) */
+.card-art-actions-overlay {
+  position: absolute;
+  bottom: 0;
+  inset-inline: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.45) 60%, transparent 100%);
+  padding: 10px 8px;
   display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  padding-bottom: 24px;
-}
-
-.stacked-column {
-  flex: 0 0 240px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-}
-
-.stacked-cards-list {
-  display: flex;
-  flex-direction: column;
-  padding-top: 8px;
-}
-
-.stacked-card-entry {
-  position: relative;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  margin-top: -30px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.stacked-card-entry:first-child {
-  margin-top: 0;
-}
-
-.stacked-card-entry:hover {
-  margin-top: 0;
-  margin-bottom: 12px;
-  transform: scale(1.04);
-  z-index: 10;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(255, 187, 0, 0.3);
-  border-color: var(--primary);
-}
-
-.stacked-card-header {
-  display: flex;
+  justify-content: center;
   align-items: center;
-  justify-content: space-between;
-  padding: 6px 10px;
-  background: #141418;
-  font-size: 0.8rem;
-  font-weight: 500;
-  gap: 6px;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 5;
+}
+
+.card-item-container:hover .card-art-actions-overlay,
+.card-item-container:focus-within .card-art-actions-overlay,
+.card-image-wrapper:hover .card-art-actions-overlay {
+  opacity: 1;
+}
+
+/* On touch devices, always show subtle actions bar */
+@media (hover: none) and (pointer: coarse) {
+  .card-art-actions-overlay {
+    opacity: 0.9;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.3) 100%);
+  }
 }
 
 /* Mana Symbols */
@@ -596,6 +566,124 @@ dialog.custom-modal[open] {
   position: absolute;
   pointer-events: none;
   z-index: 15;
+}
+
+/* =========================================================================
+   COMPREHENSIVE MOBILE OPTIMIZATIONS (Smartphones & Tablets <= 768px)
+   ========================================================================= */
+
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Compact header with horizontal scrolling tab navigation */
+  .app-header {
+    margin: 8px 8px 0 8px !important;
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+    gap: 10px !important;
+  }
+
+  .app-header-top {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .app-brand h1 {
+    font-size: 1rem !important;
+  }
+
+  .app-header-nav {
+    width: 100% !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    display: flex !important;
+    gap: 6px !important;
+    padding-bottom: 2px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .app-header-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-header-nav .btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    padding: 6px 12px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .app-actions {
+    display: flex !important;
+    gap: 4px !important;
+  }
+
+  .app-actions .btn {
+    padding: 6px 8px !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Main container padding */
+  .main-content-container {
+    padding: 12px 8px !important;
+  }
+
+  /* Form inputs: >= 16px to prevent iOS Safari auto-zooming */
+  .input-text,
+  .select-field,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Cards Grid: 2 columns on mobile devices */
+  .cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  /* Glass panel padding */
+  .glass-panel {
+    padding: 14px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Modals: fit viewport cleanly */
+  .modal-backdrop {
+    padding: 8px !important;
+  }
+
+  .modal-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 94dvh !important;
+    border-radius: 14px !important;
+  }
+
+  .modal-header {
+    padding: 12px 14px !important;
+  }
+
+  /* Responsive table scroll wrapper */
+  .table-responsive-wrapper {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    width: 100% !important;
+    border-radius: 10px !important;
+  }
+
+  /* Touch targets */
+  .btn {
+    min-height: 34px;
+  }
+
+  .btn-sm {
+    min-height: 32px;
+  }
 }
 
 @media print {
