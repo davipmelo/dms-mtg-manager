@@ -720,7 +720,7 @@ export async function generateDeckPoster(
     const pdf = new jsPDF({
       orientation: isLandscape ? 'landscape' : 'portrait',
       unit: 'mm',
-      format: 'a4',
+      format: isLandscape ? [297, 210] : [210, 297],
     });
 
     const imgData = canvas.toDataURL('image/jpeg', Math.min(0.96, Math.max(0.7, options.jpegQuality)));

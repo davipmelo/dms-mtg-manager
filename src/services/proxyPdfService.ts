@@ -80,14 +80,20 @@ export async function generateProxiesPdf(
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: 'a4',
+    format: [210, 297],
   });
 
-  // A4 dimensions at 300 DPI: 2480 x 3508 px
-  // 1 mm = 2480 / 210 = 11.809523 px
-  const SCALE = 2480 / 210;
-  const CANVAS_WIDTH = 2480;
-  const CANVAS_HEIGHT = 3508;
+  pdf.setProperties({
+    title: 'DMS MTG Proxies (A4 210x297mm)',
+    subject: 'Magic: The Gathering Proxies (63x88mm)',
+    creator: 'DMS MTG Manager',
+  });
+
+  // Exact 12 px per mm = 304.8 DPI (crisp high-res print)
+  // Ensures integer coordinates and 100% exact 63.00mm x 88.00mm card dimensions
+  const SCALE = 12;
+  const CANVAS_WIDTH = 2520; // 210 * 12
+  const CANVAS_HEIGHT = 3564; // 297 * 12
 
   const canvas = document.createElement('canvas');
   canvas.width = CANVAS_WIDTH;
@@ -136,32 +142,32 @@ export async function generateProxiesPdf(
     // 2. Sheet Metadata (in margin, outside card cutting area)
     if (options.showSheetMetadata) {
       ctx.fillStyle = '#64748b';
-      ctx.font = '600 22px system-ui, -apple-system, sans-serif';
+      ctx.font = '600 24px system-ui, -apple-system, sans-serif';
       ctx.textBaseline = 'middle';
 
       // Left metadata
       ctx.textAlign = 'left';
       ctx.fillText(
-        `DMS MTG MANAGER • PROXY STUDIO (A4)`,
-        Math.round(10.5 * SCALE),
-        Math.round(8 * SCALE)
+        `DMS MTG MANAGER • PROXY STUDIO (A4 210×297mm)`,
+        126, // 10.5mm * 12
+        96 // 8mm * 12
       );
 
       // Right metadata
       ctx.textAlign = 'right';
       ctx.fillText(
-        `FOLHA ${pageIdx + 1} DE ${totalPages} • 9 CARTAS (63mm × 88mm)`,
-        CANVAS_WIDTH - Math.round(10.5 * SCALE),
-        Math.round(8 * SCALE)
+        `FOLHA ${pageIdx + 1} DE ${totalPages} • 9 CARTAS (63.0mm × 88.0mm)`,
+        CANVAS_WIDTH - 126,
+        96
       );
       ctx.textAlign = 'left';
     }
 
-    // 3. Render 9 Cards in 3x3 Grid
-    const startX = 10.5 * SCALE;
-    const startY = 16.5 * SCALE;
-    const cardWPx = 63 * SCALE;
-    const cardHPx = 88 * SCALE;
+    // 3. Render 9 Cards in 3x3 Grid (Exactly 63mm x 88mm)
+    const startX = 126; // 10.5mm * 12
+    const startY = 198; // 16.5mm * 12
+    const cardWPx = 756; // 63mm * 12
+    const cardHPx = 1056; // 88mm * 12
 
     for (let cIdx = 0; cIdx < pageCards.length; cIdx++) {
       const { card } = pageCards[cIdx];
@@ -280,9 +286,9 @@ export async function generateProxiesPdf(
       ctx.restore();
     }
 
-    // Add page to PDF
+    // Add page to PDF (exact 210 x 297 mm)
     if (pageIdx > 0) {
-      pdf.addPage('a4', 'portrait');
+      pdf.addPage([210, 297], 'portrait');
     }
 
     const pageImgData = canvas.toDataURL('image/jpeg', 0.96);
