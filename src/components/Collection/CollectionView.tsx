@@ -9,6 +9,7 @@ import {
   List,
   Search,
   Filter,
+  Download,
   Plus,
   Minus,
   Sparkles,
@@ -29,7 +30,7 @@ interface CollectionViewProps {
   onOpenArtSelector: (card: Card, collectionItemId: string) => void;
   onAddToProxies: (card: Card, qty: number) => void;
   onRemoveItem: (id: string) => void;
-  onOpenAddModal: () => void;
+  onOpenImportModal: () => void;
 }
 
 export type SortColumn = 'quantity' | 'available' | 'name' | 'cmc' | 'type' | 'set' | 'rarity' | 'price';
@@ -41,7 +42,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
   onOpenArtSelector,
   onAddToProxies,
   onRemoveItem,
-  onOpenAddModal,
+  onOpenImportModal,
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [searchQuery, setSearchQuery] = useState('');
@@ -268,8 +269,12 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
               {showCharts ? 'Ocultar Estatísticas' : 'Estatísticas'}
             </button>
 
-            <button className="btn btn-primary btn-sm" onClick={onOpenAddModal}>
-              <Plus size={16} /> Adicionar Carta
+            <button
+              className="btn btn-highlight btn-sm"
+              onClick={onOpenImportModal}
+              title="Importar cartas para sua coleção via listas de texto, Moxfield, Arena ou LigaMagic"
+            >
+              <Download size={15} /> Importar Cartas
             </button>
           </div>
         </div>

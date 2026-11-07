@@ -194,6 +194,20 @@ h1, h2, h3, h4, .font-display {
   transform: translateY(-1px);
 }
 
+.btn-highlight {
+  background: var(--primary);
+  color: var(--primary-text);
+  font-weight: 700;
+  border: 1px solid rgba(255, 187, 0, 0.6);
+  box-shadow: 0 0 14px rgba(255, 187, 0, 0.35);
+}
+.btn-highlight:hover {
+  background: var(--primary-hover);
+  color: var(--primary-text);
+  box-shadow: 0 0 20px rgba(255, 187, 0, 0.55);
+  transform: translateY(-1px);
+}
+
 .btn-secondary {
   background: var(--bg-surface);
   color: var(--text-main);

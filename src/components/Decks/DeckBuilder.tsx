@@ -15,6 +15,7 @@ import {
   Trash2,
   Printer,
   Upload,
+  Download,
   BarChart3,
   Sparkles,
   Shield,
@@ -37,7 +38,7 @@ interface DeckBuilderProps {
   onAddToProxies?: (card: Card, quantity: number) => void;
   onSendDeckToProxies: (deck: Deck) => void;
   onOpenExportModal: (deckId: string) => void;
-  onOpenAddCardModal: (deckId: string) => void;
+  onOpenImportModal?: (deckId: string) => void;
 }
 
 type SortColumn =
@@ -60,7 +61,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   onAddToProxies,
   onSendDeckToProxies,
   onOpenExportModal,
-  onOpenAddCardModal,
+  onOpenImportModal,
 }) => {
   // View mode: Table/List is default/primary
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -446,10 +447,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             </button>
 
             <button
-              className="btn btn-primary btn-sm"
-              onClick={() => onOpenAddCardModal(deck.id)}
+              className="btn btn-highlight btn-sm"
+              onClick={() => onOpenImportModal?.(deck.id)}
+              title="Importar lista de cartas diretamente para este deck"
             >
-              <Plus size={16} /> Adicionar Carta
+              <Download size={15} /> Importar Cartas
             </button>
           </div>
         </div>
@@ -765,7 +767,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       {sortedMainCards.length === 0 ? (
         <div className="glass-card" style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8' }}>
           {mainCards.length === 0
-            ? 'Este deck ainda não possui cartas. Clique em "Adicionar Carta" acima ou importe uma lista!'
+            ? 'Este deck ainda não possui cartas. Clique em "Importar Cartas" acima para adicionar sua lista!'
             : 'Nenhuma carta encontrada com os filtros selecionados.'}
         </div>
       ) : viewMode === 'grid' ? (

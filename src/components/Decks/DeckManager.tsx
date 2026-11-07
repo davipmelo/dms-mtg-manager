@@ -1,6 +1,6 @@
 import React from 'react';
 import { Deck } from '../../types';
-import { Shield, Plus, Upload, Trash2, Printer, Edit3 } from 'lucide-react';
+import { Shield, Plus, Upload, Download, Trash2, Printer, Edit3 } from 'lucide-react';
 
 interface DeckManagerProps {
   decks: Deck[];
@@ -36,10 +36,10 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
           </div>
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button className="btn btn-secondary btn-sm" onClick={onOpenImportModal}>
-              <Upload size={15} /> Importar Deck
+            <button className="btn btn-highlight btn-sm" onClick={onOpenImportModal}>
+              <Download size={15} /> Importar Deck
             </button>
-            <button className="btn btn-primary btn-sm" onClick={onOpenCreateModal}>
+            <button className="btn btn-secondary btn-sm" onClick={onOpenCreateModal}>
               <Plus size={16} /> Novo Deck
             </button>
           </div>
@@ -67,11 +67,11 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
             Crie seu primeiro deck escolhendo o formato desejado (Commander, Modern, Standard, etc.) ou importe listas de Moxfield, LigaMagic e MTG Arena.
           </p>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button className="btn btn-primary" onClick={onOpenCreateModal}>
-              <Plus size={16} /> Criar Deck
+            <button className="btn btn-highlight" onClick={onOpenImportModal}>
+              <Download size={16} /> Importar Lista
             </button>
-            <button className="btn btn-secondary" onClick={onOpenImportModal}>
-              <Upload size={16} /> Importar Lista
+            <button className="btn btn-secondary" onClick={onOpenCreateModal}>
+              <Plus size={16} /> Criar Deck
             </button>
           </div>
         </div>

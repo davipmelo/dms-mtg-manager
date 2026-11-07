@@ -913,12 +913,13 @@ export function App() {
           </button>
 
           <button
-            className="btn btn-secondary btn-sm"
+            className="btn btn-highlight btn-sm"
             onClick={() => {
               setImportExportMode('import');
               setImportExportDeckId(undefined);
               setIsImportExportModalOpen(true);
             }}
+            title="Importar listas de cartas (Moxfield, LigaMagic, MTG Arena ou texto)"
           >
             <Download size={14} /> Importar
           </button>
@@ -932,13 +933,6 @@ export function App() {
             }}
           >
             <Upload size={14} /> Exportar
-          </button>
-
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => setIsAddCardModalOpen(true)}
-          >
-            <Plus size={16} /> Nova Carta
           </button>
         </div>
       </header>
@@ -963,7 +957,11 @@ export function App() {
             }}
             onAddToProxies={handleAddCardToProxies}
             onRemoveItem={(id) => handleUpdateCollectionQuantity(id, 0)}
-            onOpenAddModal={() => setIsAddCardModalOpen(true)}
+            onOpenImportModal={() => {
+              setImportExportMode('import');
+              setImportExportDeckId('collection');
+              setIsImportExportModalOpen(true);
+            }}
           />
         )}
 
@@ -987,8 +985,10 @@ export function App() {
                 setImportExportDeckId(deckId);
                 setIsImportExportModalOpen(true);
               }}
-              onOpenAddCardModal={() => {
-                setIsAddCardModalOpen(true);
+              onOpenImportModal={(deckId) => {
+                setImportExportMode('import');
+                setImportExportDeckId(deckId);
+                setIsImportExportModalOpen(true);
               }}
             />
           ) : (
