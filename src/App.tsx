@@ -448,7 +448,7 @@ export function App() {
       collectorNumber: selectedPrint.collectorNumber,
       imageUrl: selectedPrint.imageUrl,
       imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
-      imageUrlArtCrop: selectedPrint.imageUrlArtCrop || artSelectorCard.imageUrlArtCrop,
+      imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl || artSelectorCard.imageUrlArtCrop,
       priceUsd: selectedPrint.priceUsd ?? artSelectorCard.priceUsd,
     };
 
@@ -583,8 +583,8 @@ export function App() {
         ...card,
         name: faces[0].name || card.name.split(' // ')[0].trim(),
         typeLine: faces[0].typeLine || card.typeLine,
-        imageUrl: faces[0].imageUrl || card.imageUrl,
-        imageUrlLarge: faces[0].imageUrlLarge || card.imageUrlLarge || card.imageUrl,
+        imageUrl: card.imageUrl || faces[0].imageUrl,
+        imageUrlLarge: card.imageUrlLarge || card.imageUrl || faces[0].imageUrlLarge || faces[0].imageUrl,
         faceLabel: 'frente',
       };
       const backCard: Card | TokenCard = {
@@ -716,8 +716,8 @@ export function App() {
           ...entry.card,
           name: faces[0].name || entry.card.name.split(' // ')[0].trim(),
           typeLine: faces[0].typeLine || entry.card.typeLine,
-          imageUrl: faces[0].imageUrl || entry.card.imageUrl,
-          imageUrlLarge: faces[0].imageUrlLarge || entry.card.imageUrlLarge || entry.card.imageUrl,
+          imageUrl: entry.card.imageUrl || faces[0].imageUrl,
+          imageUrlLarge: entry.card.imageUrlLarge || entry.card.imageUrl || faces[0].imageUrlLarge || faces[0].imageUrl,
           faceLabel: 'frente',
         };
         deckProxyItems.push({

@@ -53,7 +53,9 @@ export const DEFAULT_DECK_IMAGE_OPTIONS: DeckImageOptions = {
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (!url.startsWith('data:') && !url.startsWith('blob:')) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error(`Failed to load ${url}`));
     img.src = url;
@@ -529,22 +531,30 @@ export async function generateDeckPoster(
     finalCards.map(async (item) => {
       const card = item.card;
       const urlCandidates: string[] = [];
+      const isCustomOrAlter = card.setCode === 'CUSTOM' || card.setCode === 'MPC';
+      const isValidSrc = (src?: string) =>
+        Boolean(
+          src &&
+            (src.startsWith('http://') ||
+              src.startsWith('https://') ||
+              src.startsWith('data:image/') ||
+              src.startsWith('blob:'))
+        );
 
       // If high or ultra, prefer large image
       if (
         (options.resolution === 'ultra' || options.resolution === 'high') &&
-        card.imageUrlLarge &&
-        card.imageUrlLarge.startsWith('http')
+        isValidSrc(card.imageUrlLarge)
       ) {
-        urlCandidates.push(card.imageUrlLarge);
+        urlCandidates.push(card.imageUrlLarge!);
       }
-      if (card.imageUrl && card.imageUrl.startsWith('http') && !urlCandidates.includes(card.imageUrl)) {
-        urlCandidates.push(card.imageUrl);
+      if (isValidSrc(card.imageUrl) && !urlCandidates.includes(card.imageUrl!)) {
+        urlCandidates.push(card.imageUrl!);
       }
-      if (card.imageUrlLarge && card.imageUrlLarge.startsWith('http') && !urlCandidates.includes(card.imageUrlLarge)) {
-        urlCandidates.push(card.imageUrlLarge);
+      if (isValidSrc(card.imageUrlLarge) && !urlCandidates.includes(card.imageUrlLarge!)) {
+        urlCandidates.push(card.imageUrlLarge!);
       }
-      if (card.setCode && card.collectorNumber) {
+      if (!isCustomOrAlter && card.setCode && card.collectorNumber && card.collectorNumber !== '★') {
         urlCandidates.push(
           `https://api.scryfall.com/cards/${card.setCode.toLowerCase()}/${card.collectorNumber}?format=image&version=normal`
         );

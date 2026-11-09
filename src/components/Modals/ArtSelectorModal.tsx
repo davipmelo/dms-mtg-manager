@@ -282,6 +282,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
         {/* Header */}
         <div
           style={{
+            flexShrink: 0,
             padding: '16px 24px',
             borderBottom: '1px solid var(--border-subtle)',
             display: 'flex',
@@ -304,6 +305,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#818cf8',
+                flexShrink: 0,
               }}
             >
               <ImageIcon size={20} />
@@ -323,7 +325,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           <button
             onClick={onClose}
             className="btn btn-ghost btn-icon"
-            style={{ borderRadius: '50%', padding: '6px', color: '#94a3b8' }}
+            style={{ borderRadius: '50%', padding: '6px', color: '#94a3b8', flexShrink: 0 }}
           >
             <X size={20} />
           </button>
@@ -332,11 +334,14 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
         {/* Navigation Tabs (3 Abas solicitadas) */}
         <div
           style={{
+            flexShrink: 0,
+            minHeight: '48px',
+            height: '48px',
             display: 'flex',
             alignItems: 'center',
             padding: '0 24px',
             borderBottom: '1px solid var(--border-subtle)',
-            background: 'rgba(15, 20, 30, 0.95)',
+            background: 'rgba(15, 20, 30, 0.98)',
             gap: '8px',
             overflowX: 'auto',
           }}
@@ -347,13 +352,15 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             className="btn btn-ghost"
             onClick={() => setActiveTab('official')}
             style={{
-              padding: '12px 16px',
+              flexShrink: 0,
+              height: '100%',
+              padding: '0 16px',
               borderRadius: '0',
-              borderBottom: activeTab === 'official' ? '2px solid #6366f1' : '2px solid transparent',
+              borderBottom: activeTab === 'official' ? '3px solid #6366f1' : '3px solid transparent',
               color: activeTab === 'official' ? '#f8fafc' : '#94a3b8',
               fontWeight: activeTab === 'official' ? 700 : 500,
               fontSize: '0.88rem',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
               cursor: 'pointer',
@@ -374,13 +381,15 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             className="btn btn-ghost"
             onClick={() => setActiveTab('mpcfill')}
             style={{
-              padding: '12px 16px',
+              flexShrink: 0,
+              height: '100%',
+              padding: '0 16px',
               borderRadius: '0',
-              borderBottom: activeTab === 'mpcfill' ? '2px solid #ffbb00' : '2px solid transparent',
+              borderBottom: activeTab === 'mpcfill' ? '3px solid #ffbb00' : '3px solid transparent',
               color: activeTab === 'mpcfill' ? '#ffbb00' : '#94a3b8',
               fontWeight: activeTab === 'mpcfill' ? 700 : 500,
               fontSize: '0.88rem',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
               cursor: 'pointer',
@@ -410,13 +419,15 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             className="btn btn-ghost"
             onClick={() => setActiveTab('custom')}
             style={{
-              padding: '12px 16px',
+              flexShrink: 0,
+              height: '100%',
+              padding: '0 16px',
               borderRadius: '0',
-              borderBottom: activeTab === 'custom' ? '2px solid #10b981' : '2px solid transparent',
+              borderBottom: activeTab === 'custom' ? '3px solid #10b981' : '3px solid transparent',
               color: activeTab === 'custom' ? '#10b981' : '#94a3b8',
               fontWeight: activeTab === 'custom' ? 700 : 500,
               fontSize: '0.88rem',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
               cursor: 'pointer',

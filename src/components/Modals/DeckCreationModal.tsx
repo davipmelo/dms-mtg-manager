@@ -187,7 +187,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
         collectorNumber: print.collectorNumber,
         imageUrl: print.imageUrl,
         imageUrlLarge: print.imageUrlLarge || print.imageUrl,
-        imageUrlArtCrop: print.imageUrlArtCrop || selectedCommander.imageUrlArtCrop,
+        imageUrlArtCrop: print.imageUrlArtCrop || print.imageUrl || selectedCommander.imageUrlArtCrop,
       });
       setCommanderQuery(`${selectedCommander.name} (${print.setCode}) ${print.collectorNumber}`);
       setCommanderWarning(null);
@@ -202,7 +202,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
         collectorNumber: print.collectorNumber,
         imageUrl: print.imageUrl,
         imageUrlLarge: print.imageUrlLarge || print.imageUrl,
-        imageUrlArtCrop: print.imageUrlArtCrop || selectedPartner.imageUrlArtCrop,
+        imageUrlArtCrop: print.imageUrlArtCrop || print.imageUrl || selectedPartner.imageUrlArtCrop,
       });
       setPartnerQuery(`${selectedPartner.name} (${print.setCode}) ${print.collectorNumber}`);
       setPartnerWarning(null);

@@ -117,8 +117,8 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
           ...item.card,
           name: faces[0].name || item.card.name.split(' // ')[0].trim(),
           typeLine: faces[0].typeLine || item.card.typeLine,
-          imageUrl: faces[0].imageUrl || item.card.imageUrl,
-          imageUrlLarge: faces[0].imageUrlLarge || item.card.imageUrlLarge || item.card.imageUrl,
+          imageUrl: item.card.imageUrl || faces[0].imageUrl,
+          imageUrlLarge: item.card.imageUrlLarge || item.card.imageUrl || faces[0].imageUrlLarge || faces[0].imageUrl,
           faceLabel: 'frente',
         };
         const backCard: Card | TokenCard = {

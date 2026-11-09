@@ -34,7 +34,9 @@ export const DEFAULT_PROXY_PDF_OPTIONS: ProxyPdfOptions = {
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (!url.startsWith('data:') && !url.startsWith('blob:')) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error(`Failed to load ${url}`));
     img.src = url;
@@ -184,10 +186,22 @@ export async function generateProxiesPdf(
       ctx.fillRect(cardX, cardY, wPx, hPx);
 
       // Attempt to load image
+      const isCustomOrAlter = card.setCode === 'CUSTOM' || card.setCode === 'MPC';
+      const isValidSrc = (src?: string) =>
+        Boolean(
+          src &&
+            (src.startsWith('http://') ||
+              src.startsWith('https://') ||
+              src.startsWith('data:image/') ||
+              src.startsWith('blob:'))
+        );
+
       const candidates: string[] = [];
-      if (card.imageUrlLarge && card.imageUrlLarge.startsWith('http')) candidates.push(card.imageUrlLarge);
-      if (card.imageUrl && card.imageUrl.startsWith('http')) candidates.push(card.imageUrl);
-      if (card.setCode && card.collectorNumber) {
+      if (isValidSrc(card.imageUrlLarge)) candidates.push(card.imageUrlLarge!);
+      if (isValidSrc(card.imageUrl) && !candidates.includes(card.imageUrl!)) {
+        candidates.push(card.imageUrl!);
+      }
+      if (!isCustomOrAlter && card.setCode && card.collectorNumber && card.collectorNumber !== '★') {
         candidates.push(
           `https://api.scryfall.com/cards/${card.setCode.toLowerCase()}/${card.collectorNumber}?format=image&version=large`
         );

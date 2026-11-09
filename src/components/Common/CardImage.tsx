@@ -41,22 +41,36 @@ export const CardImage: React.FC<CardImageProps> = ({
     const primary = preferLarge ? imageUrlLarge || imageUrl : imageUrl || imageUrlLarge;
     const secondary = preferLarge ? imageUrl : imageUrlLarge;
 
-    if (primary && primary.startsWith('http')) list.push(primary);
-    if (secondary && secondary.startsWith('http') && secondary !== primary) list.push(secondary);
-
-    const faceParam = face === 'back' ? '&face=back' : '';
-
-    if (setCode && collectorNumber) {
-      list.push(
-        `https://api.scryfall.com/cards/${encodeURIComponent(setCode.toLowerCase())}/${encodeURIComponent(collectorNumber)}?format=image&version=${version}${faceParam}`
+    const isValidSrc = (src?: string) =>
+      Boolean(
+        src &&
+          (src.startsWith('http://') ||
+            src.startsWith('https://') ||
+            src.startsWith('data:image/') ||
+            src.startsWith('blob:'))
       );
-    }
 
-    if (name) {
-      const frontName = name.includes('//') ? name.split('//')[0].trim() : name.trim();
-      list.push(
-        `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(frontName)}&format=image&version=${version}${faceParam}`
-      );
+    if (isValidSrc(primary)) list.push(primary!);
+    if (isValidSrc(secondary) && secondary !== primary) list.push(secondary!);
+
+    const isCustomOrAlter = setCode === 'CUSTOM' || setCode === 'MPC';
+
+    // Only fallback to Scryfall endpoints for official Scryfall cards
+    if (!isCustomOrAlter) {
+      const faceParam = face === 'back' ? '&face=back' : '';
+
+      if (setCode && collectorNumber && collectorNumber !== '★') {
+        list.push(
+          `https://api.scryfall.com/cards/${encodeURIComponent(setCode.toLowerCase())}/${encodeURIComponent(collectorNumber)}?format=image&version=${version}${faceParam}`
+        );
+      }
+
+      if (name) {
+        const frontName = name.includes('//') ? name.split('//')[0].trim() : name.trim();
+        list.push(
+          `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(frontName)}&format=image&version=${version}${faceParam}`
+        );
+      }
     }
 
     return list;
