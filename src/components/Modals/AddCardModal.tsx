@@ -3,6 +3,7 @@ import { Card, Deck, CardPrint } from '../../types';
 import { searchAutocomplete, getCardByName, getCardPrints } from '../../services/scryfall';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
+import { CardHoverPreview, CardHoverPreviewData } from '../Common/CardHoverPreview';
 import { useModalOverlay } from '../../hooks/useModalOverlay';
 import { Search, Plus, X, Loader2, Sparkles, Check, Image as ImageIcon } from 'lucide-react';
 
@@ -34,6 +35,8 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
   const [isFoil, setIsFoil] = useState(false);
   const [targetDeckId, setTargetDeckId] = useState<string>(defaultDeckId || '');
   const [addedNotice, setAddedNotice] = useState(false);
+  const [hoveredPreview, setHoveredPreview] = useState<CardHoverPreviewData | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -382,7 +385,10 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                     return (
                       <div
                         key={p.id}
-                        onClick={() => handleSelectPrint(p)}
+                        onClick={() => {
+                          setHoveredPreview(null);
+                          handleSelectPrint(p);
+                        }}
                         style={{
                           flex: '0 0 105px',
                           cursor: 'pointer',
@@ -397,9 +403,17 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                         }}
                         onMouseEnter={(e) => {
                           if (!isSelected) e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                          setMousePos({ x: e.clientX, y: e.clientY });
+                          setHoveredPreview({
+                            url: p.imageUrlLarge || p.imageUrl,
+                            title: `${selectedCard.name} (${p.setCode.toUpperCase()} #${p.collectorNumber})`,
+                            subtitle: `${p.setName}${p.artist ? ` • Arte por ${p.artist}` : ''}`,
+                          });
                         }}
+                        onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
                         onMouseLeave={(e) => {
                           if (!isSelected) e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                          setHoveredPreview(null);
                         }}
                       >
                         <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b', overflow: 'hidden' }}>
@@ -587,6 +601,8 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
           </button>
         </div>
       </div>
+      {/* Floating Card Zoom Preview */}
+      <CardHoverPreview preview={hoveredPreview} mousePos={mousePos} />
     </div>
   );
 };

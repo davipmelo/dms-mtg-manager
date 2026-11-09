@@ -3,6 +3,7 @@ import { Deck, DeckCard, ViewMode, Card, CollectionItem } from '../../types';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
 import { InteractiveCharts } from '../Analytics/InteractiveCharts';
+import { CardHoverPreview, CardHoverPreviewData } from '../Common/CardHoverPreview';
 import { EditDeckModal } from '../Modals/EditDeckModal';
 import { ExportDeckImageModal } from '../Modals/ExportDeckImageModal';
 import {
@@ -88,7 +89,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     });
   };
   const [showCharts, setShowCharts] = useState(true);
-  const [hoveredCardImg, setHoveredCardImg] = useState<string | null>(null);
+  const [hoveredPreview, setHoveredPreview] = useState<CardHoverPreviewData | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Filter & Search states (matches Collection)
@@ -537,7 +538,20 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     flexShrink: 0,
                     borderRadius: '6px',
                     overflow: 'hidden',
+                    cursor: 'pointer',
                   }}
+                  onMouseEnter={(e) => {
+                    setMousePos({ x: e.clientX, y: e.clientY });
+                    setHoveredPreview({
+                      url: cmd.card.imageUrlLarge || cmd.card.imageUrl,
+                      title: cmd.card.name,
+                      subtitle: `${cmd.card.setName} (${cmd.card.setCode.toUpperCase()} #${cmd.card.collectorNumber})`,
+                      badge: 'Comandante ★',
+                      badgeColor: '#ffbb00',
+                    });
+                  }}
+                  onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                  onMouseLeave={() => setHoveredPreview(null)}
                 >
                   <CardImage
                     name={cmd.card.name}
@@ -728,7 +742,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             <button
               className={`btn btn-icon ${viewMode === 'grid' ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => {
-                setHoveredCardImg(null);
+                setHoveredPreview(null);
                 handleSetViewMode('grid');
               }}
               title="Visualização em Grade Visual (Principal)"
@@ -738,7 +752,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             <button
               className={`btn btn-icon ${viewMode === 'table' ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => {
-                setHoveredCardImg(null);
+                setHoveredPreview(null);
                 handleSetViewMode('table');
               }}
               title="Visualização em Lista / Tabela (Secundária)"
@@ -821,7 +835,20 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
             return (
               <div key={`${c.card.id}-${idx}`} className="card-item-container">
-                <div className={`card-image-wrapper ${isFoil ? 'foil-sheen' : ''}`}>
+                <div
+                  className={`card-image-wrapper ${isFoil ? 'foil-sheen' : ''}`}
+                  onMouseEnter={(e) => {
+                    setMousePos({ x: e.clientX, y: e.clientY });
+                    setHoveredPreview({
+                      url: c.card.imageUrlLarge || c.card.imageUrl,
+                      title: c.card.name,
+                      subtitle: `${c.card.setName} (${c.card.setCode.toUpperCase()} #${c.card.collectorNumber})`,
+                      badge: isFoil ? 'Foil ★' : undefined,
+                    });
+                  }}
+                  onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                  onMouseLeave={() => setHoveredPreview(null)}
+                >
                   <CardImage
                     name={c.card.name}
                     imageUrl={c.card.imageUrl}
@@ -881,6 +908,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
                         onClick={(e) => {
                           e.stopPropagation();
+                          setHoveredPreview(null);
                           onOpenArtSelector(c.card, deck.cards.indexOf(c));
                         }}
                         title="Trocar Arte / Edição"
@@ -893,6 +921,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                           style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
                           onClick={(e) => {
                             e.stopPropagation();
+                            setHoveredPreview(null);
                             onAddToProxies(c.card, c.quantity);
                           }}
                           title="Imprimir Proxies"
@@ -905,6 +934,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
                         onClick={(e) => {
                           e.stopPropagation();
+                          setHoveredPreview(null);
                           handleRemoveCard(c.card.id);
                         }}
                         title="Remover do Deck"
@@ -1397,13 +1427,18 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                           e.currentTarget.style.color = '#a5b4fc';
                           e.currentTarget.style.borderColor = '#818cf8';
                           setMousePos({ x: e.clientX, y: e.clientY });
-                          setHoveredCardImg(c.card.imageUrlLarge || c.card.imageUrl);
+                          setHoveredPreview({
+                            url: c.card.imageUrlLarge || c.card.imageUrl,
+                            title: c.card.name,
+                            subtitle: `${c.card.setName} (${c.card.setCode.toUpperCase()} #${c.card.collectorNumber})`,
+                            badge: isFoil ? 'Foil ★' : undefined,
+                          });
                         }}
                         onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.color = '#f8fafc';
                           e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.45)';
-                          setHoveredCardImg(null);
+                          setHoveredPreview(null);
                         }}
                       >
                         {c.card.name}
@@ -1587,13 +1622,18 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                               e.currentTarget.style.color = '#a5b4fc';
                               e.currentTarget.style.borderColor = '#818cf8';
                               setMousePos({ x: e.clientX, y: e.clientY });
-                              setHoveredCardImg(c.card.imageUrlLarge || c.card.imageUrl);
+                              setHoveredPreview({
+                                url: c.card.imageUrlLarge || c.card.imageUrl,
+                                title: c.card.name,
+                                subtitle: `${c.card.setName} (${c.card.setCode.toUpperCase()} #${c.card.collectorNumber})`,
+                                badge: isFoil ? 'Foil ★' : undefined,
+                              });
                             }}
                             onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.color = '#f8fafc';
                               e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.45)';
-                              setHoveredCardImg(null);
+                              setHoveredPreview(null);
                             }}
                           >
                             {c.card.name}
@@ -1668,7 +1708,20 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 const isFoil = c.isFoil || c.card.isFoil;
                 return (
                   <div key={`side-grid-${c.card.id}-${idx}`} className="card-item-container">
-                    <div className={`card-image-wrapper ${isFoil ? 'foil-sheen' : ''}`}>
+                    <div
+                      className={`card-image-wrapper ${isFoil ? 'foil-sheen' : ''}`}
+                      onMouseEnter={(e) => {
+                        setMousePos({ x: e.clientX, y: e.clientY });
+                        setHoveredPreview({
+                          url: c.card.imageUrlLarge || c.card.imageUrl,
+                          title: c.card.name,
+                          subtitle: `${c.card.setName} (${c.card.setCode.toUpperCase()} #${c.card.collectorNumber})`,
+                          badge: isFoil ? 'Foil ★' : undefined,
+                        });
+                      }}
+                      onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                      onMouseLeave={() => setHoveredPreview(null)}
+                    >
                       <CardImage
                         name={c.card.name}
                         imageUrl={c.card.imageUrl}
@@ -1724,29 +1777,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         </div>
       )}
 
-      {/* Floating Card Image Tooltip (Triggered strictly on card name hover) */}
-      {hoveredCardImg && (
-        <div
-          style={{
-            position: 'fixed',
-            left: `${Math.min(window.innerWidth - 260, mousePos.x + 20)}px`,
-            top: `${Math.min(window.innerHeight - 360, mousePos.y - 120)}px`,
-            width: '240px',
-            pointerEvents: 'none',
-            zIndex: 10000,
-            borderRadius: '12px',
-            overflow: 'hidden',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.8), 0 0 20px rgba(99,102,241,0.3)',
-            animation: 'modal-enter 0.15s ease forwards',
-          }}
-        >
-          <img
-            src={hoveredCardImg}
-            alt="Preview"
-            style={{ width: '100%', height: 'auto', display: 'block' }}
-          />
-        </div>
-      )}
+      {/* Floating Card Zoom Preview (matching Art Selector Modal hover) */}
+      <CardHoverPreview preview={hoveredPreview} mousePos={mousePos} />
       {/* Edit Deck Modal (Allows renaming, format changes and card list editing) */}
       {isEditModalOpen && (
         <EditDeckModal

@@ -3,6 +3,7 @@ import { TokenCard, UtilityCategory, Card, CardPrint } from '../../types';
 import { searchUtilityCards } from '../../services/scryfall';
 import { CardImage } from '../Common/CardImage';
 import { ArtSelectorModal } from '../Modals/ArtSelectorModal';
+import { CardHoverPreview, CardHoverPreviewData } from '../Common/CardHoverPreview';
 import {
   Search,
   Loader2,
@@ -123,6 +124,8 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
   const [isMultiOnly, setIsMultiOnly] = useState(false);
   const [isColorlessOnly, setIsColorlessOnly] = useState(false);
   const [addedMap, setAddedMap] = useState<Record<string, boolean>>({});
+  const [hoveredPreview, setHoveredPreview] = useState<CardHoverPreviewData | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Alternative Art Selector state for utility cards
   const [artTargetIndex, setArtTargetIndex] = useState<number | null>(null);
@@ -526,7 +529,19 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
             const isAdded = !!addedMap[item.id];
             return (
               <div key={`${item.id}-${idx}`} className="card-item-container">
-                <div className="card-image-wrapper">
+                <div
+                  className="card-image-wrapper"
+                  onMouseEnter={(e) => {
+                    setMousePos({ x: e.clientX, y: e.clientY });
+                    setHoveredPreview({
+                      url: item.imageUrlLarge || item.imageUrl,
+                      title: item.name,
+                      subtitle: `${item.typeLine || ''}${item.setName ? ` (${item.setName})` : ''}`,
+                    });
+                  }}
+                  onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                  onMouseLeave={() => setHoveredPreview(null)}
+                >
                   <CardImage
                     name={item.name}
                     imageUrl={item.imageUrl}
@@ -546,6 +561,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
                         style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
                         onClick={(e) => {
                           e.stopPropagation();
+                          setHoveredPreview(null);
                           setArtTargetIndex(idx);
                         }}
                         title="Escolher Arte Alternativa"
@@ -558,6 +574,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
                         style={{ padding: '6px', background: isAdded ? 'rgba(16, 185, 129, 0.9)' : undefined }}
                         onClick={(e) => {
                           e.stopPropagation();
+                          setHoveredPreview(null);
                           handleAdd(item, 1);
                         }}
                         title="Adicionar à Fila de Impressão"
@@ -678,6 +695,9 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
           })}
         </div>
       )}
+
+      {/* Floating Card Zoom Preview */}
+      <CardHoverPreview preview={hoveredPreview} mousePos={mousePos} />
 
       {/* Alternative Art Selector Modal for Utilities & Tokens */}
       <ArtSelectorModal

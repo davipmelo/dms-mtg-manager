@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { ProxyItem, Deck, Card, TokenCard } from '../../types';
 import { CardImage } from '../Common/CardImage';
+import { CardHoverPreview, CardHoverPreviewData } from '../Common/CardHoverPreview';
 import {
   generateProxiesPdf,
   ProxyPdfOptions,
@@ -95,6 +96,8 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
   const [pdfProgress, setPdfProgress] = useState<{ current: number; total: number; percentage: number } | null>(null);
+  const [hoveredPreview, setHoveredPreview] = useState<CardHoverPreviewData | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // MPCFill Import state
   const mpcFileInputRef = useRef<HTMLInputElement>(null);
@@ -887,7 +890,20 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                     flexShrink: 0,
                     borderRadius: '4px',
                     overflow: 'hidden',
+                    cursor: 'pointer',
                   }}
+                  onMouseEnter={(e) => {
+                    setMousePos({ x: e.clientX, y: e.clientY });
+                    setHoveredPreview({
+                      url: item.card.imageUrlLarge || item.card.imageUrl,
+                      title: item.card.name,
+                      subtitle: `${item.card.setName || ''} (${(item.card.setCode || '').toUpperCase()} #${item.card.collectorNumber || ''})`,
+                      badge: item.card.faceLabel ? `Lado: ${item.card.faceLabel.toUpperCase()}` : undefined,
+                      badgeColor: '#818cf8',
+                    });
+                  }}
+                  onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                  onMouseLeave={() => setHoveredPreview(null)}
                 >
                   <CardImage
                     name={item.card.name}
@@ -1201,7 +1217,22 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                     typeLine.includes('phenomenon');
 
                   return (
-                    <div key={cardIdx} className="a4-card-slot has-card">
+                    <div
+                      key={cardIdx}
+                      className="a4-card-slot has-card"
+                      onMouseEnter={(e) => {
+                        setMousePos({ x: e.clientX, y: e.clientY });
+                        setHoveredPreview({
+                          url: c.card.imageUrlLarge || c.card.imageUrl,
+                          title: c.card.name,
+                          subtitle: `${c.card.setName || ''} (${(c.card.setCode || '').toUpperCase()} #${c.card.collectorNumber || ''})`,
+                          badge: c.card.faceLabel ? `Lado: ${c.card.faceLabel.toUpperCase()}` : undefined,
+                          badgeColor: '#ffbb00',
+                        });
+                      }}
+                      onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                      onMouseLeave={() => setHoveredPreview(null)}
+                    >
                       <CardImage
                         name={c.card.name}
                         imageUrl={c.card.imageUrl}
@@ -1734,6 +1765,8 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
           </div>
         </div>
       )}
+      {/* Floating Card Zoom Preview */}
+      <CardHoverPreview preview={hoveredPreview} mousePos={mousePos} />
     </div>
   );
 };

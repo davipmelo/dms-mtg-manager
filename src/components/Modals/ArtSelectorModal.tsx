@@ -11,6 +11,7 @@ import {
 } from '../../services/mpcFillService';
 import { compressImageFile } from '../../services/imageUtils';
 import { CardImage } from '../Common/CardImage';
+import { CardHoverPreview } from '../Common/CardHoverPreview';
 import {
   X,
   Check,
@@ -1524,90 +1525,19 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
         )}
 
         {/* Floating Zoom Hover Preview Tooltip */}
-        {hoveredPreview && (
-          <div
-            style={{
-              position: 'fixed',
-              left: `${Math.max(16, Math.min(window.innerWidth - 420, previewMousePos.x + 24 + 400 > window.innerWidth ? previewMousePos.x - 424 : previewMousePos.x + 24))}px`,
-              top: `${Math.max(16, Math.min(window.innerHeight - 600, previewMousePos.y - 210))}px`,
-              width: '400px',
-              maxWidth: 'calc(100vw - 32px)',
-              maxHeight: 'calc(100vh - 32px)',
-              pointerEvents: 'none',
-              zIndex: 100000,
-              borderRadius: '14px',
-              overflow: 'hidden',
-              boxShadow: '0 30px 70px rgba(0, 0, 0, 0.98), 0 0 40px rgba(245, 158, 11, 0.3)',
-              border: '1px solid rgba(255, 187, 0, 0.45)',
-              background: '#070a10',
-              animation: 'modal-enter 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div style={{ position: 'relative', width: '100%', aspectRatio: '5/7', background: '#000', maxHeight: 'calc(100vh - 90px)' }}>
-              <img
-                src={hoveredPreview.url}
-                alt={hoveredPreview.title}
-                crossOrigin="anonymous"
-                style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-              />
-            </div>
-            <div
-              style={{
-                padding: '9px 14px',
-                background: 'rgba(10, 14, 23, 0.97)',
-                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                <span
-                  style={{
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                    color: '#f8fafc',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    maxWidth: hoveredPreview.dpi ? '290px' : '100%',
-                  }}
-                >
-                  {hoveredPreview.title}
-                </span>
-                {hoveredPreview.dpi ? (
-                  <span
-                    style={{
-                      fontSize: '0.74rem',
-                      color: '#ffbb00',
-                      fontWeight: 800,
-                      background: 'rgba(245, 158, 11, 0.18)',
-                      padding: '2px 7px',
-                      borderRadius: '4px',
-                      border: '1px solid rgba(245, 158, 11, 0.4)',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {hoveredPreview.dpi} DPI
-                  </span>
-                ) : null}
-              </div>
-              {hoveredPreview.subtitle && (
-                <div
-                  style={{
-                    fontSize: '0.78rem',
-                    color: '#94a3b8',
-                    marginTop: '2px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {hoveredPreview.subtitle}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        <CardHoverPreview
+          preview={
+            hoveredPreview
+              ? {
+                  url: hoveredPreview.url,
+                  title: hoveredPreview.title,
+                  subtitle: hoveredPreview.subtitle,
+                  badge: hoveredPreview.dpi ? `${hoveredPreview.dpi} DPI` : undefined,
+                }
+              : null
+          }
+          mousePos={previewMousePos}
+        />
       </div>
     </div>
   );
