@@ -428,7 +428,7 @@ export async function saveUserCloudData(
   const proxies = await optimizeProxiesImages(data.proxies);
 
   const payload: CloudUserData = {
-    app: 'dms-mtg-manager',
+    app: 'proliferate',
     schemaVersion: 1,
     updatedAt: new Date().toISOString(),
     collection,

@@ -86,9 +86,9 @@ export async function generateProxiesPdf(
   });
 
   pdf.setProperties({
-    title: 'DMS MTG Proxies (A4 210x297mm)',
+    title: 'Proliferate Proxies (A4 210x297mm)',
     subject: 'Magic: The Gathering Proxies (63x88mm)',
-    creator: 'DMS MTG Manager',
+    creator: 'Proliferate',
   });
 
   // Exact 12 px per mm = 304.8 DPI (crisp high-res print)
@@ -150,7 +150,7 @@ export async function generateProxiesPdf(
       // Left metadata
       ctx.textAlign = 'left';
       ctx.fillText(
-        `DMS MTG MANAGER • PROXY STUDIO (A4 210×297mm)`,
+        `PROLIFERATE • PROXY STUDIO (A4 210×297mm)`,
         126, // 10.5mm * 12
         96 // 8mm * 12
       );

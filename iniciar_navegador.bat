@@ -8,7 +8,7 @@ if %ERRORLEVEL% neq 0 (
     )
 )
 
-echo Iniciando DMS MTG Manager em modo Navegador Web...
+echo Iniciando Proliferate em modo Navegador Web...
 call npm run dev -- --open
 if %ERRORLEVEL% neq 0 (
     echo.

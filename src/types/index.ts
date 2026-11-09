@@ -161,7 +161,7 @@ export interface ProxyItem {
 }
 
 export interface SystemBackup {
-  app: 'dms-mtg-manager';
+  app: 'dms-mtg-manager' | 'proliferate';
   schemaVersion: number;
   exportedAt: string;
   collection: CollectionItem[];
@@ -181,7 +181,7 @@ export interface UserProfile {
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'offline';
 
 export interface CloudUserData {
-  app: 'dms-mtg-manager';
+  app: 'dms-mtg-manager' | 'proliferate';
   schemaVersion: number;
   updatedAt: string;
   collection: CollectionItem[];

@@ -1203,7 +1203,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       letterSpacing: '0.4px',
                     }}
                   >
-                    <span>DMS MTG MANAGER • PROXY STUDIO (A4)</span>
+                    <span>PROLIFERATE • PROXY STUDIO (A4)</span>
                     <span style={{ fontWeight: 700 }}>FOLHA {pageIdx + 1} DE {totalPages}</span>
                     <span>{pageCards.length} CARTAS (63mm × 88mm)</span>
                   </div>

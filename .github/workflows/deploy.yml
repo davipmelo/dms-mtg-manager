@@ -1,4 +1,4 @@
-name: Deploy DMS MTG Manager to GitHub Pages
+name: Deploy Proliferate to GitHub Pages
 
 on:
   push:

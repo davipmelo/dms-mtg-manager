@@ -445,7 +445,7 @@ export async function generateDeckPoster(
     const tagFontSize = Math.max(12, Math.round(titleFontSize * 0.45));
     ctx.fillStyle = isLight ? '#4f46e5' : '#818cf8';
     ctx.font = `bold ${tagFontSize}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-    ctx.fillText('DMS MTG MANAGER', CANVAS_WIDTH - marginX - 28, headerY + headerHeight * 0.4);
+    ctx.fillText('PROLIFERATE', CANVAS_WIDTH - marginX - 28, headerY + headerHeight * 0.4);
 
     ctx.fillStyle = textMuted;
     ctx.font = `${Math.max(10, Math.round(tagFontSize * 0.8))}px system-ui, sans-serif`;

@@ -276,7 +276,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                     2. Importar / Restaurar Backup de Outra Máquina
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                    Selecione um arquivo <code>.json</code> exportado anteriormente pelo DMS MTG Manager
+                    Selecione um arquivo <code>.json</code> exportado anteriormente pelo Proliferate
                   </div>
                 </div>
               </div>

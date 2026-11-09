@@ -1,9 +1,9 @@
 {
-  "name": "dms-mtg-manager",
+  "name": "proliferate",
   "private": true,
   "version": "2.0.0",
-  "description": "Web App para gerenciamento de coleção, construção de decks, utilitários e impressão de proxies A4 de Magic: The Gathering",
-  "homepage": "https://davipmelo.github.io/dms-mtg-manager",
+  "description": "Proliferate - Web App para gerenciamento de coleção, construção de decks, utilitários e impressão de proxies A4 de Magic: The Gathering",
+  "homepage": "https://davipmelo.github.io/proliferate",
   "type": "module",
   "scripts": {
     "dev": "vite",

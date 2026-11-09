@@ -1,8 +1,8 @@
-# DMS MTG Manager 🎴✨
+# Proliferate 🎴✨
 
 Aplicação Web moderna e minimalista para gerenciamento completo da sua coleção (pool), construção dinâmica de decks, central de utilitários e estúdio de diagramação de proxies A4 para **Magic: The Gathering**.
 
-🌐 **Acesso Web (GitHub Pages):** [https://davipmelo.github.io/dms-mtg-manager](https://davipmelo.github.io/dms-mtg-manager)
+🌐 **Acesso Web (GitHub Pages):** [https://davipmelo.github.io/proliferate](https://davipmelo.github.io/proliferate)
 
 ---
 
@@ -17,19 +17,19 @@ Acesse no navegador em `http://localhost:5173` (ou dê dois cliques em `iniciar_
 
 ---
 
-## 🌐 Como Publicar no GitHub Pages (`davipmelo.github.io/dms-mtg-manager`)
+## 🌐 Como Publicar no GitHub Pages (`davipmelo.github.io/proliferate`)
 
 O repositório Git e o workflow oficial de deploy automático (`.github/workflows/deploy.yml`) já estão configurados:
 
-1. Crie um repositório público chamado **`dms-mtg-manager`** na sua conta GitHub (`https://github.com/new` — **sem** marcar "Add a README").
-2. No repositório recém-criado no GitHub, vá em **Settings → Pages** e em **Build and deployment → Source** selecione **GitHub Actions**.
+1. Crie ou renomeie o repositório para **`proliferate`** na sua conta GitHub.
+2. No repositório no GitHub, vá em **Settings → Pages** e em **Build and deployment → Source** selecione **GitHub Actions**.
 3. Envie o código na raiz do projeto executando:
    ```bash
    git push -u origin main
    ```
    *(Ou clique duas vezes em `publicar_github.bat`).*
 4. Em cerca de 1 minuto, a Action concluirá o build e publicará o site em:
-   **https://davipmelo.github.io/dms-mtg-manager**
+   **https://davipmelo.github.io/proliferate**
 
 > **Alternativa manual via branch `gh-pages`:** caso prefira publicar direto pela branch `gh-pages`, basta rodar `npm run deploy` e selecionar a branch `gh-pages` em **Settings → Pages**.
 

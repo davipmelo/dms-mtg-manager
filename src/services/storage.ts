@@ -421,7 +421,7 @@ export function createSystemBackup(
   );
 
   return {
-    app: 'dms-mtg-manager',
+    app: 'proliferate',
     schemaVersion: 1,
     exportedAt: new Date().toISOString(),
     collection: cleanCollection,
@@ -442,7 +442,7 @@ export function parseSystemBackup(rawJson: string): SystemBackup {
   }
 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('Formato de backup inválido. Selecione um arquivo .json gerado pelo DMS MTG Manager.');
+    throw new Error('Formato de backup inválido. Selecione um arquivo .json gerado pelo Proliferate.');
   }
 
   if (!Array.isArray(parsed.collection) || !Array.isArray(parsed.decks)) {
@@ -501,7 +501,7 @@ export function parseSystemBackup(rawJson: string): SystemBackup {
     : [];
 
   return {
-    app: 'dms-mtg-manager',
+    app: (parsed.app === 'dms-mtg-manager' ? 'dms-mtg-manager' : 'proliferate'),
     schemaVersion: Number(parsed.schemaVersion) || 1,
     exportedAt: parsed.exportedAt || new Date().toISOString(),
     collection: normalizedCollection,

@@ -60,7 +60,7 @@ export default {
       return env.ASSETS.fetch(request);
     }
 
-    return new Response('DMS MTG Manager - MPCFill Proxy Active', {
+    return new Response('Proliferate - MPCFill Proxy Active', {
       status: 200,
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',

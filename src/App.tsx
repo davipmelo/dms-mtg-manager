@@ -1209,7 +1209,7 @@ export function App() {
                 lineHeight: 1.1,
               }}
             >
-              DM`S MTG MANAGER
+              PROLIFERATE
             </h1>
           </div>
         </div>
