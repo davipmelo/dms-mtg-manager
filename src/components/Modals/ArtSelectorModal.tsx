@@ -341,7 +341,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     reader.onload = (event) => {
       try {
         const text = event.target?.result as string;
-        const matches = extractAltersFromXmlForCard(text, card.name);
+        const matches = extractAltersFromXmlForCard(text, currentFaceName);
         if (matches.length > 0) {
           // Prepend matches to MPC prints
           setMpcPrints((prev) => {
@@ -351,7 +351,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           });
           setMpcError(null);
         } else {
-          setMpcError(`Nenhuma arte para "${card.name}" foi encontrada dentro do arquivo XML fornecido.`);
+          setMpcError(`Nenhuma arte para "${currentFaceName}" foi encontrada dentro do arquivo XML fornecido.`);
         }
       } catch (err: any) {
         setMpcError(err?.message || 'Erro ao processar arquivo XML do MPCFill.');
@@ -994,7 +994,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       onChange={(e) => {
                         const newType = e.target.value as 'CARD' | 'TOKEN';
                         setMpcCardType(newType);
-                        fetchMpcAlters(card.name, mpcMinDpi, newType, card.typeLine);
+                        fetchMpcAlters(currentFaceName, mpcMinDpi, newType, card.typeLine);
                       }}
                       style={{ height: '34px', fontSize: '0.8rem', padding: '0 8px' }}
                       title="Tipo de item no catálogo MPCFill (Cartas ou Fichas/Tokens)"
@@ -1012,7 +1012,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       onChange={(e) => {
                         const newDpi = Number(e.target.value);
                         setMpcMinDpi(newDpi);
-                        fetchMpcAlters(card.name, newDpi, mpcCardType, card.typeLine);
+                        fetchMpcAlters(currentFaceName, newDpi, mpcCardType, card.typeLine);
                       }}
                       style={{ height: '34px', fontSize: '0.8rem', padding: '0 8px' }}
                       title="Filtrar resolução mínima de DPI"
@@ -1044,7 +1044,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
-                    onClick={() => fetchMpcAlters(card.name, mpcMinDpi, mpcCardType, card.typeLine)}
+                    onClick={() => fetchMpcAlters(currentFaceName, mpcMinDpi, mpcCardType, card.typeLine)}
                     disabled={loadingMpc}
                     style={{
                       height: '34px',
@@ -1119,7 +1119,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   </button>
 
                   <a
-                    href={`https://mpcfill.com/editor?query=${encodeURIComponent(card.name)}`}
+                    href={`https://mpcfill.com/editor?query=${encodeURIComponent(currentFaceName)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="btn btn-ghost btn-sm"
@@ -1157,7 +1157,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
-                    onClick={() => fetchMpcAlters(card.name, mpcMinDpi, mpcCardType, card.typeLine)}
+                    onClick={() => fetchMpcAlters(currentFaceName, mpcMinDpi, mpcCardType, card.typeLine)}
                     style={{ fontSize: '0.75rem', height: '28px', whiteSpace: 'nowrap' }}
                   >
                     <RefreshCw size={12} /> Tentar Novamente
@@ -1206,7 +1206,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 >
                   <Loader2 className="animate-spin text-amber-400" size={32} />
                   <span style={{ fontSize: '0.9rem' }}>
-                    Buscando artes de {mpcCardType === 'TOKEN' ? 'fichas/tokens' : 'cartas'} no MPCFill para <strong>"{card.name}"</strong> (&gt;{mpcMinDpi} DPI)...
+                    Buscando artes de {mpcCardType === 'TOKEN' ? 'fichas/tokens' : 'cartas'} no MPCFill para <strong>"{currentFaceName}"</strong> (&gt;{mpcMinDpi} DPI)...
                   </span>
                 </div>
               ) : filteredMpcPrints.length === 0 ? (
@@ -1227,7 +1227,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       ? 'Nenhuma arte corresponde aos filtros selecionados. Tente ajustar a busca ou o DPI mínimo.'
                       : (
                         <>
-                          Nenhuma arte de {mpcCardType === 'TOKEN' ? 'ficha/token' : 'carta'} foi encontrada automaticamente para <strong>{card.name}</strong>.
+                          Nenhuma arte de {mpcCardType === 'TOKEN' ? 'ficha/token' : 'carta'} foi encontrada automaticamente para <strong>{currentFaceName}</strong>.
                           Certifique-se de que o servidor local (<code>npm run dev</code>) foi reiniciado, ou use a barra acima para colar o link/ID do Google Drive ou carregar um XML.
                         </>
                       )}
@@ -1540,7 +1540,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       className="input-text"
                       value={customTitle}
                       onChange={(e) => setCustomTitle(e.target.value)}
-                      placeholder={`Ex: Arte Alternativa - ${card.name}`}
+                      placeholder={`Ex: Arte Alternativa - ${currentFaceName}`}
                       style={{ width: '100%', height: '34px', fontSize: '0.82rem' }}
                     />
                   </div>
@@ -1595,7 +1595,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   {customImageUrl ? (
                     <img
                       src={customImageUrl}
-                      alt={customTitle || card.name}
+                      alt={customTitle || currentFaceName}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   ) : (

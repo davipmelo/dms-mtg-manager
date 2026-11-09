@@ -167,12 +167,19 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
   // Filter collection
   const filteredItems = useMemo(() => {
     return collection.filter((item) => {
-      // Search
+      // Search (support both primary name and double-faced faces)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchesName = item.card.name.toLowerCase().includes(q);
-        const matchesType = item.card.typeLine.toLowerCase().includes(q);
-        const matchesText = item.card.oracleText?.toLowerCase().includes(q) || false;
+        const matchesName =
+          item.card.name.toLowerCase().includes(q) ||
+          Boolean(item.card.cardFaces?.some((f) => f.name.toLowerCase().includes(q)));
+        const matchesType =
+          item.card.typeLine.toLowerCase().includes(q) ||
+          Boolean(item.card.cardFaces?.some((f) => f.typeLine?.toLowerCase().includes(q)));
+        const matchesText =
+          item.card.oracleText?.toLowerCase().includes(q) ||
+          Boolean(item.card.cardFaces?.some((f) => f.oracleText?.toLowerCase().includes(q))) ||
+          false;
         if (!matchesName && !matchesType && !matchesText) return false;
       }
 

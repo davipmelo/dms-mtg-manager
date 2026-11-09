@@ -333,6 +333,16 @@ export async function getCardPrints(card: Card): Promise<CardPrint[]> {
       const byExactName = await fetchPrintsFromUrl(exactNameUrl);
       if (byExactName.length > 0) return byExactName;
 
+      // If DFC card name has '//', also try querying just the primary/front face name
+      if (card.name.includes('//')) {
+        const primaryFaceName = card.name.split('//')[0].trim();
+        const primaryExactUrl = `${API_BASE}/cards/search?order=released&q=${encodeURIComponent(
+          `!"${primaryFaceName}" include:extras`
+        )}&unique=prints`;
+        const byPrimary = await fetchPrintsFromUrl(primaryExactUrl);
+        if (byPrimary.length > 0) return byPrimary;
+      }
+
       // 4. Resolve canonical card via /cards/named (handles front-face DFC names or fuzzy matches)
       const canonical = await getCardByName(card.name);
       if (canonical) {

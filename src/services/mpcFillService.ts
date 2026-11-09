@@ -490,7 +490,11 @@ export async function searchMpcFillAlters(
     const maxDpi = options?.maxDpi ?? 2400;
     const targetCardType = options?.cardType || 'CARD';
 
-    let cleanQuery = cardName.split('//')[0].trim();
+    let cleanQuery = cardName.trim();
+    // If a double-faced full name "Front // Back" is passed, take the front face
+    if (cleanQuery.includes('//')) {
+      cleanQuery = cleanQuery.split('//')[0].trim();
+    }
 
     // If searching for tokens, clean the query from "Token", "Ficha", "1/1", etc.
     if (targetCardType === 'TOKEN') {
@@ -504,9 +508,10 @@ export async function searchMpcFillAlters(
       }
     }
 
+    // Clean extra whitespace and invalid chars, but PRESERVE apostrophes ('), commas (,), hyphens (-)
     cleanQuery = cleanQuery
-      .toLowerCase()
-      .replace(/[~`!@#$%^&*(){}\[\];:"'’<,.>?/\\|_+=]/g, ' ')
+      .replace(/[\n\r\t]+/g, ' ')
+      .replace(/[~`!@#$%^&*(){}\[\];:?<>/\\|_+=]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
 
@@ -577,6 +582,11 @@ export async function searchMpcFillAlters(
     const searchData = await searchRes.json();
     const resultObj =
       searchData?.results?.[cleanQuery] ||
+      (searchData?.results
+        ? Object.entries(searchData.results).find(
+            ([k]) => k.toLowerCase() === cleanQuery.toLowerCase()
+          )?.[1]
+        : undefined) ||
       (searchData?.results ? (Object.values(searchData.results)[0] as any) : undefined);
 
     const ids: string[] =
