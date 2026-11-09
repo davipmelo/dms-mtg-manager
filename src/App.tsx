@@ -1211,6 +1211,19 @@ export function App() {
             >
               PROLIFERATE
             </h1>
+            <p
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 500,
+                color: '#94a3b8',
+                lineHeight: 1.2,
+                marginTop: '2px',
+                letterSpacing: '-0.01em',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Um gerenciador de coleções e proxies para Magic: the Gathering®
+            </p>
           </div>
         </div>
         </div>
