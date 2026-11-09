@@ -83,6 +83,15 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   // MPCFill Catalog Target Type ('CARD' vs 'TOKEN')
   const [mpcCardType, setMpcCardType] = useState<'CARD' | 'TOKEN'>('CARD');
 
+  // Zoomed Hover Preview State for inspection
+  const [hoveredPreview, setHoveredPreview] = useState<{
+    url: string;
+    title: string;
+    subtitle?: string;
+    dpi?: number;
+  } | null>(null);
+  const [previewMousePos, setPreviewMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
   // Fetch MPCFill alters callback
   const fetchMpcAlters = useCallback(
     async (
@@ -136,6 +145,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
       setCustomTitle(`Arte Customizada de ${card.name}`);
       setCustomArtist('');
       setCustomUrlInput('');
+      setHoveredPreview(null);
 
       // Auto-detect if this card is a token to filter only token alters
       const initialCardType: 'CARD' | 'TOKEN' = isCardToken ? 'TOKEN' : 'CARD';
@@ -354,7 +364,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           </div>
 
           <button
-            onClick={onClose}
+            onClick={() => {
+              setHoveredPreview(null);
+              onClose();
+            }}
             className="btn btn-ghost btn-icon"
             style={{ borderRadius: '50%', padding: '6px', color: '#94a3b8', flexShrink: 0 }}
           >
@@ -381,7 +394,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           <button
             type="button"
             className="btn btn-ghost"
-            onClick={() => setActiveTab('official')}
+            onClick={() => {
+              setHoveredPreview(null);
+              setActiveTab('official');
+            }}
             style={{
               flexShrink: 0,
               height: '100%',
@@ -410,7 +426,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           <button
             type="button"
             className="btn btn-ghost"
-            onClick={() => setActiveTab('mpcfill')}
+            onClick={() => {
+              setHoveredPreview(null);
+              setActiveTab('mpcfill');
+            }}
             style={{
               flexShrink: 0,
               height: '100%',
@@ -448,7 +467,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           <button
             type="button"
             className="btn btn-ghost"
-            onClick={() => setActiveTab('custom')}
+            onClick={() => {
+              setHoveredPreview(null);
+              setActiveTab('custom');
+            }}
             style={{
               flexShrink: 0,
               height: '100%',
@@ -555,10 +577,21 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       <div
                         key={p.id}
                         onClick={() => {
+                          setHoveredPreview(null);
                           setActivePrintId(p.id);
                           onSelectPrint(p);
                           onClose();
                         }}
+                        onMouseEnter={(e) => {
+                          setPreviewMousePos({ x: e.clientX, y: e.clientY });
+                          setHoveredPreview({
+                            url: p.imageUrlLarge || p.imageUrl,
+                            title: `${card.name} (${p.setCode.toUpperCase()} #${p.collectorNumber})`,
+                            subtitle: `${p.setName}${p.artist ? ` • Arte por ${p.artist}` : ''}`,
+                          });
+                        }}
+                        onMouseMove={(e) => setPreviewMousePos({ x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setHoveredPreview(null)}
                         className="glass-card"
                         style={{
                           cursor: 'pointer',
@@ -975,10 +1008,22 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       <div
                         key={p.id}
                         onClick={() => {
+                          setHoveredPreview(null);
                           setActivePrintId(p.id);
                           onSelectPrint(p);
                           onClose();
                         }}
+                        onMouseEnter={(e) => {
+                          setPreviewMousePos({ x: e.clientX, y: e.clientY });
+                          setHoveredPreview({
+                            url: p.imageUrlLarge || p.imageUrl,
+                            title: p.setName,
+                            subtitle: p.artist ? `Comunidade MPCFill • ${p.artist}` : 'Comunidade MPCFill',
+                            dpi: dpiVal || undefined,
+                          });
+                        }}
+                        onMouseMove={(e) => setPreviewMousePos({ x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setHoveredPreview(null)}
                         className="glass-card"
                         style={{
                           cursor: 'pointer',
@@ -1300,6 +1345,88 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   Aplicar Esta Arte na Carta
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Floating Zoom Hover Preview Tooltip */}
+        {hoveredPreview && (
+          <div
+            style={{
+              position: 'fixed',
+              left: `${Math.max(16, Math.min(window.innerWidth - 340, previewMousePos.x + 24 + 320 > window.innerWidth ? previewMousePos.x - 344 : previewMousePos.x + 24))}px`,
+              top: `${Math.max(16, Math.min(window.innerHeight - 480, previewMousePos.y - 180))}px`,
+              width: '320px',
+              pointerEvents: 'none',
+              zIndex: 100000,
+              borderRadius: '14px',
+              overflow: 'hidden',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(245, 158, 11, 0.3)',
+              border: '1px solid rgba(255, 187, 0, 0.4)',
+              background: '#070a10',
+              animation: 'modal-enter 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            }}
+          >
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '5/7', background: '#000' }}>
+              <img
+                src={hoveredPreview.url}
+                alt={hoveredPreview.title}
+                crossOrigin="anonymous"
+                style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+              />
+            </div>
+            <div
+              style={{
+                padding: '8px 12px',
+                background: 'rgba(10, 14, 23, 0.95)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    color: '#f8fafc',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: hoveredPreview.dpi ? '220px' : '100%',
+                  }}
+                >
+                  {hoveredPreview.title}
+                </span>
+                {hoveredPreview.dpi ? (
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      color: '#ffbb00',
+                      fontWeight: 800,
+                      background: 'rgba(245, 158, 11, 0.15)',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {hoveredPreview.dpi} DPI
+                  </span>
+                ) : null}
+              </div>
+              {hoveredPreview.subtitle && (
+                <div
+                  style={{
+                    fontSize: '0.75rem',
+                    color: '#94a3b8',
+                    marginTop: '2px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {hoveredPreview.subtitle}
+                </div>
+              )}
             </div>
           </div>
         )}
