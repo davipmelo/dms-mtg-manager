@@ -1354,20 +1354,24 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           <div
             style={{
               position: 'fixed',
-              left: `${Math.max(16, Math.min(window.innerWidth - 340, previewMousePos.x + 24 + 320 > window.innerWidth ? previewMousePos.x - 344 : previewMousePos.x + 24))}px`,
-              top: `${Math.max(16, Math.min(window.innerHeight - 480, previewMousePos.y - 180))}px`,
-              width: '320px',
+              left: `${Math.max(16, Math.min(window.innerWidth - 520, previewMousePos.x + 28 + 500 > window.innerWidth ? previewMousePos.x - 528 : previewMousePos.x + 28))}px`,
+              top: `${Math.max(16, Math.min(window.innerHeight - 740, previewMousePos.y - 250))}px`,
+              width: '500px',
+              maxWidth: 'calc(100vw - 32px)',
+              maxHeight: 'calc(100vh - 32px)',
               pointerEvents: 'none',
               zIndex: 100000,
-              borderRadius: '14px',
+              borderRadius: '16px',
               overflow: 'hidden',
-              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(245, 158, 11, 0.3)',
-              border: '1px solid rgba(255, 187, 0, 0.4)',
+              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.98), 0 0 45px rgba(245, 158, 11, 0.35)',
+              border: '1px solid rgba(255, 187, 0, 0.45)',
               background: '#070a10',
               animation: 'modal-enter 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            <div style={{ position: 'relative', width: '100%', aspectRatio: '5/7', background: '#000' }}>
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '5/7', background: '#000', maxHeight: 'calc(100vh - 90px)' }}>
               <img
                 src={hoveredPreview.url}
                 alt={hoveredPreview.title}
@@ -1377,21 +1381,21 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             </div>
             <div
               style={{
-                padding: '8px 12px',
-                background: 'rgba(10, 14, 23, 0.95)',
+                padding: '10px 16px',
+                background: 'rgba(10, 14, 23, 0.97)',
                 borderTop: '1px solid rgba(255, 255, 255, 0.08)',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
                 <span
                   style={{
                     fontWeight: 700,
-                    fontSize: '0.85rem',
+                    fontSize: '0.95rem',
                     color: '#f8fafc',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    maxWidth: hoveredPreview.dpi ? '220px' : '100%',
+                    maxWidth: hoveredPreview.dpi ? '380px' : '100%',
                   }}
                 >
                   {hoveredPreview.title}
@@ -1399,13 +1403,13 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 {hoveredPreview.dpi ? (
                   <span
                     style={{
-                      fontSize: '0.7rem',
+                      fontSize: '0.78rem',
                       color: '#ffbb00',
                       fontWeight: 800,
-                      background: 'rgba(245, 158, 11, 0.15)',
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      background: 'rgba(245, 158, 11, 0.18)',
+                      padding: '2px 8px',
+                      borderRadius: '5px',
+                      border: '1px solid rgba(245, 158, 11, 0.4)',
                       flexShrink: 0,
                     }}
                   >
@@ -1416,9 +1420,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               {hoveredPreview.subtitle && (
                 <div
                   style={{
-                    fontSize: '0.75rem',
+                    fontSize: '0.8rem',
                     color: '#94a3b8',
-                    marginTop: '2px',
+                    marginTop: '3px',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
