@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Deck, DeckCard, ViewMode, Card, CollectionItem } from '../../types';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
@@ -142,15 +142,63 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     return 60;
   }, [deck.format]);
 
-  // Sections: Commander, Mainboard, Sideboard
-  const commanders = useMemo(
-    () => deck.cards.filter((c) => c.category === 'commander' || c.category === 'partner'),
-    [deck.cards]
+  // Check if a card is a Commander or Partner
+  const isCommanderCard = useCallback(
+    (c: DeckCard) => {
+      if (c.category === 'commander' || c.category === 'partner') return true;
+      if (
+        deck.commanderCard &&
+        (c.card.id === deck.commanderCard.id ||
+          c.card.name.toLowerCase() === deck.commanderCard.name.toLowerCase())
+      ) {
+        return true;
+      }
+      if (
+        deck.partnerCard &&
+        (c.card.id === deck.partnerCard.id ||
+          c.card.name.toLowerCase() === deck.partnerCard.name.toLowerCase())
+      ) {
+        return true;
+      }
+      return false;
+    },
+    [deck.commanderCard, deck.partnerCard]
   );
-  const mainCards = useMemo(
-    () => deck.cards.filter((c) => c.category === 'main'),
-    [deck.cards]
-  );
+
+  // Sections: Mainboard (including Commander(s) pinned first), Sideboard
+  const mainCards = useMemo(() => {
+    const list = deck.cards.filter((c) => c.category !== 'sideboard');
+    if (
+      deck.commanderCard &&
+      !list.some(
+        (c) =>
+          c.card.id === deck.commanderCard!.id ||
+          c.card.name.toLowerCase() === deck.commanderCard!.name.toLowerCase()
+      )
+    ) {
+      list.unshift({
+        card: deck.commanderCard,
+        quantity: 1,
+        category: 'commander',
+      });
+    }
+    if (
+      deck.partnerCard &&
+      !list.some(
+        (c) =>
+          c.card.id === deck.partnerCard!.id ||
+          c.card.name.toLowerCase() === deck.partnerCard!.name.toLowerCase()
+      )
+    ) {
+      list.push({
+        card: deck.partnerCard,
+        quantity: 1,
+        category: 'partner',
+      });
+    }
+    return list;
+  }, [deck.cards, deck.commanderCard, deck.partnerCard]);
+
   const sideCards = useMemo(
     () => deck.cards.filter((c) => c.category === 'sideboard'),
     [deck.cards]
@@ -189,7 +237,15 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   const handleRemoveCard = (cardId: string) => {
     const updatedCards = deck.cards.filter((c) => c.card.id !== cardId);
-    onUpdateDeck({ ...deck, cards: updatedCards, updatedAt: new Date().toISOString() });
+    const updatedCommander = deck.commanderCard?.id === cardId ? undefined : deck.commanderCard;
+    const updatedPartner = deck.partnerCard?.id === cardId ? undefined : deck.partnerCard;
+    onUpdateDeck({
+      ...deck,
+      cards: updatedCards,
+      commanderCard: updatedCommander,
+      partnerCard: updatedPartner,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   // Color Filter toggles
@@ -330,10 +386,30 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     () => mainCards.filter(filterCardItem),
     [mainCards, searchQuery, selectedColors, isMultiOnly, isColorlessOnly, colorMatchMode]
   );
-  const sortedMainCards = useMemo(
-    () => sortCardItems(filteredMainCards),
-    [filteredMainCards, sortColumn, sortDirection, collection]
-  );
+  const sortedMainCards = useMemo(() => {
+    const commandersList: DeckCard[] = [];
+    const nonCommandersList: DeckCard[] = [];
+
+    for (const c of filteredMainCards) {
+      if (isCommanderCard(c)) {
+        if (
+          c.category === 'partner' ||
+          (deck.partnerCard &&
+            (c.card.id === deck.partnerCard.id ||
+              c.card.name.toLowerCase() === deck.partnerCard.name.toLowerCase()))
+        ) {
+          commandersList.push(c);
+        } else {
+          commandersList.unshift(c);
+        }
+      } else {
+        nonCommandersList.push(c);
+      }
+    }
+
+    const sortedNonCommanders = sortCardItems(nonCommandersList);
+    return [...commandersList, ...sortedNonCommanders];
+  }, [filteredMainCards, isCommanderCard, sortColumn, sortDirection, collection, deck.partnerCard]);
 
   const filteredSideCards = useMemo(
     () => sideCards.filter(filterCardItem),
@@ -491,119 +567,6 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Commander Showcase Banner if Commander Deck */}
-      {commanders.length > 0 && (
-        <div
-          className="glass-panel"
-          style={{
-            padding: '20px',
-            background: 'var(--bg-card)',
-            border: '1px solid rgba(255, 187, 0, 0.35)',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginBottom: '14px',
-              color: '#ffbb00',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-            }}
-          >
-            <Shield size={16} />
-            <span>COMANDANTE(S) DO DECK</span>
-          </div>
-
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-            {commanders.map((cmd) => (
-              <div
-                key={cmd.card.id}
-                style={{
-                  display: 'flex',
-                  gap: '16px',
-                  alignItems: 'center',
-                  background: 'rgba(12, 15, 23, 0.8)',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  border: '1px solid var(--border-subtle)',
-                }}
-              >
-                <div
-                  style={{
-                    width: '64px',
-                    height: '90px',
-                    flexShrink: 0,
-                    borderRadius: '6px',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={(e) => {
-                    setMousePos({ x: e.clientX, y: e.clientY });
-                    setHoveredPreview({
-                      url: cmd.card.imageUrlLarge || cmd.card.imageUrl,
-                      title: cmd.card.name,
-                      subtitle: `${cmd.card.setName} (${cmd.card.setCode.toUpperCase()} #${cmd.card.collectorNumber})`,
-                      badge: 'Comandante ★',
-                      badgeColor: '#ffbb00',
-                    });
-                  }}
-                  onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
-                  onMouseLeave={() => setHoveredPreview(null)}
-                >
-                  <CardImage
-                    name={cmd.card.name}
-                    imageUrl={cmd.card.imageUrl}
-                    imageUrlLarge={cmd.card.imageUrlLarge}
-                    setCode={cmd.card.setCode}
-                    collectorNumber={cmd.card.collectorNumber}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc' }}>
-                      {cmd.card.name}
-                    </h3>
-                    <ManaCostRenderer manaCost={cmd.card.manaCost} />
-                    <button
-                      className="btn btn-ghost btn-icon"
-                      style={{ padding: '4px' }}
-                      onClick={() => onOpenArtSelector(cmd.card, deck.cards.indexOf(cmd))}
-                      title="Mudar Arte do Comandante"
-                    >
-                      <ImageIcon size={15} />
-                    </button>
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '2px' }}>
-                    {cmd.card.typeLine}
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: '10px',
-                      marginTop: '6px',
-                      fontSize: '0.75rem',
-                      color: '#64748b',
-                    }}
-                  >
-                    <span>
-                      {cmd.card.setName} ({cmd.card.setCode})
-                    </span>
-                    {cmd.card.power && cmd.card.toughness && (
-                      <span style={{ fontWeight: 700, color: '#f8fafc' }}>
-                        {cmd.card.power}/{cmd.card.toughness}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Interactive Deck Analytics / Charts */}
       <div className="glass-panel" style={{ padding: '26px' }}>
@@ -829,12 +792,24 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         >
           {sortedMainCards.map((c, idx) => {
             const isFoil = c.isFoil || c.card.isFoil;
+            const isCmd = isCommanderCard(c);
             const linked = getCollectionItemForCard(c);
             const availQty = linked?.availableQuantity ?? 0;
             const inUseQty = linked?.inUseQuantity ?? c.quantity;
 
             return (
-              <div key={`${c.card.id}-${idx}`} className="card-item-container">
+              <div
+                key={`${c.card.id}-${idx}`}
+                className="card-item-container"
+                style={
+                  isCmd
+                    ? {
+                        border: '2px solid #ffbb00',
+                        boxShadow: '0 0 18px rgba(255, 187, 0, 0.45)',
+                      }
+                    : undefined
+                }
+              >
                 <div
                   className={`card-image-wrapper ${isFoil ? 'foil-sheen' : ''}`}
                   onMouseEnter={(e) => {
@@ -843,7 +818,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       url: c.card.imageUrlLarge || c.card.imageUrl,
                       title: c.card.name,
                       subtitle: `${c.card.setName} (${c.card.setCode.toUpperCase()} #${c.card.collectorNumber})`,
-                      badge: isFoil ? 'Foil ★' : undefined,
+                      badge: isCmd ? 'Comandante ★' : (isFoil ? 'Foil ★' : undefined),
+                      badgeColor: '#ffbb00',
                     });
                   }}
                   onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
@@ -859,18 +835,46 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     className="card-image"
                   />
 
+                  {/* Commander Golden Badge */}
+                  {isCmd && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        left: '8px',
+                        background: 'rgba(12, 15, 23, 0.92)',
+                        border: '1px solid #ffbb00',
+                        borderRadius: '6px',
+                        padding: '2px 7px',
+                        fontSize: '0.68rem',
+                        fontWeight: 800,
+                        color: '#ffbb00',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.7)',
+                        zIndex: 2,
+                        letterSpacing: '0.5px',
+                      }}
+                      title="Comandante do Deck"
+                    >
+                      <Shield size={11} /> COMANDANTE
+                    </div>
+                  )}
+
                   {/* Foil Star Badge */}
                   {isFoil && (
                     <div
                       style={{
                         position: 'absolute',
                         top: '8px',
-                        left: '8px',
+                        left: isCmd ? '106px' : '8px',
                         background: 'rgba(0,0,0,0.7)',
                         borderRadius: '50%',
                         padding: '4px',
                         color: '#facc15',
                         display: 'flex',
+                        zIndex: 2,
                       }}
                       title="Carta Foil"
                     >
@@ -1359,6 +1363,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 const availQty = linked?.availableQuantity ?? 0;
                 const inUseQty = linked?.inUseQuantity ?? c.quantity;
                 const isFoil = c.isFoil || c.card.isFoil;
+                const isCmd = isCommanderCard(c);
                 const isSelected = selectedCardIds.has(c.card.id);
 
                 return (
@@ -1367,13 +1372,26 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     style={{
                       borderBottom: '1px solid var(--border-subtle)',
                       transition: 'background 0.15s ease',
-                      backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
+                      backgroundColor: isSelected
+                        ? 'rgba(239, 68, 68, 0.08)'
+                        : isCmd
+                        ? 'rgba(255, 187, 0, 0.06)'
+                        : 'transparent',
+                      borderLeft: isCmd ? '3px solid #ffbb00' : '3px solid transparent',
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
+                      if (!isSelected) {
+                        e.currentTarget.style.backgroundColor = isCmd
+                          ? 'rgba(255, 187, 0, 0.12)'
+                          : 'rgba(255,255,255,0.02)';
+                      }
                     }}
                     onMouseLeave={(e) => {
-                      if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                      if (!isSelected) {
+                        e.currentTarget.style.backgroundColor = isCmd
+                          ? 'rgba(255, 187, 0, 0.06)'
+                          : 'transparent';
+                      }
                     }}
                   >
                     {/* Row Checkbox */}
@@ -1418,6 +1436,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                           borderBottom: '1px dotted rgba(148, 163, 184, 0.45)',
                           paddingBottom: '1px',
                           transition: 'color 0.15s ease, border-color 0.15s ease',
+                          color: isCmd ? '#ffbb00' : undefined,
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.color = '#a5b4fc';
@@ -1427,18 +1446,38 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                             url: c.card.imageUrlLarge || c.card.imageUrl,
                             title: c.card.name,
                             subtitle: `${c.card.setName} (${c.card.setCode.toUpperCase()} #${c.card.collectorNumber})`,
-                            badge: isFoil ? 'Foil ★' : undefined,
+                            badge: isCmd ? 'Comandante ★' : (isFoil ? 'Foil ★' : undefined),
+                            badgeColor: '#ffbb00',
                           });
                         }}
                         onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.color = '#f8fafc';
+                          e.currentTarget.style.color = isCmd ? '#ffbb00' : '#f8fafc';
                           e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.45)';
                           setHoveredPreview(null);
                         }}
                       >
                         {c.card.name}
                       </span>{' '}
+                      {isCmd && (
+                        <span
+                          style={{
+                            background: 'rgba(255, 187, 0, 0.18)',
+                            color: '#ffbb00',
+                            border: '1px solid rgba(255, 187, 0, 0.4)',
+                            fontSize: '0.68rem',
+                            fontWeight: 800,
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            marginRight: '6px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                          }}
+                        >
+                          <Shield size={10} /> CMD
+                        </span>
+                      )}
                       {isFoil && <Sparkles size={12} className="inline text-amber-400" />}
                     </td>
 
