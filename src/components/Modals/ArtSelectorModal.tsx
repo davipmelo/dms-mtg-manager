@@ -89,6 +89,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
   // Active print highlight
   const [activePrintId, setActivePrintId] = useState<string>('');
+  const loadedCardNameRef = useRef<string | null>(null);
 
   // Detect if current card is a token or utility token card
   const isCardToken = useMemo(() => {
@@ -149,46 +150,59 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     [mpcCardType, card?.typeLine]
   );
 
-  // Reset and load on open
+  // Reset and load on open, or when navigating to a different card name
   useEffect(() => {
-    let cancelled = false;
-    if (isOpen && card) {
-      setActivePrintId(card.id);
-      setFilterOfficialQuery('');
-      setMpcDriveInput('');
-      setMpcError(null);
-      setMpcProxyNotice(false);
-      setMpcFilterText('');
-      setCustomImageUrl('');
-      setCustomTitle(`Arte Customizada de ${card.name}`);
-      setCustomArtist('');
-      setCustomUrlInput('');
-      setHoveredPreview(null);
-
-      // Auto-detect if this card is a token to filter only token alters
-      const initialCardType: 'CARD' | 'TOKEN' = isCardToken ? 'TOKEN' : 'CARD';
-      setMpcCardType(initialCardType);
-
-      // 1. Load official prints from Scryfall
-      setLoadingOfficial(true);
-      getCardPrints(card)
-        .then((data) => {
-          if (!cancelled) setOfficialPrints(data);
-        })
-        .finally(() => {
-          if (!cancelled) setLoadingOfficial(false);
-        });
-
-      // 2. Fetch MPCFill community alters (>= 200 DPI)
-      fetchMpcAlters(card.name, mpcMinDpi, initialCardType, card.typeLine);
-    } else {
+    if (!isOpen) {
+      loadedCardNameRef.current = null;
       setOfficialPrints([]);
       setMpcPrints([]);
+      return;
     }
+
+    if (!card) return;
+
+    // If prints for this exact card name are already loaded, do NOT reload or flash!
+    if (loadedCardNameRef.current === card.name) {
+      setActivePrintId(card.id);
+      return;
+    }
+
+    loadedCardNameRef.current = card.name;
+    let cancelled = false;
+
+    setActivePrintId(card.id);
+    setFilterOfficialQuery('');
+    setMpcDriveInput('');
+    setMpcError(null);
+    setMpcProxyNotice(false);
+    setMpcFilterText('');
+    setCustomImageUrl('');
+    setCustomTitle(`Arte Customizada de ${card.name}`);
+    setCustomArtist('');
+    setCustomUrlInput('');
+    setHoveredPreview(null);
+
+    // Auto-detect if this card is a token to filter only token alters
+    const initialCardType: 'CARD' | 'TOKEN' = isCardToken ? 'TOKEN' : 'CARD';
+    setMpcCardType(initialCardType);
+
+    // 1. Load official prints from Scryfall
+    setLoadingOfficial(true);
+    getCardPrints(card)
+      .then((data) => {
+        if (!cancelled) setOfficialPrints(data);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingOfficial(false);
+      });
+
+    // 2. Fetch MPCFill community alters (>= 200 DPI)
+    fetchMpcAlters(card.name, mpcMinDpi, initialCardType, card.typeLine);
+
     return () => {
       cancelled = true;
     };
-  }, [isOpen, card, isCardToken]);
+  }, [isOpen, card?.name, isCardToken, fetchMpcAlters, mpcMinDpi]);
 
   // Keyboard navigation for previous/next card (Left/Right arrows when not typing)
   useEffect(() => {
