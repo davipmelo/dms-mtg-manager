@@ -34,6 +34,7 @@ export interface CardPrint {
   releasedAt?: string;
   artist?: string;
   priceUsd?: number;
+  cardFaces?: CardFace[];
 }
 
 export interface CardFace {
@@ -187,4 +188,32 @@ export interface CloudUserData {
   decks: Deck[];
   proxies: ProxyItem[];
 }
+
+/**
+ * Checks if a card is double-faced (Transform, MDFC, Battle, Meld, Reversible, Double-Faced Token)
+ * Excluding physical split / adventure / flip cards that share the same single front face.
+ */
+export function isDoubleFacedCard(card?: Card | TokenCard | null): boolean {
+  if (!card) return false;
+  if (card.cardFaces && card.cardFaces.length > 1) return true;
+  if (
+    card.layout &&
+    ['transform', 'modal_dfc', 'meld', 'battle', 'reversible_card', 'double_faced_token'].includes(
+      card.layout
+    )
+  ) {
+    return true;
+  }
+  if (card.layout && ['split', 'adventure', 'flip'].includes(card.layout)) {
+    return false;
+  }
+  if (card.name && card.name.includes(' // ') && !card.layout) {
+    return true;
+  }
+  if ('meldResultName' in card && Boolean(card.meldResultName)) {
+    return true;
+  }
+  return false;
+}
+
 

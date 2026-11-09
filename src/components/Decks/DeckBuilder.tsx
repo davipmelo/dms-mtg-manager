@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Deck, DeckCard, ViewMode, Card, CollectionItem } from '../../types';
+import { Deck, DeckCard, ViewMode, Card, CollectionItem, isDoubleFacedCard } from '../../types';
+import { resolveCardFaces } from '../../services/scryfall';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
 import { InteractiveCharts } from '../Analytics/InteractiveCharts';
@@ -30,6 +31,7 @@ import {
   Eye,
   EyeOff,
   CheckSquare,
+  RotateCw,
 } from 'lucide-react';
 
 interface DeckBuilderProps {
@@ -37,7 +39,7 @@ interface DeckBuilderProps {
   collection?: CollectionItem[];
   onBack: () => void;
   onUpdateDeck: (updated: Deck) => void;
-  onOpenArtSelector: (card: Card, cardIndex: number) => void;
+  onOpenArtSelector: (card: Card, cardIndex: number, face?: 'front' | 'back') => void;
   onAddToProxies?: (card: Card, quantity: number) => void;
   onSendDeckToProxies: (deck: Deck) => void;
   onOpenExportModal: (deckId: string) => void;
@@ -127,6 +129,24 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     setShowGridDetails((prev) => {
       const next = !prev;
       localStorage.setItem('dms_grid_show_details', String(next));
+      return next;
+    });
+  };
+
+  // Flip state for double-faced cards in visual grid
+  const [flippedCardKeys, setFlippedCardKeys] = useState<Set<string>>(new Set());
+
+  const handleToggleFlip = async (cardKey: string, card: Card) => {
+    if (!card.cardFaces || card.cardFaces.length < 2) {
+      await resolveCardFaces(card);
+    }
+    setFlippedCardKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(cardKey)) {
+        next.delete(cardKey);
+      } else {
+        next.add(cardKey);
+      }
       return next;
     });
   };
@@ -797,6 +817,26 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             const availQty = linked?.availableQuantity ?? 0;
             const inUseQty = linked?.inUseQuantity ?? c.quantity;
 
+            const isDfc = isDoubleFacedCard(c.card);
+            const isFlipped = isDfc && flippedCardKeys.has(c.card.id);
+
+            const frontName =
+              c.card.cardFaces?.[0]?.name ||
+              (c.card.name.includes(' // ') ? c.card.name.split(' // ')[0].trim() : c.card.name);
+            const backName =
+              c.card.cardFaces?.[1]?.name ||
+              (c.card.name.includes(' // ')
+                ? c.card.name.split(' // ')[1].trim()
+                : `${c.card.name} (Verso)`);
+            const displayName = isFlipped ? backName : frontName;
+
+            const displayImageUrl = isFlipped
+              ? c.card.cardFaces?.[1]?.imageUrl || c.card.imageUrl
+              : c.card.imageUrl;
+            const displayImageUrlLarge = isFlipped
+              ? c.card.cardFaces?.[1]?.imageUrlLarge || c.card.cardFaces?.[1]?.imageUrl || displayImageUrl
+              : c.card.imageUrlLarge || displayImageUrl;
+
             return (
               <div
                 key={`${c.card.id}-${idx}`}
@@ -807,9 +847,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   onMouseEnter={(e) => {
                     setMousePos({ x: e.clientX, y: e.clientY });
                     setHoveredPreview({
-                      url: c.card.imageUrlLarge || c.card.imageUrl,
-                      title: c.card.name,
-                      subtitle: `${c.card.setName} (${c.card.setCode.toUpperCase()} #${c.card.collectorNumber})`,
+                      url: displayImageUrlLarge,
+                      title: displayName,
+                      subtitle: `${c.card.setName} (${c.card.setCode.toUpperCase()} #${c.card.collectorNumber})${isFlipped ? ' • [Verso]' : ''}`,
                       badge: isCmd ? 'Comandante ★' : (isFoil ? 'Foil ★' : undefined),
                       badgeColor: '#ffbb00',
                     });
@@ -818,12 +858,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   onMouseLeave={() => setHoveredPreview(null)}
                 >
                   <CardImage
-                    name={c.card.name}
-                    imageUrl={c.card.imageUrl}
-                    imageUrlLarge={c.card.imageUrlLarge}
+                    name={displayName}
+                    imageUrl={displayImageUrl}
+                    imageUrlLarge={displayImageUrlLarge}
                     setCode={c.card.setCode}
                     collectorNumber={c.card.collectorNumber}
                     preferLarge
+                    face={isFlipped ? 'back' : 'front'}
                     className="card-image"
                   />
 
@@ -875,6 +916,29 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     {c.quantity}x
                   </div>
 
+                  {/* Flip Button for Double-Faced Cards (Bottom-Right) */}
+                  {isDfc && (
+                    <button
+                      type="button"
+                      className={`btn-flip-card ${isFlipped ? 'is-active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setHoveredPreview(null);
+                        handleToggleFlip(c.card.id, c.card);
+                      }}
+                      title={isFlipped ? 'Virar para Frente' : 'Virar para o Verso'}
+                    >
+                      <RotateCw
+                        size={12}
+                        style={{
+                          transform: isFlipped ? 'rotate(180deg)' : 'none',
+                          transition: 'transform 0.25s ease',
+                        }}
+                      />
+                      <span>Virar</span>
+                    </button>
+                  )}
+
                   {/* Floating quick actions on Art-Only mode */}
                   {!showGridDetails && (
                     <div className="card-art-actions-overlay">
@@ -884,9 +948,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           setHoveredPreview(null);
-                          onOpenArtSelector(c.card, deck.cards.indexOf(c));
+                          onOpenArtSelector(c.card, deck.cards.indexOf(c), isFlipped ? 'back' : 'front');
                         }}
-                        title="Trocar Arte / Edição"
+                        title={isFlipped ? 'Trocar Arte do Verso' : 'Trocar Arte / Edição'}
                       >
                         <ImageIcon size={15} />
                       </button>
@@ -950,7 +1014,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         textOverflow: 'ellipsis',
                       }}
                     >
-                      {c.card.name}
+                      {displayName}
+                      {isFlipped && (
+                        <span style={{ marginLeft: '6px', fontSize: '0.72rem', color: '#a78bfa', fontWeight: 600 }}>
+                          (Verso)
+                        </span>
+                      )}
                     </div>
                     <ManaCostRenderer manaCost={c.card.manaCost} />
                   </div>
@@ -1034,8 +1103,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       <button
                         className="btn btn-ghost btn-icon"
                         style={{ padding: '5px' }}
-                        onClick={() => onOpenArtSelector(c.card, deck.cards.indexOf(c))}
-                        title="Trocar Arte / Edição"
+                        onClick={() => onOpenArtSelector(c.card, deck.cards.indexOf(c), isFlipped ? 'back' : 'front')}
+                        title={isFlipped ? 'Trocar Arte do Verso' : 'Trocar Arte / Edição'}
                       >
                         <ImageIcon size={15} />
                       </button>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { Card, CardPrint } from '../../types';
-import { getCardPrints } from '../../services/scryfall';
+import { Card, CardPrint, isDoubleFacedCard } from '../../types';
+import { getCardPrints, resolveCardFaces } from '../../services/scryfall';
 import {
   searchMpcFillAlters,
   MpcCardPrint,
@@ -26,6 +26,7 @@ import {
   AlertCircle,
   Plus,
   RefreshCw,
+  RotateCw,
   SlidersHorizontal,
   ArrowUpDown,
   Tag,
@@ -40,12 +41,13 @@ interface ArtSelectorModalProps {
   card: Card | null;
   isOpen: boolean;
   onClose: () => void;
-  onSelectPrint: (selectedPrint: CardPrint) => void;
+  onSelectPrint: (selectedPrint: CardPrint, targetFace?: 'front' | 'back') => void;
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
   hasPrev?: boolean;
   hasNext?: boolean;
   cardIndexLabel?: string;
+  initialFace?: 'front' | 'back';
 }
 
 export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
@@ -58,11 +60,43 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   hasPrev = false,
   hasNext = false,
   cardIndexLabel,
+  initialFace = 'front',
 }) => {
   useModalOverlay(isOpen, onClose);
 
   const [activeTab, setActiveTab] = useState<ArtTab>('official');
   const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
+
+  // Active face state for double-faced cards ('front' vs 'back')
+  const [activeFace, setActiveFace] = useState<'front' | 'back'>(initialFace);
+
+  const isCardDfc = useMemo(() => isDoubleFacedCard(card), [card]);
+
+  const frontFaceName = useMemo(() => {
+    if (!card) return '';
+    if (card.cardFaces?.[0]?.name) return card.cardFaces[0].name;
+    if (card.name.includes(' // ')) return card.name.split(' // ')[0].trim();
+    return card.name;
+  }, [card]);
+
+  const backFaceName = useMemo(() => {
+    if (!card) return '';
+    if (card.cardFaces?.[1]?.name) return card.cardFaces[1].name;
+    if (card.name.includes(' // ')) return card.name.split(' // ')[1].trim();
+    return `${card.name} (Verso)`;
+  }, [card]);
+
+  const currentFaceName = activeFace === 'back' ? backFaceName : frontFaceName;
+
+  // Sync initial face when card or modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setActiveFace(initialFace || 'front');
+      if (card && isCardDfc && (!card.cardFaces || card.cardFaces.length < 2)) {
+        resolveCardFaces(card).catch(() => {});
+      }
+    }
+  }, [isOpen, initialFace, card?.id, isCardDfc]);
 
   // Official Prints State (Scryfall)
   const [officialPrints, setOfficialPrints] = useState<CardPrint[]>([]);
@@ -178,7 +212,11 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     setMpcProxyNotice(false);
     setMpcFilterText('');
     setCustomImageUrl('');
-    setCustomTitle(`Arte Customizada de ${card.name}`);
+    setCustomTitle(
+      activeFace === 'back'
+        ? `Arte Customizada de ${backFaceName}`
+        : `Arte Customizada de ${frontFaceName}`
+    );
     setCustomArtist('');
     setCustomUrlInput('');
     setHoveredPreview(null);
@@ -197,13 +235,24 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
         if (!cancelled) setLoadingOfficial(false);
       });
 
-    // 2. Fetch MPCFill community alters (>= 200 DPI)
-    fetchMpcAlters(card.name, mpcMinDpi, initialCardType, card.typeLine);
-
     return () => {
       cancelled = true;
     };
-  }, [isOpen, card?.name, isCardToken, fetchMpcAlters, mpcMinDpi]);
+  }, [isOpen, card?.name, isCardToken, activeFace, backFaceName, frontFaceName]);
+
+  // Fetch MPCFill community alters whenever card or active face changes
+  const lastMpcTargetRef = useRef<string>('');
+  useEffect(() => {
+    if (!isOpen || !card) {
+      lastMpcTargetRef.current = '';
+      return;
+    }
+    const targetName = activeFace === 'back' ? backFaceName : frontFaceName;
+    if (lastMpcTargetRef.current === `${card.name}-${targetName}`) return;
+    lastMpcTargetRef.current = `${card.name}-${targetName}`;
+    const initialCardType: 'CARD' | 'TOKEN' = isCardToken ? 'TOKEN' : 'CARD';
+    fetchMpcAlters(targetName, mpcMinDpi, initialCardType, card.typeLine);
+  }, [isOpen, activeFace, card?.name, backFaceName, frontFaceName, isCardToken, fetchMpcAlters, mpcMinDpi]);
 
   // Keyboard navigation for previous/next card (Left/Right arrows when not typing)
   useEffect(() => {
@@ -271,14 +320,14 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   // Handle manual Drive ID submission in MPC tab
   const handleApplyDriveId = () => {
     if (!card || !mpcDriveInput.trim()) return;
-    const print = createPrintFromMpcId(card.name, mpcDriveInput.trim(), `MPCFill Alter (${card.name})`);
+    const print = createPrintFromMpcId(currentFaceName, mpcDriveInput.trim(), `MPCFill Alter (${currentFaceName})`);
     if (!print) {
       setMpcError('ID ou link do Google Drive inválido. Cole o ID alfanumérico ou o link de compartilhamento.');
       return;
     }
     setMpcError(null);
     setActivePrintId(print.id);
-    onSelectPrint(print);
+    onSelectPrint(print, activeFace);
     setSelectedFeedback('Arte do Google Drive selecionada!');
     setTimeout(() => setSelectedFeedback(null), 2200);
   };
@@ -353,9 +402,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   // Handle confirm custom art
   const handleConfirmCustomArt = () => {
     if (!card || !customImageUrl) return;
-    const print = createPrintFromCustomImage(card.name, customImageUrl, customTitle, customArtist);
+    const print = createPrintFromCustomImage(currentFaceName, customImageUrl, customTitle, customArtist);
     setActivePrintId(print.id);
-    onSelectPrint(print);
+    onSelectPrint(print, activeFace);
     setSelectedFeedback('Arte personalizada selecionada!');
     setTimeout(() => setSelectedFeedback(null), 2200);
   };
@@ -439,8 +488,54 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
-                  Trocar Arte — {card.name}
+                  Trocar Arte — {activeFace === 'back' ? backFaceName : frontFaceName}
                 </h2>
+                {isCardDfc && (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      padding: '2px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-medium)',
+                      marginLeft: '4px',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className={`btn btn-xs ${activeFace === 'front' ? 'btn-primary' : 'btn-ghost'}`}
+                      style={{
+                        fontSize: '0.74rem',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        fontWeight: activeFace === 'front' ? 700 : 500,
+                      }}
+                      onClick={() => setActiveFace('front')}
+                      title={`Ver e trocar arte da Frente (${frontFaceName})`}
+                    >
+                      Frente
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-xs ${activeFace === 'back' ? 'btn-primary' : 'btn-ghost'}`}
+                      style={{
+                        fontSize: '0.74rem',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        fontWeight: activeFace === 'back' ? 700 : 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                      onClick={() => setActiveFace('back')}
+                      title={`Ver e trocar arte do Verso (${backFaceName})`}
+                    >
+                      <RotateCw size={11} />
+                      Verso
+                    </button>
+                  </div>
+                )}
                 {selectedFeedback && (
                   <span
                     style={{
@@ -461,7 +556,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 )}
               </div>
               <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '2px 0 0' }}>
-                Clique em uma arte para selecioná-la. Use as setas para trocar a arte das outras cartas.
+                {isCardDfc
+                  ? `Carta dupla face: alterando arte do ${activeFace === 'back' ? 'VERSO' : 'FRENTE'} (${currentFaceName}).`
+                  : 'Clique em uma arte para selecioná-la. Use as setas para trocar a arte das outras cartas.'}
               </p>
             </div>
           </div>
@@ -731,22 +828,39 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 >
                   {filteredOfficialPrints.map((p) => {
                     const isSelected = p.id === activePrintId;
+                    const printImg =
+                      activeFace === 'back'
+                        ? p.cardFaces?.[1]?.imageUrl || p.imageUrl
+                        : p.imageUrl;
+                    const printImgLarge =
+                      activeFace === 'back'
+                        ? p.cardFaces?.[1]?.imageUrlLarge || p.cardFaces?.[1]?.imageUrl || p.imageUrlLarge || p.imageUrl
+                        : p.imageUrlLarge || p.imageUrl;
+                    const printArtist =
+                      activeFace === 'back'
+                        ? p.cardFaces?.[1]?.artist || p.artist
+                        : p.artist;
+                    const printFaceName =
+                      activeFace === 'back'
+                        ? p.cardFaces?.[1]?.name || backFaceName
+                        : p.cardFaces?.[0]?.name || frontFaceName;
+
                     return (
                       <div
                         key={p.id}
                         onClick={() => {
                           setHoveredPreview(null);
                           setActivePrintId(p.id);
-                          onSelectPrint(p);
+                          onSelectPrint(p, activeFace);
                           setSelectedFeedback(`Arte oficial selecionada (${p.setName})`);
                           setTimeout(() => setSelectedFeedback(null), 2200);
                         }}
                         onMouseEnter={(e) => {
                           setPreviewMousePos({ x: e.clientX, y: e.clientY });
                           setHoveredPreview({
-                            url: p.imageUrlLarge || p.imageUrl,
-                            title: `${card.name} (${p.setCode.toUpperCase()} #${p.collectorNumber})`,
-                            subtitle: `${p.setName}${p.artist ? ` • Arte por ${p.artist}` : ''}`,
+                            url: printImgLarge,
+                            title: `${printFaceName} (${p.setCode.toUpperCase()} #${p.collectorNumber})`,
+                            subtitle: `${p.setName}${printArtist ? ` • Arte por ${printArtist}` : ''}${activeFace === 'back' ? ' • [Verso]' : ''}`,
                           });
                         }}
                         onMouseMove={(e) => setPreviewMousePos({ x: e.clientX, y: e.clientY })}
@@ -765,11 +879,12 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       >
                         <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b' }}>
                           <CardImage
-                            name={card.name}
-                            imageUrl={p.imageUrl}
-                            imageUrlLarge={p.imageUrlLarge}
+                            name={printFaceName}
+                            imageUrl={printImg}
+                            imageUrlLarge={printImgLarge}
                             setCode={p.setCode}
                             collectorNumber={p.collectorNumber}
+                            face={activeFace}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
                           {isSelected && (
@@ -1121,7 +1236,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm"
-                      onClick={() => fetchMpcAlters(card.name, mpcMinDpi, mpcCardType, card.typeLine)}
+                      onClick={() => fetchMpcAlters(currentFaceName, mpcMinDpi, mpcCardType, card.typeLine)}
                       style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                       <RefreshCw size={14} className="text-amber-400" /> Tentar Novamente
@@ -1169,8 +1284,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                         onClick={() => {
                           setHoveredPreview(null);
                           setActivePrintId(p.id);
-                          onSelectPrint(p);
-                          setSelectedFeedback(`Arte oficial selecionada (${p.setName})`);
+                          onSelectPrint(p, activeFace);
+                          setSelectedFeedback(`Arte da comunidade MPCFill selecionada (${p.setName})`);
                           setTimeout(() => setSelectedFeedback(null), 2200);
                         }}
                         onMouseEnter={(e) => {

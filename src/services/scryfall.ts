@@ -261,6 +261,7 @@ async function fetchPrintsFromUrl(initialUrl: string, maxPages: number = 3): Pro
         imageUrl: parsed.imageUrl,
         imageUrlLarge: parsed.imageUrlLarge,
         imageUrlArtCrop: parsed.imageUrlArtCrop,
+        cardFaces: parsed.cardFaces,
         releasedAt: raw.released_at,
         artist: raw.artist,
         priceUsd: parsed.priceUsd,

@@ -13,6 +13,7 @@ import {
   UserProfile,
   SyncStatus,
   CloudUserData,
+  isDoubleFacedCard,
 } from './types';
 import {
   getStoredCollection,
@@ -89,6 +90,7 @@ export function App() {
     collectionItemId?: string;
     deckCardIndex?: number;
     proxyItemId?: string;
+    face?: 'front' | 'back';
   }>({});
 
   // User Authentication & Cloud Sync
@@ -607,22 +609,120 @@ export function App() {
   };
 
   // Art Selection (Collection, Decks, and Proxy Queue)
-  const handleSelectArtPrint = (selectedPrint: CardPrint) => {
+  const handleSelectArtPrint = (selectedPrint: CardPrint, targetFace: 'front' | 'back' = 'front') => {
     if (!artSelectorCard) return;
 
-    const newCardData: Card = {
-      ...artSelectorCard,
-      id: selectedPrint.id,
-      oracleId: selectedPrint.oracleId || artSelectorCard.oracleId,
-      printsSearchUri: selectedPrint.printsSearchUri || artSelectorCard.printsSearchUri,
-      setCode: selectedPrint.setCode,
-      setName: selectedPrint.setName,
-      collectorNumber: selectedPrint.collectorNumber,
-      imageUrl: selectedPrint.imageUrl,
-      imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
-      imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl || artSelectorCard.imageUrlArtCrop,
-      priceUsd: selectedPrint.priceUsd ?? artSelectorCard.priceUsd,
-    };
+    const isDfc = isDoubleFacedCard(artSelectorCard);
+    let newCardData: Card;
+
+    if (isDfc) {
+      const baseFaces = artSelectorCard.cardFaces && artSelectorCard.cardFaces.length >= 2
+        ? [...artSelectorCard.cardFaces]
+        : [
+            {
+              name: artSelectorCard.name.split(' // ')[0].trim(),
+              typeLine: artSelectorCard.typeLine,
+              imageUrl: artSelectorCard.imageUrl,
+              imageUrlLarge: artSelectorCard.imageUrlLarge || artSelectorCard.imageUrl,
+            },
+            {
+              name: artSelectorCard.name.includes(' // ')
+                ? artSelectorCard.name.split(' // ')[1].trim()
+                : `${artSelectorCard.name} (Verso)`,
+              typeLine: artSelectorCard.typeLine,
+              imageUrl: artSelectorCard.imageUrl,
+              imageUrlLarge: artSelectorCard.imageUrlLarge || artSelectorCard.imageUrl,
+            },
+          ];
+
+      if (targetFace === 'back') {
+        if (selectedPrint.cardFaces && selectedPrint.cardFaces.length >= 2) {
+          // Official DFC print: update both faces
+          newCardData = {
+            ...artSelectorCard,
+            id: selectedPrint.id,
+            oracleId: selectedPrint.oracleId || artSelectorCard.oracleId,
+            printsSearchUri: selectedPrint.printsSearchUri || artSelectorCard.printsSearchUri,
+            setCode: selectedPrint.setCode,
+            setName: selectedPrint.setName,
+            collectorNumber: selectedPrint.collectorNumber,
+            imageUrl: selectedPrint.imageUrl,
+            imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
+            imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl || artSelectorCard.imageUrlArtCrop,
+            priceUsd: selectedPrint.priceUsd ?? artSelectorCard.priceUsd,
+            cardFaces: selectedPrint.cardFaces,
+          };
+        } else {
+          // Custom / MPCFill alter specifically for the back face
+          const updatedFaces = [
+            baseFaces[0],
+            {
+              ...baseFaces[1],
+              imageUrl: selectedPrint.imageUrl,
+              imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
+              imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl,
+              artist: selectedPrint.artist || baseFaces[1]?.artist,
+            },
+          ];
+
+          newCardData = {
+            ...artSelectorCard,
+            cardFaces: updatedFaces,
+          };
+        }
+      } else {
+        // Changing the front face
+        if (selectedPrint.cardFaces && selectedPrint.cardFaces.length >= 2) {
+          newCardData = {
+            ...artSelectorCard,
+            id: selectedPrint.id,
+            oracleId: selectedPrint.oracleId || artSelectorCard.oracleId,
+            printsSearchUri: selectedPrint.printsSearchUri || artSelectorCard.printsSearchUri,
+            setCode: selectedPrint.setCode,
+            setName: selectedPrint.setName,
+            collectorNumber: selectedPrint.collectorNumber,
+            imageUrl: selectedPrint.imageUrl,
+            imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
+            imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl || artSelectorCard.imageUrlArtCrop,
+            priceUsd: selectedPrint.priceUsd ?? artSelectorCard.priceUsd,
+            cardFaces: selectedPrint.cardFaces,
+          };
+        } else {
+          const updatedFaces = [
+            {
+              ...baseFaces[0],
+              imageUrl: selectedPrint.imageUrl,
+              imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
+              imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl,
+              artist: selectedPrint.artist || baseFaces[0]?.artist,
+            },
+            baseFaces[1],
+          ];
+
+          newCardData = {
+            ...artSelectorCard,
+            imageUrl: selectedPrint.imageUrl,
+            imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
+            imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl || artSelectorCard.imageUrlArtCrop,
+            cardFaces: updatedFaces,
+          };
+        }
+      }
+    } else {
+      newCardData = {
+        ...artSelectorCard,
+        id: selectedPrint.id,
+        oracleId: selectedPrint.oracleId || artSelectorCard.oracleId,
+        printsSearchUri: selectedPrint.printsSearchUri || artSelectorCard.printsSearchUri,
+        setCode: selectedPrint.setCode,
+        setName: selectedPrint.setName,
+        collectorNumber: selectedPrint.collectorNumber,
+        imageUrl: selectedPrint.imageUrl,
+        imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
+        imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl || artSelectorCard.imageUrlArtCrop,
+        priceUsd: selectedPrint.priceUsd ?? artSelectorCard.priceUsd,
+      };
+    }
 
     setArtSelectorCard(newCardData);
 
@@ -1232,9 +1332,9 @@ export function App() {
           <CollectionView
             collection={collectionWithUsage}
             onUpdateQuantity={handleUpdateCollectionQuantity}
-            onOpenArtSelector={(card, colItemId) => {
+            onOpenArtSelector={(card, colItemId, face) => {
               setArtSelectorCard(card);
-              setArtSelectorContext({ collectionItemId: colItemId });
+              setArtSelectorContext({ collectionItemId: colItemId, face: face || 'front' });
             }}
             onAddToProxies={handleAddCardToProxies}
             onRemoveItem={(id) => handleUpdateCollectionQuantity(id, 0)}
@@ -1251,9 +1351,9 @@ export function App() {
               onUpdateDeck={(updatedDeck) => {
                 updateDecksState(decks.map((d) => (d.id === updatedDeck.id ? updatedDeck : d)));
               }}
-              onOpenArtSelector={(card, cardIndex) => {
+              onOpenArtSelector={(card, cardIndex, face) => {
                 setArtSelectorCard(card);
-                setArtSelectorContext({ deckCardIndex: cardIndex });
+                setArtSelectorContext({ deckCardIndex: cardIndex, face: face || 'front' });
               }}
               onAddToProxies={handleAddCardToProxies}
               onSendDeckToProxies={handleAddDeckToProxies}
@@ -1357,6 +1457,7 @@ export function App() {
       <ArtSelectorModal
         isOpen={!!artSelectorCard}
         card={artSelectorCard}
+        initialFace={artSelectorContext.face || 'front'}
         onClose={() => {
           setArtSelectorCard(null);
           setArtSelectorContext({});

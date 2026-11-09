@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { CollectionItem, ViewMode, CardPrint, Card } from '../../types';
+import { CollectionItem, ViewMode, CardPrint, Card, isDoubleFacedCard } from '../../types';
+import { resolveCardFaces } from '../../services/scryfall';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
 import { InteractiveCharts } from '../Analytics/InteractiveCharts';
@@ -26,12 +27,13 @@ import {
   EyeOff,
   Trash2,
   CheckSquare,
+  RotateCw,
 } from 'lucide-react';
 
 interface CollectionViewProps {
   collection: CollectionItem[];
   onUpdateQuantity: (id: string, newQty: number) => void;
-  onOpenArtSelector: (card: Card, collectionItemId: string) => void;
+  onOpenArtSelector: (card: Card, collectionItemId: string, face?: 'front' | 'back') => void;
   onAddToProxies: (card: Card, qty: number) => void;
   onRemoveItem: (id: string) => void;
   onRemoveItems?: (itemIds: string[]) => void;
@@ -102,6 +104,24 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
     setShowGridDetails((prev) => {
       const next = !prev;
       localStorage.setItem('dms_grid_show_details', String(next));
+      return next;
+    });
+  };
+
+  // Flip state for double-faced cards in visual grid
+  const [flippedItemIds, setFlippedItemIds] = useState<Set<string>>(new Set());
+
+  const handleToggleFlip = async (itemId: string, card: Card) => {
+    if (!card.cardFaces || card.cardFaces.length < 2) {
+      await resolveCardFaces(card);
+    }
+    setFlippedItemIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
       return next;
     });
   };
@@ -540,94 +560,144 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
           className="cards-grid"
           style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardSize}px, 1fr))` }}
         >
-          {sortedItems.map((item) => (
-            <div key={item.id} className={`card-item-container ${item.isFoil ? 'is-foil' : ''}`}>
-              {/* Image & Sheen */}
-              <div
-                className="card-image-wrapper"
-                onMouseEnter={(e) => {
-                  setMousePos({ x: e.clientX, y: e.clientY });
-                  setHoveredPreview({
-                    url: item.card.imageUrlLarge || item.card.imageUrl,
-                    title: item.card.name,
-                    subtitle: `${item.card.setName} (${item.card.setCode.toUpperCase()} #${item.card.collectorNumber})`,
-                    badge: item.isFoil ? 'Foil ★' : undefined,
-                  });
-                }}
-                onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
-                onMouseLeave={() => setHoveredPreview(null)}
-              >
-                <CardImage
-                  name={item.card.name}
-                  imageUrl={item.card.imageUrl}
-                  imageUrlLarge={item.card.imageUrlLarge}
-                  setCode={item.card.setCode}
-                  collectorNumber={item.card.collectorNumber}
-                  preferLarge
-                  className="card-image"
-                />
+          {sortedItems.map((item) => {
+            const isDfc = isDoubleFacedCard(item.card);
+            const isFlipped = isDfc && flippedItemIds.has(item.id);
 
-                {/* Total Quantity Owned Badge (Bottom-Left) */}
+            const frontName =
+              item.card.cardFaces?.[0]?.name ||
+              (item.card.name.includes(' // ') ? item.card.name.split(' // ')[0].trim() : item.card.name);
+            const backName =
+              item.card.cardFaces?.[1]?.name ||
+              (item.card.name.includes(' // ')
+                ? item.card.name.split(' // ')[1].trim()
+                : `${item.card.name} (Verso)`);
+            const displayName = isFlipped ? backName : frontName;
+
+            const displayImageUrl = isFlipped
+              ? item.card.cardFaces?.[1]?.imageUrl || item.card.imageUrl
+              : item.card.imageUrl;
+            const displayImageUrlLarge = isFlipped
+              ? item.card.cardFaces?.[1]?.imageUrlLarge || item.card.cardFaces?.[1]?.imageUrl || displayImageUrl
+              : item.card.imageUrlLarge || displayImageUrl;
+
+            return (
+              <div key={item.id} className={`card-item-container ${item.isFoil ? 'is-foil' : ''}`}>
+                {/* Image & Sheen */}
                 <div
-                  style={{
-                    position: 'absolute',
-                    bottom: '8px',
-                    left: '8px',
-                    background: 'rgba(12, 15, 23, 0.88)',
-                    border: '1px solid var(--border-medium)',
-                    borderRadius: '6px',
-                    padding: '2px 8px',
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
-                    color: '#f8fafc',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
-                    zIndex: 2,
-                    pointerEvents: 'none',
+                  className="card-image-wrapper"
+                  onMouseEnter={(e) => {
+                    setMousePos({ x: e.clientX, y: e.clientY });
+                    setHoveredPreview({
+                      url: displayImageUrlLarge,
+                      title: displayName,
+                      subtitle: `${item.card.setName} (${item.card.setCode.toUpperCase()} #${item.card.collectorNumber})${isFlipped ? ' • [Verso]' : ''}`,
+                      badge: item.isFoil ? 'Foil ★' : undefined,
+                    });
                   }}
+                  onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                  onMouseLeave={() => setHoveredPreview(null)}
                 >
-                  {item.quantity}x
+                  <CardImage
+                    name={displayName}
+                    imageUrl={displayImageUrl}
+                    imageUrlLarge={displayImageUrlLarge}
+                    setCode={item.card.setCode}
+                    collectorNumber={item.card.collectorNumber}
+                    preferLarge
+                    face={isFlipped ? 'back' : 'front'}
+                    className="card-image"
+                  />
+
+                  {/* Total Quantity Owned Badge (Bottom-Left) */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '8px',
+                      left: '8px',
+                      background: 'rgba(12, 15, 23, 0.88)',
+                      border: '1px solid var(--border-medium)',
+                      borderRadius: '6px',
+                      padding: '2px 8px',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      color: '#f8fafc',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
+                      zIndex: 2,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    {item.quantity}x
+                  </div>
+
+                  {/* Flip Button for Double-Faced Cards (Bottom-Right) */}
+                  {isDfc && (
+                    <button
+                      type="button"
+                      className={`btn-flip-card ${isFlipped ? 'is-active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setHoveredPreview(null);
+                        handleToggleFlip(item.id, item.card);
+                      }}
+                      title={isFlipped ? 'Virar para Frente' : 'Virar para o Verso'}
+                    >
+                      <RotateCw
+                        size={12}
+                        style={{
+                          transform: isFlipped ? 'rotate(180deg)' : 'none',
+                          transition: 'transform 0.25s ease',
+                        }}
+                      />
+                      <span>Virar</span>
+                    </button>
+                  )}
+
+                  {/* In Art-Only mode: Floating quick actions on hover/touch */}
+                  {!showGridDetails && (
+                    <div className="card-art-actions-overlay">
+                      <button
+                        className="btn btn-secondary btn-icon"
+                        style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setHoveredPreview(null);
+                          onOpenArtSelector(item.card, item.id, isFlipped ? 'back' : 'front');
+                        }}
+                        title={isFlipped ? 'Mudar Arte do Verso' : 'Mudar Arte / Edição'}
+                      >
+                        <ImageIcon size={15} />
+                      </button>
+                      <button
+                        className="btn btn-secondary btn-icon"
+                        style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setHoveredPreview(null);
+                          onAddToProxies(item.card, 1);
+                        }}
+                        title="Adicionar à Impressão"
+                      >
+                        <Printer size={15} />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {/* In Art-Only mode: Floating quick actions on hover/touch */}
-                {!showGridDetails && (
-                  <div className="card-art-actions-overlay">
-                    <button
-                      className="btn btn-secondary btn-icon"
-                      style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setHoveredPreview(null);
-                        onOpenArtSelector(item.card, item.id);
-                      }}
-                      title="Mudar Arte / Edição"
-                    >
-                      <ImageIcon size={15} />
-                    </button>
-                    <button
-                      className="btn btn-secondary btn-icon"
-                      style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setHoveredPreview(null);
-                        onAddToProxies(item.card, 1);
-                      }}
-                      title="Adicionar à Impressão"
-                    >
-                      <Printer size={15} />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Card Details & In Use / Available Indicators (Requirement 4) - Hidden in Art-Only mode */}
-              {showGridDetails && (
-                <div style={{ padding: '12px', background: '#0c0f17', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {item.card.name}
+                {/* Card Details & In Use / Available Indicators (Requirement 4) - Hidden in Art-Only mode */}
+                {showGridDetails && (
+                  <div style={{ padding: '12px', background: '#0c0f17', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {displayName}
+                        {isFlipped && (
+                          <span style={{ marginLeft: '6px', fontSize: '0.72rem', color: '#a78bfa', fontWeight: 600 }}>
+                            (Verso)
+                          </span>
+                        )}
+                      </div>
+                      <ManaCostRenderer manaCost={item.card.manaCost} />
                     </div>
-                    <ManaCostRenderer manaCost={item.card.manaCost} />
-                  </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }}>
                     <span>{item.card.setName} ({item.card.setCode})</span>
@@ -706,8 +776,8 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                       <button
                         className="btn btn-ghost btn-icon"
                         style={{ padding: '5px' }}
-                        onClick={() => onOpenArtSelector(item.card, item.id)}
-                        title="Mudar Arte / Edição (Scryfall)"
+                        onClick={() => onOpenArtSelector(item.card, item.id, isFlipped ? 'back' : 'front')}
+                        title={isFlipped ? 'Mudar Arte do Verso (Scryfall)' : 'Mudar Arte / Edição (Scryfall)'}
                       >
                         <ImageIcon size={15} />
                       </button>
@@ -732,7 +802,8 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                 </div>
               )}
             </div>
-          ))}
+          );
+        })}
         </div>
       ) : (
         /* 2. TABLE / COMPACT LIST VIEW */
