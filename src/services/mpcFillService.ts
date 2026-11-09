@@ -1,4 +1,4 @@
-import { Card, ProxyItem, Deck, DeckCard } from '../types';
+import { Card, ProxyItem, Deck, DeckCard, CardPrint } from '../types';
 
 export interface MpcFillParsedCard {
   id: string; // Google Drive ID
@@ -342,4 +342,213 @@ export function buildDeckFromMpcOrder(order: MpcFillOrder, customName?: string):
     tags: ['mpcfill', 'alters', 'proxy'],
   };
 }
+
+/**
+ * Extracts Google Drive ID from raw ID, sharing link, or uc?id link.
+ */
+export function extractGoogleDriveId(input: string): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+  const fileDMatch = trimmed.match(/\/d\/([a-zA-Z0-9_\-]+)/);
+  if (fileDMatch) return fileDMatch[1];
+  const idParamMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_\-]+)/);
+  if (idParamMatch) return idParamMatch[1];
+  if (/^[a-zA-Z0-9_\-]{20,50}$/.test(trimmed)) {
+    return trimmed;
+  }
+  return null;
+}
+
+/**
+ * Creates a CardPrint instance from a Google Drive ID or MPCFill alter.
+ */
+export function createPrintFromMpcId(
+  cardName: string,
+  driveIdOrUrl: string,
+  title?: string,
+  artist?: string
+): CardPrint | null {
+  const driveId = extractGoogleDriveId(driveIdOrUrl);
+  if (!driveId) return null;
+
+  const imageUrl = `https://lh3.googleusercontent.com/d/${driveId}`;
+  return {
+    id: `mpc-alter-${driveId}`,
+    setCode: 'MPC',
+    setName: title || 'MPCFill Alter',
+    collectorNumber: '★',
+    artist: artist || 'Comunidade MPCFill',
+    imageUrl,
+    imageUrlLarge: imageUrl,
+    imageUrlArtCrop: imageUrl,
+  };
+}
+
+/**
+ * Creates a CardPrint instance from a user-uploaded image (data URL, blob URL, or external link).
+ */
+export function createPrintFromCustomImage(
+  cardName: string,
+  imageUrl: string,
+  title?: string,
+  artist?: string
+): CardPrint {
+  const timestamp = Date.now();
+  return {
+    id: `custom-art-${timestamp}-${Math.random().toString(36).substring(2, 7)}`,
+    setCode: 'CUSTOM',
+    setName: title?.trim() || 'Arte Personalizada',
+    collectorNumber: '★',
+    artist: artist?.trim() || 'Custom Art',
+    imageUrl,
+    imageUrlLarge: imageUrl,
+    imageUrlArtCrop: imageUrl,
+  };
+}
+
+/**
+ * Extracts matching alter arts from an uploaded/provided MPCFill XML string for a specific card name.
+ */
+export function extractAltersFromXmlForCard(xmlString: string, targetCardName: string): CardPrint[] {
+  try {
+    const order = parseMpcFillXml(xmlString);
+    const cleanTarget = targetCardName.toLowerCase().replace(/[~`!@#$%^&*(){}\[\];:"'’<,.>?/\\|_+=]/g, '').trim();
+
+    const matches: CardPrint[] = [];
+    const allCards = [...order.fronts, ...order.backs];
+
+    for (const c of allCards) {
+      const cleanName = c.name.toLowerCase().replace(/[~`!@#$%^&*(){}\[\];:"'’<,.>?/\\|_+=]/g, '').trim();
+      const cleanQuery = c.query.toLowerCase().replace(/[~`!@#$%^&*(){}\[\];:"'’<,.>?/\\|_+=]/g, '').trim();
+
+      if (cleanName.includes(cleanTarget) || cleanTarget.includes(cleanName) || cleanQuery === cleanTarget) {
+        matches.push({
+          id: `mpc-xml-${c.id}`,
+          setCode: 'MPC',
+          setName: c.alterVariant ? `MPCFill (${c.alterVariant})` : 'MPCFill Alter',
+          collectorNumber: '★',
+          artist: c.alterVariant || 'MPCFill Community',
+          imageUrl: c.imageUrl,
+          imageUrlLarge: c.imageUrl,
+          imageUrlArtCrop: c.imageUrl,
+        });
+      }
+    }
+
+    return matches;
+  } catch {
+    return [];
+  }
+}
+
+// Memory cache for MPCFill sources
+let cachedMpcSources: Array<[number, boolean]> | null = null;
+
+/**
+ * Queries the MPCFill backend API to search for community alter arts for a card name.
+ * Uses Vite proxy in development or direct endpoint if accessible.
+ */
+export async function searchMpcFillAlters(cardName: string): Promise<CardPrint[]> {
+  try {
+    const cleanQuery = cardName
+      .toLowerCase()
+      .replace(/[~`!@#$%^&*(){}\[\];:"'’<,.>?/\\|_+=]/g, '')
+      .trim();
+
+    if (!cleanQuery) return [];
+
+    // Base URL: Vite dev server proxy or direct
+    const isDev = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const baseUrl = isDev ? '/api-mpcfill' : 'https://mpcfill.com';
+
+    // 1. Get sources if not cached
+    if (!cachedMpcSources) {
+      try {
+        const sourcesRes = await fetch(`${baseUrl}/2/sources/`);
+        if (sourcesRes.ok) {
+          const sourcesData = await sourcesRes.json();
+          if (sourcesData && sourcesData.results) {
+            cachedMpcSources = Object.values(sourcesData.results).map((s: any) => [s.pk, true]);
+          }
+        }
+      } catch {
+        // Fallback to minimal array if sources fetch fails
+        cachedMpcSources = Array.from({ length: 300 }, (_, i) => [i + 1, true]);
+      }
+    }
+
+    // 2. Query editorSearch
+    const searchBody = {
+      queries: [{ query: cleanQuery, cardType: 'CARD' }],
+      searchSettings: {
+        filterSettings: {
+          excludesTags: [],
+          includesTags: [],
+          languages: ['en'],
+          maximumDPI: 1200,
+          maximumSize: 50,
+          minimumDPI: 0,
+        },
+        searchTypeSettings: { filterCardbacks: false, fuzzySearch: true },
+        sourceSettings: { sources: cachedMpcSources || [] },
+      },
+    };
+
+    const searchRes = await fetch(`${baseUrl}/2/editorSearch/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(searchBody),
+    });
+
+    if (!searchRes.ok) return [];
+
+    const searchData = await searchRes.json();
+    const ids: string[] = searchData?.results?.[cleanQuery]?.CARD || [];
+    if (!ids || ids.length === 0) return [];
+
+    // 3. Query card metadata for top 24 results
+    const topIds = ids.slice(0, 24);
+    let cardsMetaMap: Record<string, any> = {};
+
+    try {
+      const metaRes = await fetch(`${baseUrl}/2/cards/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ cardIdentifiers: topIds }),
+      });
+      if (metaRes.ok) {
+        const metaData = await metaRes.json();
+        cardsMetaMap = metaData?.results || {};
+      }
+    } catch {
+      // Ignore metadata error and use IDs directly
+    }
+
+    // 4. Transform into CardPrint
+    const prints: CardPrint[] = topIds.map((id, index) => {
+      const meta = cardsMetaMap[id];
+      const imageUrl = `https://lh3.googleusercontent.com/d/${id}`;
+      return {
+        id: `mpc-alter-${id}`,
+        setCode: 'MPC',
+        setName: meta?.name || `MPCFill Alter #${index + 1}`,
+        collectorNumber: meta?.dpi ? `${meta.dpi} DPI` : '★',
+        artist: meta?.sourceName || meta?.source || 'Comunidade MPCFill',
+        imageUrl,
+        imageUrlLarge: imageUrl,
+        imageUrlArtCrop: imageUrl,
+      };
+    });
+
+    return prints;
+  } catch (err) {
+    console.warn('Erro ao consultar MPCFill API:', err);
+    return [];
+  }
+}
+
 

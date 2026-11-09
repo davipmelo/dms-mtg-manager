@@ -371,24 +371,6 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
               onChange={handleMpcFileSelect}
             />
 
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => mpcFileInputRef.current?.click()}
-              disabled={isDownloadingPdf}
-              title="Importar cartas alter de um arquivo XML gerado pelo MPCFill.com com artes em alta resolução"
-              style={{
-                borderColor: 'rgba(255, 187, 0, 0.45)',
-                color: '#ffbb00',
-                background: 'rgba(255, 187, 0, 0.08)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <Sparkles size={14} className="text-amber-400" /> Importar XML MPCFill
-            </button>
-
             {proxies.length > 0 && (
               <button
                 type="button"
@@ -1033,26 +1015,8 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
               Sua fila de proxies está vazia
             </h3>
             <p style={{ fontSize: '0.9rem', color: '#94a3b8', maxWidth: '460px' }}>
-              Adicione cartas da sua coleção, de um deck completo, da aba de Utilitários ou importe uma lista de cartas alter diretamente do MPCFill.
+              Adicione cartas da sua coleção, de um deck completo, da aba de Utilitários ou carregue um arquivo XML do MPCFill.
             </p>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => mpcFileInputRef.current?.click()}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                borderColor: 'rgba(255, 187, 0, 0.45)',
-                color: '#ffbb00',
-                background: 'rgba(255, 187, 0, 0.08)',
-                padding: '10px 20px',
-                marginTop: '4px',
-              }}
-            >
-              <Sparkles size={16} className="text-amber-400" />
-              Importar XML do MPCFill.com
-            </button>
           </div>
         ) : (
           pages.map((pageCards, pageIdx) => (
