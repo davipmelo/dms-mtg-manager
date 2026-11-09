@@ -90,7 +90,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       return next;
     });
   };
-  const [showCharts, setShowCharts] = useState(true);
+  const [showCharts, setShowCharts] = useState(false);
   const [hoveredPreview, setHoveredPreview] = useState<CardHoverPreviewData | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 

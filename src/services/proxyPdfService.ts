@@ -17,14 +17,14 @@ export interface ProxyPdfOptions {
 }
 
 export const DEFAULT_PROXY_PDF_OPTIONS: ProxyPdfOptions = {
-  showCutLines: true,
+  showCutLines: false,
   cutLinesColor: '#000000',
   cutLinesThickness: 0.25,
   cutLinesStyle: 'solid',
   showCropMarks: true,
-  cropMarksColor: '#000000',
-  cropMarksThickness: 0.35,
-  cropMarksLength: 8,
+  cropMarksColor: '#475569',
+  cropMarksThickness: 0.2,
+  cropMarksLength: 12,
   showMarginTicks: true,
   showCornerMarks: true,
   cardBleedBg: 'black',

@@ -74,16 +74,16 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
   decks,
 }) => {
   // Cut lines state
-  const [showCutLines, setShowCutLines] = useState<boolean>(true);
+  const [showCutLines, setShowCutLines] = useState<boolean>(false);
   const [cutLinesColor, setCutLinesColor] = useState<string>('#000000');
   const [cutLinesThickness, setCutLinesThickness] = useState<number>(0.25);
   const [cutLinesStyle, setCutLinesStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
 
   // Crop marks state
   const [showCropMarks, setShowCropMarks] = useState<boolean>(true);
-  const [cropMarksColor, setCropMarksColor] = useState<string>('#000000');
-  const [cropMarksThickness, setCropMarksThickness] = useState<number>(0.35);
-  const [cropMarksLength, setCropMarksLength] = useState<number>(8);
+  const [cropMarksColor, setCropMarksColor] = useState<string>('#475569');
+  const [cropMarksThickness, setCropMarksThickness] = useState<number>(0.2);
+  const [cropMarksLength, setCropMarksLength] = useState<number>(12);
   const [showMarginTicks, setShowMarginTicks] = useState<boolean>(true);
   const [showCornerMarks, setShowCornerMarks] = useState<boolean>(true);
 
@@ -278,17 +278,18 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
   const applyPreset = (preset: 'guillotine' | 'hobbyknife' | 'minimal' | 'economical') => {
     switch (preset) {
       case 'guillotine':
-        setShowCutLines(true);
+        setShowCutLines(false);
         setCutLinesColor('#000000');
         setCutLinesThickness(0.25);
         setCutLinesStyle('solid');
         setShowCropMarks(true);
-        setCropMarksColor('#000000');
-        setCropMarksThickness(0.35);
+        setCropMarksColor('#475569');
+        setCropMarksThickness(0.2);
         setCropMarksLength(12);
         setShowMarginTicks(true);
         setShowCornerMarks(true);
         setCardBleedBg('black');
+        setShowSheetMetadata(true);
         break;
 
       case 'hobbyknife':
@@ -516,9 +517,9 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                 className="btn btn-secondary btn-sm"
                 onClick={() => applyPreset('guillotine')}
                 style={{ fontSize: '0.72rem', padding: '3px 8px' }}
-                title="Linhas contínuas pretas + réguas de margem longas + cruzes nas junções"
+                title="Sem bordas nas cartas + crop marks 0.2mm cinza escuro + réguas de margem 12mm e cruzes"
               >
-                Guilhotina / Régua
+                Guilhotina
               </button>
               <button
                 type="button"
