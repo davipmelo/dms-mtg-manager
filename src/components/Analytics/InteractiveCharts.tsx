@@ -190,16 +190,8 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
       {
         label: 'Tipos de Carta',
         data: Object.values(stats.typesCount),
-        backgroundColor: [
-          '#10b981',
-          '#38bdf8',
-          '#ffbb00',
-          '#94a3b8',
-          '#ec4899',
-          '#a855f7',
-          '#84cc16',
-          '#71717a',
-        ],
+        backgroundColor: '#ffbb00',
+        hoverBackgroundColor: '#ffd043',
         borderRadius: 4,
       },
     ],
