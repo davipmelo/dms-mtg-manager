@@ -49,12 +49,28 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
       );
       setErrorMessage('');
 
-      // Build initial plain text card list from deck.cards (excluding standalone commander if separated)
-      const lines: string[] = [];
+      // Build initial plain text card list from deck.cards, aggregating identical printings
+      const cardCounts = new Map<string, { count: number; name: string; setCode?: string; collectorNumber?: string }>();
       deck.cards.forEach((dc) => {
-        const setPart = dc.card.setCode ? ` (${dc.card.setCode})` : '';
-        const numPart = dc.card.collectorNumber ? ` ${dc.card.collectorNumber}` : '';
-        lines.push(`${dc.quantity} ${dc.card.name}${setPart}${numPart}`);
+        const key = `${dc.card.name}|${(dc.card.setCode || '').toLowerCase()}|${dc.card.collectorNumber || ''}`;
+        const existing = cardCounts.get(key);
+        if (existing) {
+          existing.count += dc.quantity || 1;
+        } else {
+          cardCounts.set(key, {
+            count: dc.quantity || 1,
+            name: dc.card.name,
+            setCode: dc.card.setCode,
+            collectorNumber: dc.card.collectorNumber,
+          });
+        }
+      });
+
+      const lines: string[] = [];
+      cardCounts.forEach((item) => {
+        const setPart = item.setCode ? ` (${item.setCode})` : '';
+        const numPart = item.collectorNumber ? ` ${item.collectorNumber}` : '';
+        lines.push(`${item.count} ${item.name}${setPart}${numPart}`);
       });
 
       const initialText = lines.join('\n');
@@ -151,12 +167,16 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
         }
 
         if (matchedCard) {
-          updatedDeckCards.push({
-            card: matchedCard,
-            quantity: item.quantity,
-            category: item.category || 'main',
-            isFoil: item.isFoil || matchedCard.isFoil,
-          });
+          const qty = Math.max(1, item.quantity || 1);
+          for (let q = 0; q < qty; q++) {
+            updatedDeckCards.push({
+              card: { ...matchedCard },
+              quantity: 1,
+              category: item.category || 'main',
+              isFoil: item.isFoil || matchedCard.isFoil,
+              instanceId: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            });
+          }
         }
       }
 
@@ -166,6 +186,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
           card: commanderCard,
           quantity: 1,
           category: 'commander',
+          instanceId: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
         });
       }
 

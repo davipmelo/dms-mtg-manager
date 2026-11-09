@@ -1,4 +1,4 @@
-import { CollectionItem, Deck, ProxyItem, Card, SystemBackup } from '../types';
+import { CollectionItem, Deck, DeckCard, ProxyItem, Card, SystemBackup } from '../types';
 
 const STORAGE_KEYS = {
   COLLECTION: 'dms_mtg_collection_v1',
@@ -288,22 +288,43 @@ export function getStoredDecks(): Deck[] {
         return dc;
       });
 
+      // Un-group cards in deck: each copy must be an individual 1x DeckCard
+      const unGroupedCards: DeckCard[] = [];
+      let hadGroupedCards = false;
+      for (const dc of nextCards) {
+        const qty = Math.max(1, Number(dc.quantity) || 1);
+        if (qty > 1 || !dc.instanceId) hadGroupedCards = true;
+        for (let q = 0; q < qty; q++) {
+          unGroupedCards.push({
+            ...dc,
+            card: { ...dc.card },
+            quantity: 1,
+            instanceId: dc.instanceId && qty === 1
+              ? dc.instanceId
+              : `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          });
+        }
+      }
+
       const hasBrokenCover = BROKEN_IMAGE_SNIPPETS.some((s) => deck.coverImageUrl?.includes(s));
       const coverImageUrl = hasBrokenCover
-        ? commanderCard?.imageUrlArtCrop || nextCards[0]?.card.imageUrlArtCrop
+        ? commanderCard?.imageUrlArtCrop || unGroupedCards[0]?.card.imageUrlArtCrop
         : deck.coverImageUrl || commanderCard?.imageUrlArtCrop;
 
-      if (deckRepaired || hasBrokenCover) {
+      if (deckRepaired || hasBrokenCover || hadGroupedCards) {
         anyRepaired = true;
         return {
           ...deck,
           commanderCard,
           partnerCard,
           coverImageUrl,
-          cards: nextCards,
+          cards: unGroupedCards,
         };
       }
-      return deck;
+      return {
+        ...deck,
+        cards: unGroupedCards,
+      };
     });
 
     if (anyRepaired) {
@@ -468,14 +489,23 @@ export function parseSystemBackup(rawJson: string): SystemBackup {
     .map((deck: any, idx: number) => {
       const commanderCard = deck.commanderCard ? repairCardRecord(deck.commanderCard).card : undefined;
       const partnerCard = deck.partnerCard ? repairCardRecord(deck.partnerCard).card : undefined;
-      const cards = deck.cards
-        .filter((dc: any) => dc && dc.card && typeof dc.card.name === 'string')
-        .map((dc: any) => ({
-          ...dc,
-          card: repairCardRecord(dc.card).card,
-          quantity: Math.max(1, Number(dc.quantity) || 1),
-          category: dc.category || 'main',
-        }));
+      const cards: DeckCard[] = [];
+      for (const dc of (deck.cards || [])) {
+        if (!dc || !dc.card || typeof dc.card.name !== 'string') continue;
+        const repaired = repairCardRecord(dc.card).card;
+        const qty = Math.max(1, Number(dc.quantity) || 1);
+        for (let q = 0; q < qty; q++) {
+          cards.push({
+            ...dc,
+            card: { ...repaired },
+            quantity: 1,
+            category: dc.category || 'main',
+            instanceId: dc.instanceId && qty === 1
+              ? dc.instanceId
+              : `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          });
+        }
+      }
 
       return {
         ...deck,

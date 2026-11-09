@@ -105,6 +105,7 @@ export interface DeckCard {
   category: CardCategory;
   collectionItemId?: string;
   isFoil?: boolean;
+  instanceId?: string;
 }
 
 export interface Deck {

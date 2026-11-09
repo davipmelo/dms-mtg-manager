@@ -370,25 +370,19 @@ export function App() {
     if (targetDeckId) {
       const nextDecks = decks.map((d) => {
         if (d.id !== targetDeckId) return d;
-        const existingCardIdx = d.cards.findIndex(
-          (c) => c.collectionItemId === colItemId || c.card.id === card.id
-        );
-        const nextCards = [...d.cards];
-        if (existingCardIdx >= 0) {
-          nextCards[existingCardIdx] = {
-            ...nextCards[existingCardIdx],
-            quantity: nextCards[existingCardIdx].quantity + quantity,
-            collectionItemId: colItemId,
-          };
-        } else {
-          nextCards.push({
-            card,
-            quantity,
-            category: 'main',
-            collectionItemId: colItemId,
-          });
-        }
-        return { ...d, cards: nextCards, updatedAt: new Date().toISOString() };
+        const newCopies: DeckCard[] = Array.from({ length: Math.max(1, quantity) }, () => ({
+          card: { ...card },
+          quantity: 1,
+          category: 'main',
+          collectionItemId: colItemId,
+          isFoil,
+          instanceId: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        }));
+        return {
+          ...d,
+          cards: [...d.cards, ...newCopies],
+          updatedAt: new Date().toISOString(),
+        };
       });
       updateDecksState(nextDecks);
     }
@@ -442,10 +436,15 @@ export function App() {
           dateAdded: new Date().toISOString(),
         });
       }
-      linkedCards.push({
-        ...c,
-        collectionItemId: colId,
-      });
+      const qty = Math.max(1, c.quantity || 1);
+      for (let q = 0; q < qty; q++) {
+        linkedCards.push({
+          ...c,
+          quantity: 1,
+          collectionItemId: colId,
+          instanceId: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        });
+      }
     }
     updateCollectionState(nextCollection);
 
@@ -568,13 +567,17 @@ export function App() {
           commanderCard?.imageUrlArtCrop ||
           commanderCard?.imageUrl ||
           importedCards[0]?.card.imageUrlArtCrop,
-        cards: importedCards.map((c) => ({
-          card: c.card,
-          quantity: c.quantity,
-          category: c.category,
-          collectionItemId: cardToColId.get(c.card.id),
-          isFoil: c.isFoil || c.card.isFoil,
-        })),
+        cards: importedCards.flatMap((c) => {
+          const qty = Math.max(1, c.quantity || 1);
+          return Array.from({ length: qty }, () => ({
+            card: { ...c.card },
+            quantity: 1,
+            category: c.category,
+            collectionItemId: cardToColId.get(c.card.id),
+            isFoil: c.isFoil || c.card.isFoil,
+            instanceId: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          }));
+        }),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -585,18 +588,20 @@ export function App() {
     } else if (destination !== 'collection') {
       const nextDecks = decks.map((d) => {
         if (d.id !== destination) return d;
+        const newCopies: DeckCard[] = importedCards.flatMap((c) => {
+          const qty = Math.max(1, c.quantity || 1);
+          return Array.from({ length: qty }, () => ({
+            card: { ...c.card },
+            quantity: 1,
+            category: c.category,
+            collectionItemId: cardToColId.get(c.card.id),
+            isFoil: c.isFoil || c.card.isFoil,
+            instanceId: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          }));
+        });
         return {
           ...d,
-          cards: [
-            ...d.cards,
-            ...importedCards.map((c) => ({
-              card: c.card,
-              quantity: c.quantity,
-              category: c.category,
-              collectionItemId: cardToColId.get(c.card.id),
-              isFoil: c.isFoil || c.card.isFoil,
-            })),
-          ],
+          cards: [...d.cards, ...newCopies],
           updatedAt: new Date().toISOString(),
         };
       });
@@ -800,10 +805,35 @@ export function App() {
       const activeDeck = decks.find((d) => d.id === activeDeckId);
       if (activeDeck && activeDeck.cards[artSelectorContext.deckCardIndex]) {
         const targetEntry = activeDeck.cards[artSelectorContext.deckCardIndex];
+        // Find or create matching collection entry for this new art (grouping identical arts)
+        const matchedCol = rawCollection.find(
+          (c) =>
+            c.card.id === newCardData.id ||
+            (c.card.setCode.toLowerCase() === newCardData.setCode.toLowerCase() &&
+              c.card.collectorNumber === newCardData.collectorNumber)
+        );
+
+        let newColId: string;
+        if (matchedCol) {
+          newColId = matchedCol.id;
+        } else {
+          newColId = `col-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+          updateCollectionState([
+            ...rawCollection,
+            {
+              id: newColId,
+              card: newCardData,
+              quantity: 1,
+              dateAdded: new Date().toISOString(),
+            },
+          ]);
+        }
+
         const nextCards = [...activeDeck.cards];
         nextCards[artSelectorContext.deckCardIndex] = {
           ...targetEntry,
           card: newCardData,
+          collectionItemId: newColId,
         };
         const isCommander = targetEntry.category === 'commander';
         const isPartner = targetEntry.category === 'partner';
@@ -823,24 +853,34 @@ export function App() {
               : d
           )
         );
-
-        // Also update linked collection item
-        if (targetEntry.collectionItemId) {
-          updateCollectionState(
-            rawCollection.map((c) =>
-              c.id === targetEntry.collectionItemId ? { ...c, card: newCardData } : c
-            )
-          );
-        } else {
-          const matchedCol = rawCollection.find((c) => c.card.id === targetEntry.card.id);
-          if (matchedCol) {
-            updateCollectionState(
-              rawCollection.map((c) =>
-                c.id === matchedCol.id ? { ...c, card: newCardData } : c
-              )
-            );
-          }
-        }
+      }
+    } else if (
+      activeDeckId &&
+      (artSelectorContext.deckCardIndex === undefined || artSelectorContext.deckCardIndex === -1)
+    ) {
+      const activeDeck = decks.find((d) => d.id === activeDeckId);
+      if (
+        activeDeck &&
+        (activeDeck.commanderCard?.id === artSelectorCard.id ||
+          activeDeck.partnerCard?.id === artSelectorCard.id)
+      ) {
+        const isCommander = activeDeck.commanderCard?.id === artSelectorCard.id;
+        const isPartner = activeDeck.partnerCard?.id === artSelectorCard.id;
+        updateDecksState(
+          decks.map((d) =>
+            d.id === activeDeckId
+              ? {
+                  ...d,
+                  commanderCard: isCommander ? newCardData : d.commanderCard,
+                  partnerCard: isPartner ? newCardData : d.partnerCard,
+                  coverImageUrl: isCommander
+                    ? newCardData.imageUrlArtCrop || newCardData.imageUrl
+                    : d.coverImageUrl,
+                  updatedAt: new Date().toISOString(),
+                }
+              : d
+          )
+        );
       }
     }
   };

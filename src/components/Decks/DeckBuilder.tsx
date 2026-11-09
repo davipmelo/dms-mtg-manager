@@ -185,9 +185,29 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     [deck.commanderCard, deck.partnerCard]
   );
 
+  // Unique key helper for selection and individual card identity
+  const getCardKey = useCallback((c: DeckCard): string => {
+    return c.instanceId || `${c.card.id}-${c.collectionItemId || ''}`;
+  }, []);
+
   // Sections: Mainboard (including Commander(s) pinned first), Sideboard
+  // Guarantee each individual copy is expanded (never grouped inside a deck)
   const mainCards = useMemo(() => {
-    const list = deck.cards.filter((c) => c.category !== 'sideboard');
+    const list: DeckCard[] = [];
+    for (const c of deck.cards) {
+      if (c.category === 'sideboard') continue;
+      const qty = Math.max(1, Number(c.quantity) || 1);
+      for (let q = 0; q < qty; q++) {
+        list.push({
+          ...c,
+          card: { ...c.card },
+          quantity: 1,
+          instanceId: c.instanceId && qty === 1
+            ? c.instanceId
+            : (c.instanceId ? `${c.instanceId}-${q}` : `dc-${c.card.id}-${q}`),
+        });
+      }
+    }
     if (
       deck.commanderCard &&
       !list.some(
@@ -200,6 +220,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         card: deck.commanderCard,
         quantity: 1,
         category: 'commander',
+        instanceId: `dc-${deck.commanderCard.id}-cmd`,
       });
     }
     if (
@@ -214,15 +235,30 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         card: deck.partnerCard,
         quantity: 1,
         category: 'partner',
+        instanceId: `dc-${deck.partnerCard.id}-ptn`,
       });
     }
     return list;
   }, [deck.cards, deck.commanderCard, deck.partnerCard]);
 
-  const sideCards = useMemo(
-    () => deck.cards.filter((c) => c.category === 'sideboard'),
-    [deck.cards]
-  );
+  const sideCards = useMemo(() => {
+    const list: DeckCard[] = [];
+    for (const c of deck.cards) {
+      if (c.category !== 'sideboard') continue;
+      const qty = Math.max(1, Number(c.quantity) || 1);
+      for (let q = 0; q < qty; q++) {
+        list.push({
+          ...c,
+          card: { ...c.card },
+          quantity: 1,
+          instanceId: c.instanceId && qty === 1
+            ? c.instanceId
+            : (c.instanceId ? `${c.instanceId}-${q}` : `dc-${c.card.id}-${q}`),
+        });
+      }
+    }
+    return list;
+  }, [deck.cards]);
 
   // Link card to collection item to get availability & in-use breakdown
   const getCollectionItemForCard = (c: DeckCard): CollectionItem | undefined => {
@@ -244,28 +280,63 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     );
   };
 
-  // Card update handlers
-  const handleUpdateCardQuantity = (cardId: string, newQty: number) => {
-    let updatedCards: DeckCard[];
-    if (newQty <= 0) {
-      updatedCards = deck.cards.filter((c) => c.card.id !== cardId);
+  // Helper to find index of a card copy in deck.cards
+  const findDeckCardIndex = useCallback(
+    (c: DeckCard): number => {
+      const idx = deck.cards.findIndex(
+        (item) => item === c || (item.instanceId && c.instanceId && item.instanceId === c.instanceId)
+      );
+      if (idx !== -1) return idx;
+      return deck.cards.indexOf(c);
+    },
+    [deck.cards]
+  );
+
+  // Card update handlers (individual copies)
+  const handleAddCardCopy = (c: DeckCard) => {
+    const newCopy: DeckCard = {
+      ...c,
+      card: { ...c.card },
+      quantity: 1,
+      instanceId: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    };
+    const cardIdx = findDeckCardIndex(c);
+    const nextCards = [...deck.cards];
+    if (cardIdx >= 0) {
+      nextCards.splice(cardIdx + 1, 0, newCopy);
     } else {
-      updatedCards = deck.cards.map((c) => (c.card.id === cardId ? { ...c, quantity: newQty } : c));
+      nextCards.push(newCopy);
     }
-    onUpdateDeck({ ...deck, cards: updatedCards, updatedAt: new Date().toISOString() });
+    onUpdateDeck({ ...deck, cards: nextCards, updatedAt: new Date().toISOString() });
   };
 
-  const handleRemoveCard = (cardId: string) => {
-    const updatedCards = deck.cards.filter((c) => c.card.id !== cardId);
-    const updatedCommander = deck.commanderCard?.id === cardId ? undefined : deck.commanderCard;
-    const updatedPartner = deck.partnerCard?.id === cardId ? undefined : deck.partnerCard;
+  const handleRemoveCard = (c: DeckCard) => {
+    const cardIdx = findDeckCardIndex(c);
+    let nextCards: DeckCard[];
+    if (cardIdx >= 0) {
+      nextCards = deck.cards.filter((_, i) => i !== cardIdx);
+    } else {
+      const targetKey = getCardKey(c);
+      nextCards = deck.cards.filter((item) => getCardKey(item) !== targetKey);
+    }
+    const isCommander = isCommanderCard(c);
+    const updatedCommander = isCommander && deck.commanderCard?.id === c.card.id ? undefined : deck.commanderCard;
+    const updatedPartner = isCommander && deck.partnerCard?.id === c.card.id ? undefined : deck.partnerCard;
     onUpdateDeck({
       ...deck,
-      cards: updatedCards,
+      cards: nextCards,
       commanderCard: updatedCommander,
       partnerCard: updatedPartner,
       updatedAt: new Date().toISOString(),
     });
+  };
+
+  const handleUpdateCardQuantity = (c: DeckCard, newQty: number) => {
+    if (newQty <= 0) {
+      handleRemoveCard(c);
+    } else if (newQty > c.quantity) {
+      handleAddCardCopy(c);
+    }
   };
 
   // Color Filter toggles
@@ -449,37 +520,37 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   // Selection helpers for Mainboard & Sideboard
   const allMainSelected =
-    sortedMainCards.length > 0 && sortedMainCards.every((c) => selectedCardIds.has(c.card.id));
-  const someMainSelected = sortedMainCards.some((c) => selectedCardIds.has(c.card.id));
+    sortedMainCards.length > 0 && sortedMainCards.every((c) => selectedCardIds.has(getCardKey(c)));
+  const someMainSelected = sortedMainCards.some((c) => selectedCardIds.has(getCardKey(c)));
 
   const handleToggleSelectAllMain = () => {
     if (allMainSelected) {
       setSelectedCardIds((prev) => {
         const next = new Set(prev);
-        sortedMainCards.forEach((c) => next.delete(c.card.id));
+        sortedMainCards.forEach((c) => next.delete(getCardKey(c)));
         return next;
       });
     } else {
       const next = new Set(selectedCardIds);
-      sortedMainCards.forEach((c) => next.add(c.card.id));
+      sortedMainCards.forEach((c) => next.add(getCardKey(c)));
       setSelectedCardIds(next);
     }
   };
 
   const allSideSelected =
-    sortedSideCards.length > 0 && sortedSideCards.every((c) => selectedCardIds.has(c.card.id));
-  const someSideSelected = sortedSideCards.some((c) => selectedCardIds.has(c.card.id));
+    sortedSideCards.length > 0 && sortedSideCards.every((c) => selectedCardIds.has(getCardKey(c)));
+  const someSideSelected = sortedSideCards.some((c) => selectedCardIds.has(getCardKey(c)));
 
   const handleToggleSelectAllSide = () => {
     if (allSideSelected) {
       setSelectedCardIds((prev) => {
         const next = new Set(prev);
-        sortedSideCards.forEach((c) => next.delete(c.card.id));
+        sortedSideCards.forEach((c) => next.delete(getCardKey(c)));
         return next;
       });
     } else {
       const next = new Set(selectedCardIds);
-      sortedSideCards.forEach((c) => next.add(c.card.id));
+      sortedSideCards.forEach((c) => next.add(getCardKey(c)));
       setSelectedCardIds(next);
     }
   };
@@ -494,7 +565,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         } deste deck?`
       )
     ) {
-      const nextCards = deck.cards.filter((c) => !selectedCardIds.has(c.card.id));
+      const nextCards = deck.cards.filter((c) => !selectedCardIds.has(getCardKey(c)));
       onUpdateDeck({
         ...deck,
         cards: nextCards,
@@ -955,7 +1026,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           setHoveredPreview(null);
-                          onOpenArtSelector(c.card, deck.cards.indexOf(c), isFlipped ? 'back' : 'front');
+                          onOpenArtSelector(c.card, findDeckCardIndex(c), isFlipped ? 'back' : 'front');
                         }}
                         title={isFlipped ? 'Trocar Arte do Verso' : 'Trocar Arte / Edição'}
                       >
@@ -981,7 +1052,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           setHoveredPreview(null);
-                          handleRemoveCard(c.card.id);
+                          handleRemoveCard(c);
                         }}
                         title="Remover do Deck"
                       >
@@ -1083,7 +1154,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       <button
                         className="btn btn-ghost btn-icon"
                         style={{ padding: '3px' }}
-                        onClick={() => handleUpdateCardQuantity(c.card.id, c.quantity - 1)}
+                        onClick={() => handleUpdateCardQuantity(c, c.quantity - 1)}
                       >
                         <Minus size={13} />
                       </button>
@@ -1100,7 +1171,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       <button
                         className="btn btn-ghost btn-icon"
                         style={{ padding: '3px' }}
-                        onClick={() => handleUpdateCardQuantity(c.card.id, c.quantity + 1)}
+                        onClick={() => handleUpdateCardQuantity(c, c.quantity + 1)}
                       >
                         <Plus size={13} />
                       </button>
@@ -1110,7 +1181,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       <button
                         className="btn btn-ghost btn-icon"
                         style={{ padding: '5px' }}
-                        onClick={() => onOpenArtSelector(c.card, deck.cards.indexOf(c), isFlipped ? 'back' : 'front')}
+                        onClick={() => onOpenArtSelector(c.card, findDeckCardIndex(c), isFlipped ? 'back' : 'front')}
                         title={isFlipped ? 'Trocar Arte do Verso' : 'Trocar Arte / Edição'}
                       >
                         <ImageIcon size={15} />
@@ -1128,7 +1199,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       <button
                         className="btn btn-ghost btn-icon text-red-400"
                         style={{ padding: '5px' }}
-                        onClick={() => handleRemoveCard(c.card.id)}
+                        onClick={() => handleRemoveCard(c)}
                         title="Remover do Deck"
                       >
                         <Trash2 size={15} />
@@ -1415,11 +1486,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 const inUseQty = linked?.inUseQuantity ?? c.quantity;
                 const isFoil = c.isFoil || c.card.isFoil;
                 const isCmd = isCommanderCard(c);
-                const isSelected = selectedCardIds.has(c.card.id);
+                const cardKey = getCardKey(c);
+                const isSelected = selectedCardIds.has(cardKey);
 
                 return (
                   <tr
-                    key={`${c.card.id}-${idx}`}
+                    key={cardKey}
                     style={{
                       borderBottom: '1px solid var(--border-subtle)',
                       transition: 'background 0.15s ease',
@@ -1450,7 +1522,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => handleToggleSelectCard(c.card.id)}
+                        onChange={() => handleToggleSelectCard(cardKey)}
                         style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#ffbb00' }}
                       />
                     </td>
@@ -1459,7 +1531,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         <button
                           className="btn btn-ghost btn-icon"
                           style={{ padding: '2px' }}
-                          onClick={() => handleUpdateCardQuantity(c.card.id, c.quantity - 1)}
+                          onClick={() => handleUpdateCardQuantity(c, c.quantity - 1)}
                         >
                           <Minus size={12} />
                         </button>
@@ -1467,7 +1539,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         <button
                           className="btn btn-ghost btn-icon"
                           style={{ padding: '2px' }}
-                          onClick={() => handleUpdateCardQuantity(c.card.id, c.quantity + 1)}
+                          onClick={() => handleUpdateCardQuantity(c, c.quantity + 1)}
                         >
                           <Plus size={12} />
                         </button>
@@ -1559,7 +1631,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         <button
                           className="btn btn-ghost btn-icon"
                           style={{ padding: '4px' }}
-                          onClick={() => onOpenArtSelector(c.card, deck.cards.indexOf(c))}
+                          onClick={() => onOpenArtSelector(c.card, findDeckCardIndex(c))}
                           title="Trocar Arte"
                         >
                           <ImageIcon size={15} />
@@ -1577,7 +1649,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         <button
                           className="btn btn-ghost btn-icon text-red-400"
                           style={{ padding: '4px' }}
-                          onClick={() => handleRemoveCard(c.card.id)}
+                          onClick={() => handleRemoveCard(c)}
                           title="Remover do Deck"
                         >
                           <Trash2 size={15} />
@@ -1644,11 +1716,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     const availQty = linked?.availableQuantity ?? 0;
                     const inUseQty = linked?.inUseQuantity ?? c.quantity;
                     const isFoil = c.isFoil || c.card.isFoil;
-                    const isSelected = selectedCardIds.has(c.card.id);
+                    const cardKey = getCardKey(c);
+                    const isSelected = selectedCardIds.has(cardKey);
 
                     return (
                       <tr
-                        key={`side-${c.card.id}-${idx}`}
+                        key={`side-${cardKey}`}
                         style={{
                           borderBottom: '1px solid var(--border-subtle)',
                           transition: 'background 0.15s ease',
@@ -1666,7 +1739,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={() => handleToggleSelectCard(c.card.id)}
+                            onChange={() => handleToggleSelectCard(cardKey)}
                             style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#ffbb00' }}
                           />
                         </td>
@@ -1675,7 +1748,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                             <button
                               className="btn btn-ghost btn-icon"
                               style={{ padding: '2px' }}
-                              onClick={() => handleUpdateCardQuantity(c.card.id, c.quantity - 1)}
+                              onClick={() => handleUpdateCardQuantity(c, c.quantity - 1)}
                             >
                               <Minus size={12} />
                             </button>
@@ -1683,7 +1756,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                             <button
                               className="btn btn-ghost btn-icon"
                               style={{ padding: '2px' }}
-                              onClick={() => handleUpdateCardQuantity(c.card.id, c.quantity + 1)}
+                              onClick={() => handleUpdateCardQuantity(c, c.quantity + 1)}
                             >
                               <Plus size={12} />
                             </button>
@@ -1754,7 +1827,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                             <button
                               className="btn btn-ghost btn-icon"
                               style={{ padding: '4px' }}
-                              onClick={() => onOpenArtSelector(c.card, deck.cards.indexOf(c))}
+                              onClick={() => onOpenArtSelector(c.card, findDeckCardIndex(c))}
                               title="Trocar Arte"
                             >
                               <ImageIcon size={15} />
@@ -1772,7 +1845,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                             <button
                               className="btn btn-ghost btn-icon text-red-400"
                               style={{ padding: '4px' }}
-                              onClick={() => handleRemoveCard(c.card.id)}
+                              onClick={() => handleRemoveCard(c)}
                               title="Remover do Deck"
                             >
                               <Trash2 size={15} />
@@ -1793,7 +1866,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               {sortedSideCards.map((c, idx) => {
                 const isFoil = c.isFoil || c.card.isFoil;
                 return (
-                  <div key={`side-grid-${c.card.id}-${idx}`} className={`card-item-container ${isFoil ? 'is-foil' : ''}`}>
+                  <div key={`side-grid-${getCardKey(c)}`} className={`card-item-container ${isFoil ? 'is-foil' : ''}`}>
                     <div
                       className="card-image-wrapper"
                       onMouseEnter={(e) => {

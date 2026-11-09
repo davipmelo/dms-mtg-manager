@@ -74,15 +74,21 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
   const frontFaceName = useMemo(() => {
     if (!card) return '';
-    if (card.cardFaces?.[0]?.name) return card.cardFaces[0].name;
-    if (card.name.includes(' // ')) return card.name.split(' // ')[0].trim();
-    return card.name;
+    let name = card.cardFaces?.[0]?.name || card.name;
+    if (name.includes('//')) name = name.split('//')[0];
+    return name.trim();
   }, [card]);
 
   const backFaceName = useMemo(() => {
     if (!card) return '';
-    if (card.cardFaces?.[1]?.name) return card.cardFaces[1].name;
-    if (card.name.includes(' // ')) return card.name.split(' // ')[1].trim();
+    if (card.cardFaces?.[1]?.name) {
+      let bName = card.cardFaces[1].name;
+      if (bName.includes('//')) bName = bName.split('//')[1] || bName;
+      return bName.trim();
+    }
+    if (card.name.includes('//')) {
+      return card.name.split('//')[1].trim();
+    }
     return `${card.name} (Verso)`;
   }, [card]);
 

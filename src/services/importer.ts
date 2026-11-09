@@ -186,11 +186,30 @@ export function exportToMtgArena(cards: DeckCard[], commander?: DeckCard): strin
     lines.push('');
   }
 
+  const aggregate = (list: DeckCard[]) => {
+    const map = new Map<string, { count: number; name: string; setCode: string; collectorNumber: string }>();
+    for (const c of list) {
+      const key = `${c.card.name}|${(c.card.setCode || '').toLowerCase()}|${c.card.collectorNumber || ''}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.count += c.quantity || 1;
+      } else {
+        map.set(key, {
+          count: c.quantity || 1,
+          name: c.card.name,
+          setCode: c.card.setCode,
+          collectorNumber: c.card.collectorNumber,
+        });
+      }
+    }
+    return Array.from(map.values());
+  };
+
   const main = cards.filter((c) => c.category === 'main' || c.category === 'commander');
   if (main.length > 0) {
     lines.push('Deck');
-    for (const c of main) {
-      lines.push(`${c.quantity} ${c.card.name} (${c.card.setCode}) ${c.card.collectorNumber}`);
+    for (const item of aggregate(main)) {
+      lines.push(`${item.count} ${item.name} (${item.setCode}) ${item.collectorNumber}`);
     }
   }
 
@@ -198,8 +217,8 @@ export function exportToMtgArena(cards: DeckCard[], commander?: DeckCard): strin
   if (side.length > 0) {
     lines.push('');
     lines.push('Sideboard');
-    for (const c of side) {
-      lines.push(`${c.quantity} ${c.card.name} (${c.card.setCode}) ${c.card.collectorNumber}`);
+    for (const item of aggregate(side)) {
+      lines.push(`${item.count} ${item.name} (${item.setCode}) ${item.collectorNumber}`);
     }
   }
 
@@ -211,22 +230,37 @@ export function exportToMtgArena(cards: DeckCard[], commander?: DeckCard): strin
  */
 export function exportToMoxfield(cards: DeckCard[]): string {
   const lines: string[] = [];
+
+  const aggregateByName = (list: DeckCard[]) => {
+    const map = new Map<string, { count: number; name: string }>();
+    for (const c of list) {
+      const key = c.card.name.toLowerCase();
+      const existing = map.get(key);
+      if (existing) {
+        existing.count += c.quantity || 1;
+      } else {
+        map.set(key, { count: c.quantity || 1, name: c.card.name });
+      }
+    }
+    return Array.from(map.values());
+  };
+
   const commanders = cards.filter((c) => c.category === 'commander');
   if (commanders.length > 0) {
     lines.push('// Commander');
-    commanders.forEach((c) => lines.push(`${c.quantity} ${c.card.name}`));
+    aggregateByName(commanders).forEach((item) => lines.push(`${item.count} ${item.name}`));
     lines.push('');
   }
 
   const main = cards.filter((c) => c.category === 'main');
   lines.push('// Main');
-  main.forEach((c) => lines.push(`${c.quantity} ${c.card.name}`));
+  aggregateByName(main).forEach((item) => lines.push(`${item.count} ${item.name}`));
 
   const side = cards.filter((c) => c.category === 'sideboard');
   if (side.length > 0) {
     lines.push('');
     lines.push('// Sideboard');
-    side.forEach((c) => lines.push(`${c.quantity} ${c.card.name}`));
+    aggregateByName(side).forEach((item) => lines.push(`${item.count} ${item.name}`));
   }
 
   return lines.join('\n');
@@ -236,8 +270,18 @@ export function exportToMoxfield(cards: DeckCard[]): string {
  * Format cards for LigaMagic export
  */
 export function exportToLigaMagic(cards: DeckCard[]): string {
-  return cards
-    .map((c) => `${c.quantity}x ${c.card.name} [${c.card.setCode}]`)
+  const map = new Map<string, { count: number; name: string; setCode: string }>();
+  for (const c of cards) {
+    const key = `${c.card.name}|${(c.card.setCode || '').toLowerCase()}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.count += c.quantity || 1;
+    } else {
+      map.set(key, { count: c.quantity || 1, name: c.card.name, setCode: c.card.setCode });
+    }
+  }
+  return Array.from(map.values())
+    .map((item) => `${item.count}x ${item.name} [${item.setCode}]`)
     .join('\n');
 }
 
