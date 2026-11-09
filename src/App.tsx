@@ -93,7 +93,7 @@ export function App() {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalInitialTab, setAuthModalInitialTab] = useState<
-    'login' | 'register' | 'forgot' | 'settings'
+    'login' | 'register' | 'forgot'
   >('login');
   const [pendingCloudData, setPendingCloudData] = useState<CloudUserData | null>(null);
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);

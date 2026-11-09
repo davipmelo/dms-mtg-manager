@@ -19,7 +19,7 @@ interface UserMenuProps {
   user: UserProfile | null;
   syncStatus: SyncStatus;
   lastSyncedAt: Date | null;
-  onOpenAuthModal: (tab?: 'login' | 'register' | 'forgot' | 'settings') => void;
+  onOpenAuthModal: (tab?: 'login' | 'register' | 'forgot') => void;
   onLogout: () => void;
   onForceSync: () => Promise<void>;
 }
@@ -377,33 +377,6 @@ export const UserMenu: React.FC<UserMenuProps> = ({
             >
               <KeyRound size={15} color="#ffbb00" />
               <span>Redefinir Minha Senha</span>
-            </button>
-
-            <button
-              onClick={() => {
-                onOpenAuthModal('settings');
-                setIsOpen(false);
-              }}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '8px 10px',
-                background: 'transparent',
-                border: 'none',
-                borderRadius: '6px',
-                color: '#e2e8f0',
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-surface-hover, #2c2c34)')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-            >
-              <Settings size={15} color="#a0a0ab" />
-              <span>Configurações da Nuvem</span>
             </button>
 
             <div style={{ height: '1px', background: 'var(--border-subtle, #292932)', margin: '4px 0' }} />

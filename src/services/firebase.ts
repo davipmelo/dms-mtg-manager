@@ -28,52 +28,14 @@ export interface FirebaseConfig {
   appId: string;
 }
 
-const STORAGE_KEY_CUSTOM_CONFIG = 'dms_mtg_firebase_config_v1';
 const STORAGE_KEY_SIMULATED_USERS = 'dms_mtg_simulated_users_v1';
 const STORAGE_KEY_SIMULATED_SESSION = 'dms_mtg_simulated_session_v1';
 const STORAGE_KEY_SIMULATED_CLOUD_DATA = 'dms_mtg_simulated_cloud_v1';
 
-/**
- * Checks if user has configured custom Firebase keys in localStorage or in .env
- */
-export function getStoredFirebaseConfig(): FirebaseConfig | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_CONFIG);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed.apiKey && parsed.projectId) {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.error('Erro ao ler Firebase Config do localStorage:', err);
-  }
-  return null;
-}
-
-export function saveStoredFirebaseConfig(config: FirebaseConfig): void {
-  localStorage.setItem(STORAGE_KEY_CUSTOM_CONFIG, JSON.stringify(config));
-  // Re-initialize Firebase on next call
-  cachedApp = null;
-  cachedAuth = null;
-  cachedDb = null;
-}
-
-export function clearStoredFirebaseConfig(): void {
-  localStorage.removeItem(STORAGE_KEY_CUSTOM_CONFIG);
-  cachedApp = null;
-  cachedAuth = null;
-  cachedDb = null;
-}
-
 export function getActiveFirebaseConfig(): FirebaseConfig | null {
-  // 1. Custom config in localStorage
-  const custom = getStoredFirebaseConfig();
-  if (custom) return custom;
-
-  // 2. Vite environment variables
   const envApiKey = import.meta.env.VITE_FIREBASE_API_KEY;
   const envProjectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+
   if (envApiKey && envProjectId) {
     return {
       apiKey: envApiKey,
