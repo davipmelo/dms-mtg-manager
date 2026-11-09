@@ -34,7 +34,7 @@ interface CollectionViewProps {
   onAddToProxies: (card: Card, qty: number) => void;
   onRemoveItem: (id: string) => void;
   onRemoveItems?: (itemIds: string[]) => void;
-  onOpenImportModal: () => void;
+  onOpenImportModal?: () => void;
 }
 
 export type SortColumn = 'quantity' | 'available' | 'name' | 'cmc' | 'type' | 'set' | 'rarity' | 'price';
@@ -305,24 +305,6 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
             <p style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '4px' }}>
               Gerencie todas as suas cartas físicas, controle cópias em uso nos decks e monitore seu acervo.
             </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
-              className={`btn btn-sm ${showCharts ? 'btn-secondary' : 'btn-ghost'}`}
-              onClick={() => setShowCharts(!showCharts)}
-            >
-              <BarChart3 size={15} />
-              {showCharts ? 'Ocultar Estatísticas' : 'Estatísticas'}
-            </button>
-
-            <button
-              className="btn btn-highlight btn-sm"
-              onClick={onOpenImportModal}
-              title="Importar cartas para sua coleção via listas de texto, Moxfield, Arena ou LigaMagic"
-            >
-              <Download size={15} /> Importar Cartas
-            </button>
           </div>
         </div>
 

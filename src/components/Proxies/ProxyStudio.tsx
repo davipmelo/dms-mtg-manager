@@ -12,6 +12,7 @@ import {
   buildProxyItemsFromMpcOrder,
   buildDeckFromMpcOrder,
 } from '../../services/mpcFillService';
+import { useModalOverlay } from '../../hooks/useModalOverlay';
 import {
   Printer,
   Trash2,
@@ -103,6 +104,8 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
   const [mpcIncludeCardback, setMpcIncludeCardback] = useState<boolean>(false);
   const [mpcSaveAsDeck, setMpcSaveAsDeck] = useState<boolean>(true);
   const [mpcDeckName, setMpcDeckName] = useState<string>('');
+
+  useModalOverlay(isMpcModalOpen, () => setIsMpcModalOpen(false));
 
   // Flatten proxies into individual card instances for exact 9-card page chunks
   // If an un-split double-faced card is present in the queue, expand each copy to Front then Back

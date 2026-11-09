@@ -1,6 +1,7 @@
 import React from 'react';
 import { Cloud, GitMerge, DownloadCloud, UploadCloud, Layers, Swords } from 'lucide-react';
 import { CollectionItem, Deck, ProxyItem } from '../../types';
+import { useModalOverlay } from '../../hooks/useModalOverlay';
 
 interface SyncConflictModalProps {
   isOpen: boolean;
@@ -28,6 +29,8 @@ export const SyncConflictModal: React.FC<SyncConflictModalProps> = ({
   onUseCloud,
   onUseLocal,
 }) => {
+  useModalOverlay(isOpen, onUseLocal);
+
   if (!isOpen) return null;
 
   const cloudCollectionCount = cloudData.collection.reduce((sum, item) => sum + item.quantity, 0);

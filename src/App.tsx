@@ -40,7 +40,9 @@ import { ProxyStudio } from './components/Proxies/ProxyStudio';
 import { AddCardModal } from './components/Modals/AddCardModal';
 import { DeckCreationModal } from './components/Modals/DeckCreationModal';
 import { ArtSelectorModal } from './components/Modals/ArtSelectorModal';
-import { ImportExportModal } from './components/Modals/ImportExportModal';
+import { BackupModal } from './components/Modals/BackupModal';
+import { ExportModal } from './components/Modals/ExportModal';
+import { ImportModal } from './components/Modals/ImportModal';
 import { EditDeckModal } from './components/Modals/EditDeckModal';
 import { MtgLogo } from './components/Common/MtgLogo';
 import { AuthModal } from './components/Auth/AuthModal';
@@ -61,7 +63,7 @@ import {
 export function App() {
   const [activeTab, setActiveTab] = useState<
     'collection' | 'decks' | 'utilities' | 'proxies'
-  >('collection');
+  >('decks');
   const [rawCollection, setRawCollection] = useState<CollectionItem[]>([]);
   const [decks, setDecks] = useState<Deck[]>([]);
   const [proxies, setProxies] = useState<ProxyItem[]>([]);
@@ -73,11 +75,13 @@ export function App() {
   const [isAddCardModalOpen, setIsAddCardModalOpen] = useState(false);
   const [isCreateDeckModalOpen, setIsCreateDeckModalOpen] = useState(false);
   const [editingDeck, setEditingDeck] = useState<Deck | null>(null);
-  const [isImportExportModalOpen, setIsImportExportModalOpen] = useState(false);
-  const [importExportMode, setImportExportMode] = useState<'import' | 'export' | 'backup'>(
-    'import'
-  );
-  const [importExportDeckId, setImportExportDeckId] = useState<string | undefined>(undefined);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importDefaultDestination, setImportDefaultDestination] = useState<
+    'collection' | 'new_deck' | string
+  >('collection');
+  const [exportDefaultDeckId, setExportDefaultDeckId] = useState<string | undefined>(undefined);
 
   // Art Selector state
   const [artSelectorCard, setArtSelectorCard] = useState<Card | null>(null);
@@ -700,6 +704,8 @@ export function App() {
       priceUsd: selectedPrint.priceUsd ?? artSelectorCard.priceUsd,
     };
 
+    setArtSelectorCard(newCardData);
+
     if (artSelectorContext.collectionItemId) {
       // 1. Update collection
       const nextCol = rawCollection.map((i) =>
@@ -1039,6 +1045,84 @@ export function App() {
       cards: syncedCards,
     };
   }, [activeDeck, rawCollection]);
+
+  // Art navigation state for ArtSelectorModal (flipping through cards in Collection, Deck or Proxies)
+  let artSelectorHasPrev = false;
+  let artSelectorHasNext = false;
+  let artSelectorLabel: string | undefined = undefined;
+  let onArtNavigatePrev: (() => void) | undefined = undefined;
+  let onArtNavigateNext: (() => void) | undefined = undefined;
+
+  if (artSelectorCard) {
+    if (artSelectorContext.collectionItemId) {
+      const idx = collectionWithUsage.findIndex((i) => i.id === artSelectorContext.collectionItemId);
+      if (idx >= 0) {
+        artSelectorHasPrev = idx > 0;
+        artSelectorHasNext = idx < collectionWithUsage.length - 1;
+        artSelectorLabel = `Carta ${idx + 1} de ${collectionWithUsage.length}`;
+        if (artSelectorHasPrev) {
+          onArtNavigatePrev = () => {
+            const prev = collectionWithUsage[idx - 1];
+            setArtSelectorCard(prev.card);
+            setArtSelectorContext({ collectionItemId: prev.id });
+          };
+        }
+        if (artSelectorHasNext) {
+          onArtNavigateNext = () => {
+            const next = collectionWithUsage[idx + 1];
+            setArtSelectorCard(next.card);
+            setArtSelectorContext({ collectionItemId: next.id });
+          };
+        }
+      }
+    } else if (
+      typeof artSelectorContext.deckCardIndex === 'number' &&
+      syncedActiveDeck &&
+      syncedActiveDeck.cards.length > 0
+    ) {
+      const idx = artSelectorContext.deckCardIndex;
+      const total = syncedActiveDeck.cards.length;
+      artSelectorHasPrev = idx > 0;
+      artSelectorHasNext = idx < total - 1;
+      artSelectorLabel = `Carta ${idx + 1} de ${total}`;
+      if (artSelectorHasPrev) {
+        onArtNavigatePrev = () => {
+          const prevCard = syncedActiveDeck.cards[idx - 1];
+          setArtSelectorCard(prevCard.card);
+          setArtSelectorContext({ deckCardIndex: idx - 1 });
+        };
+      }
+      if (artSelectorHasNext) {
+        onArtNavigateNext = () => {
+          const nextCard = syncedActiveDeck.cards[idx + 1];
+          setArtSelectorCard(nextCard.card);
+          setArtSelectorContext({ deckCardIndex: idx + 1 });
+        };
+      }
+    } else if (artSelectorContext.proxyItemId) {
+      const idx = proxies.findIndex((p) => p.id === artSelectorContext.proxyItemId);
+      if (idx >= 0) {
+        artSelectorHasPrev = idx > 0;
+        artSelectorHasNext = idx < proxies.length - 1;
+        artSelectorLabel = `Carta ${idx + 1} de ${proxies.length}`;
+        if (artSelectorHasPrev) {
+          onArtNavigatePrev = () => {
+            const prev = proxies[idx - 1];
+            setArtSelectorCard(prev.card as Card);
+            setArtSelectorContext({ proxyItemId: prev.id });
+          };
+        }
+        if (artSelectorHasNext) {
+          onArtNavigateNext = () => {
+            const next = proxies[idx + 1];
+            setArtSelectorCard(next.card as Card);
+            setArtSelectorContext({ proxyItemId: next.id });
+          };
+        }
+      }
+    }
+  }
+
   const totalProxyCount = proxies.reduce((sum, p) => sum + p.quantity, 0);
 
   return (
@@ -1096,6 +1180,13 @@ export function App() {
         {/* Navigation Tabs */}
         <nav className="app-header-nav" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
           <button
+            className={`btn btn-sm ${activeTab === 'decks' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveTab('decks')}
+          >
+            <Swords size={16} /> Decks ({decks.length})
+          </button>
+
+          <button
             className={`btn btn-sm ${activeTab === 'collection' ? 'btn-primary' : 'btn-ghost'}`}
             onClick={() => {
               setActiveDeckId(null);
@@ -1103,13 +1194,6 @@ export function App() {
             }}
           >
             <FolderArchive size={16} /> Coleção
-          </button>
-
-          <button
-            className={`btn btn-sm ${activeTab === 'decks' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setActiveTab('decks')}
-          >
-            <Swords size={16} /> Decks ({decks.length})
           </button>
 
           <button
@@ -1152,37 +1236,32 @@ export function App() {
         <div className="app-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button
             className="btn btn-secondary btn-sm"
-            onClick={() => {
-              setImportExportMode('backup');
-              setImportExportDeckId(undefined);
-              setIsImportExportModalOpen(true);
-            }}
+            onClick={() => setIsBackupModalOpen(true)}
             title="Exportar ou Restaurar Backup Completo do Sistema (.json)"
           >
             <Database size={14} /> Backup
           </button>
 
           <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              setExportDefaultDeckId(undefined);
+              setIsExportModalOpen(true);
+            }}
+            title="Exportar listas de cartas para MTG Arena, Moxfield, LigaMagic ou formatos de planilha"
+          >
+            <Upload size={14} /> Exportar
+          </button>
+
+          <button
             className="btn btn-highlight btn-sm"
             onClick={() => {
-              setImportExportMode('import');
-              setImportExportDeckId(undefined);
-              setIsImportExportModalOpen(true);
+              setImportDefaultDestination('collection');
+              setIsImportModalOpen(true);
             }}
             title="Importar listas de cartas (Moxfield, LigaMagic, MTG Arena ou texto)"
           >
             <Download size={14} /> Importar
-          </button>
-
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={() => {
-              setImportExportMode('export');
-              setImportExportDeckId(undefined);
-              setIsImportExportModalOpen(true);
-            }}
-          >
-            <Upload size={14} /> Exportar
           </button>
 
           {/* User Account & Cloud Sync Menu */}
@@ -1222,11 +1301,6 @@ export function App() {
             onAddToProxies={handleAddCardToProxies}
             onRemoveItem={(id) => handleUpdateCollectionQuantity(id, 0)}
             onRemoveItems={handleRemoveCollectionItems}
-            onOpenImportModal={() => {
-              setImportExportMode('import');
-              setImportExportDeckId('collection');
-              setIsImportExportModalOpen(true);
-            }}
           />
         )}
 
@@ -1246,14 +1320,12 @@ export function App() {
               onAddToProxies={handleAddCardToProxies}
               onSendDeckToProxies={handleAddDeckToProxies}
               onOpenExportModal={(deckId) => {
-                setImportExportMode('export');
-                setImportExportDeckId(deckId);
-                setIsImportExportModalOpen(true);
+                setExportDefaultDeckId(deckId);
+                setIsExportModalOpen(true);
               }}
               onOpenImportModal={(deckId) => {
-                setImportExportMode('import');
-                setImportExportDeckId(deckId);
-                setIsImportExportModalOpen(true);
+                setImportDefaultDestination(deckId);
+                setIsImportModalOpen(true);
               }}
             />
           ) : (
@@ -1262,9 +1334,8 @@ export function App() {
               onOpenDeck={(deckId) => setActiveDeckId(deckId)}
               onOpenCreateModal={() => setIsCreateDeckModalOpen(true)}
               onOpenImportModal={() => {
-                setImportExportMode('import');
-                setImportExportDeckId(undefined);
-                setIsImportExportModalOpen(true);
+                setImportDefaultDestination('new_deck');
+                setIsImportModalOpen(true);
               }}
               onDeleteDeck={(deckId) => {
                 updateDecksState(decks.filter((d) => d.id !== deckId));
@@ -1353,18 +1424,38 @@ export function App() {
           setArtSelectorContext({});
         }}
         onSelectPrint={handleSelectArtPrint}
+        hasPrev={artSelectorHasPrev}
+        hasNext={artSelectorHasNext}
+        cardIndexLabel={artSelectorLabel}
+        onNavigatePrev={onArtNavigatePrev}
+        onNavigateNext={onArtNavigateNext}
       />
 
-      <ImportExportModal
-        isOpen={isImportExportModalOpen}
-        onClose={() => setIsImportExportModalOpen(false)}
+      <BackupModal
+        isOpen={isBackupModalOpen}
+        onClose={() => setIsBackupModalOpen(false)}
         collection={collectionWithUsage}
         decks={decks}
         proxies={proxies}
-        defaultMode={importExportMode}
-        defaultDeckId={importExportDeckId}
-        onImportComplete={handleImportComplete}
         onRestoreSystemBackup={handleRestoreSystemBackup}
+      />
+
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        collection={collectionWithUsage}
+        decks={decks}
+        proxies={proxies}
+        defaultDeckId={exportDefaultDeckId}
+      />
+
+      <ImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        decks={decks}
+        defaultDestination={importDefaultDestination}
+        defaultDeckId={importDefaultDestination.startsWith('deck-') ? importDefaultDestination : undefined}
+        onImportComplete={handleImportComplete}
       />
 
       {editingDeck && (

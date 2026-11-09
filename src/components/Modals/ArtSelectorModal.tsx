@@ -28,7 +28,10 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   Tag,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
+import { useModalOverlay } from '../../hooks/useModalOverlay';
 
 export type ArtTab = 'official' | 'mpcfill' | 'custom';
 
@@ -37,6 +40,11 @@ interface ArtSelectorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectPrint: (selectedPrint: CardPrint) => void;
+  onNavigatePrev?: () => void;
+  onNavigateNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
+  cardIndexLabel?: string;
 }
 
 export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
@@ -44,8 +52,16 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   isOpen,
   onClose,
   onSelectPrint,
+  onNavigatePrev,
+  onNavigateNext,
+  hasPrev = false,
+  hasNext = false,
+  cardIndexLabel,
 }) => {
+  useModalOverlay(isOpen, onClose);
+
   const [activeTab, setActiveTab] = useState<ArtTab>('official');
+  const [selectedFeedback, setSelectedFeedback] = useState<string | null>(null);
 
   // Official Prints State (Scryfall)
   const [officialPrints, setOfficialPrints] = useState<CardPrint[]>([]);
@@ -174,19 +190,27 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     };
   }, [isOpen, card, isCardToken]);
 
-  // Lock background page scroll while modal is open to prevent deck scrolling
+  // Keyboard navigation for previous/next card (Left/Right arrows when not typing)
   useEffect(() => {
-    if (isOpen) {
-      const originalBodyOverflow = document.body.style.overflow;
-      const originalHtmlOverflow = document.documentElement.style.overflow;
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = originalBodyOverflow;
-        document.documentElement.style.overflow = originalHtmlOverflow;
-      };
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeElement = document.activeElement;
+      const isInput =
+        activeElement &&
+        (activeElement.tagName === 'INPUT' ||
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.tagName === 'SELECT');
+      if (isInput) return;
+
+      if (e.key === 'ArrowLeft' && hasPrev && onNavigatePrev) {
+        onNavigatePrev();
+      } else if (e.key === 'ArrowRight' && hasNext && onNavigateNext) {
+        onNavigateNext();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, hasPrev, hasNext, onNavigatePrev, onNavigateNext]);
 
   // Filter official prints
   const filteredOfficialPrints = useMemo(() => {
@@ -238,8 +262,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
       return;
     }
     setMpcError(null);
+    setActivePrintId(print.id);
     onSelectPrint(print);
-    onClose();
+    setSelectedFeedback('Arte do Google Drive selecionada!');
+    setTimeout(() => setSelectedFeedback(null), 2200);
   };
 
   // Handle uploading an MPCFill XML to extract alters for this card
@@ -313,8 +339,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   const handleConfirmCustomArt = () => {
     if (!card || !customImageUrl) return;
     const print = createPrintFromCustomImage(card.name, customImageUrl, customTitle, customArtist);
+    setActivePrintId(print.id);
     onSelectPrint(print);
-    onClose();
+    setSelectedFeedback('Arte personalizada selecionada!');
+    setTimeout(() => setSelectedFeedback(null), 2200);
   };
 
   if (!isOpen || !card) return null;
@@ -394,27 +422,100 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               <ImageIcon size={20} />
             </div>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
                   Trocar Arte — {card.name}
                 </h2>
+                {selectedFeedback && (
+                  <span
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.2)',
+                      border: '1px solid rgba(16, 185, 129, 0.4)',
+                      color: '#34d399',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Check size={12} /> {selectedFeedback}
+                  </span>
+                )}
               </div>
               <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '2px 0 0' }}>
-                Selecione uma arte oficial do Scryfall, um alter da comunidade MPCFill ou importe sua própria ilustração
+                Clique em uma arte para selecioná-la. Use as setas para trocar a arte das outras cartas.
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              setHoveredPreview(null);
-              onClose();
-            }}
-            className="btn btn-ghost btn-icon"
-            style={{ borderRadius: '50%', padding: '6px', color: '#94a3b8', flexShrink: 0 }}
-          >
-            <X size={20} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Card Navigation Controls */}
+            {(onNavigatePrev || onNavigateNext) && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  padding: '3px 8px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-icon"
+                  style={{ padding: '4px', opacity: hasPrev ? 1 : 0.3 }}
+                  disabled={!hasPrev}
+                  onClick={onNavigatePrev}
+                  title="Carta Anterior (Seta Esquerda do Teclado)"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+
+                {cardIndexLabel && (
+                  <span
+                    style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      color: '#cbd5e1',
+                      padding: '0 6px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {cardIndexLabel}
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-icon"
+                  style={{ padding: '4px', opacity: hasNext ? 1 : 0.3 }}
+                  disabled={!hasNext}
+                  onClick={onNavigateNext}
+                  title="Próxima Carta (Seta Direita do Teclado)"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setHoveredPreview(null);
+                onClose();
+              }}
+              className="btn btn-secondary btn-sm"
+              style={{ gap: '6px', padding: '6px 12px' }}
+              title="Concluir e Fechar (ESC)"
+            >
+              <X size={15} /> Concluir
+            </button>
+          </div>
         </div>
 
         {/* Navigation Tabs (3 Abas solicitadas) */}
@@ -622,7 +723,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                           setHoveredPreview(null);
                           setActivePrintId(p.id);
                           onSelectPrint(p);
-                          onClose();
+                          setSelectedFeedback(`Arte oficial selecionada (${p.setName})`);
+                          setTimeout(() => setSelectedFeedback(null), 2200);
                         }}
                         onMouseEnter={(e) => {
                           setPreviewMousePos({ x: e.clientX, y: e.clientY });
@@ -1053,7 +1155,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                           setHoveredPreview(null);
                           setActivePrintId(p.id);
                           onSelectPrint(p);
-                          onClose();
+                          setSelectedFeedback(`Arte oficial selecionada (${p.setName})`);
+                          setTimeout(() => setSelectedFeedback(null), 2200);
                         }}
                         onMouseEnter={(e) => {
                           setPreviewMousePos({ x: e.clientX, y: e.clientY });

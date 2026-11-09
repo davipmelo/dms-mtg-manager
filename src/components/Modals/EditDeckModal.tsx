@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Deck, DeckFormat, DeckCard, Card, CollectionItem } from '../../types';
 import { parseCardList } from '../../services/importer';
 import { getCardByName, getCardBySetAndNumber, getCardBySetAndName } from '../../services/scryfall';
+import { useModalOverlay } from '../../hooks/useModalOverlay';
 import { X, Save, Edit3, Crown, AlertTriangle, FileText, Loader2, Sparkles } from 'lucide-react';
 
 interface EditDeckModalProps {
@@ -27,6 +28,8 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
   const [progressText, setProgressText] = useState('');
   const [detectedCount, setDetectedCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
+
+  useModalOverlay(isOpen, onClose, isProcessing);
 
   // Commander state
   const [commanderInput, setCommanderInput] = useState('');

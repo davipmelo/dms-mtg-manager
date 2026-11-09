@@ -12,6 +12,7 @@ import {
   downloadDeckPosterBlob,
   DeckImageProgress,
 } from '../../services/deckImageGenerator';
+import { useModalOverlay } from '../../hooks/useModalOverlay';
 import {
   X,
   Image as ImageIcon,
@@ -50,6 +51,8 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState<DeckImageProgress | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
+
+  useModalOverlay(isOpen, onClose, isGenerating);
 
   // Reset or initialize when modal opens
   useEffect(() => {

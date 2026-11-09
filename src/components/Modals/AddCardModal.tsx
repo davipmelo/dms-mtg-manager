@@ -3,6 +3,7 @@ import { Card, Deck, CardPrint } from '../../types';
 import { searchAutocomplete, getCardByName, getCardPrints } from '../../services/scryfall';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
+import { useModalOverlay } from '../../hooks/useModalOverlay';
 import { Search, Plus, X, Loader2, Sparkles, Check, Image as ImageIcon } from 'lucide-react';
 
 interface AddCardModalProps {
@@ -20,6 +21,8 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
   decks,
   defaultDeckId,
 }) => {
+  useModalOverlay(isOpen, onClose);
+
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);

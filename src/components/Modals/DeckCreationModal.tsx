@@ -8,6 +8,7 @@ import {
 } from '../../services/scryfall';
 import { translatePtCardName } from '../../services/importer';
 import { ArtSelectorModal } from './ArtSelectorModal';
+import { useModalOverlay } from '../../hooks/useModalOverlay';
 import { Shield, Sparkles, X, Plus, Search, Loader2, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 
 function parseCardQuery(raw: string) {
@@ -42,6 +43,8 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
   onClose,
   onCreateDeck,
 }) => {
+  useModalOverlay(isOpen, onClose);
+
   const [name, setName] = useState('');
   const [format, setFormat] = useState<DeckFormat>('commander');
   const [description, setDescription] = useState('');

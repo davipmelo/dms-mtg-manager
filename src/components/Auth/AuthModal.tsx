@@ -20,6 +20,7 @@ import {
   getFriendlyErrorMessage,
 } from '../../services/firebase';
 import { UserProfile } from '../../types';
+import { useModalOverlay } from '../../hooks/useModalOverlay';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -47,6 +48,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useModalOverlay(isOpen, onClose, isLoading);
 
   useEffect(() => {
     if (isOpen) {
