@@ -172,6 +172,20 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     };
   }, [isOpen, card, isCardToken]);
 
+  // Lock background page scroll while modal is open to prevent deck scrolling
+  useEffect(() => {
+    if (isOpen) {
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
+      };
+    }
+  }, [isOpen]);
+
   // Filter official prints
   const filteredOfficialPrints = useMemo(() => {
     const q = filterOfficialQuery.trim().toLowerCase();
@@ -300,9 +314,19 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
         alignItems: 'center',
         justifyContent: 'center',
         padding: '20px',
+        overscrollBehavior: 'contain',
+        touchAction: 'none',
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget) {
+          setHoveredPreview(null);
+          onClose();
+        }
+      }}
+      onWheel={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+        }
       }}
     >
       <div
@@ -318,6 +342,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.15)',
           borderRadius: '16px',
           overflow: 'hidden',
+          overscrollBehavior: 'contain',
         }}
       >
         {/* Header */}
@@ -541,7 +566,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             )}
 
             {/* Prints Grid */}
-            <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+            <div style={{ padding: '24px', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}>
               {loadingOfficial ? (
                 <div
                   style={{
@@ -917,7 +942,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             </div>
 
             {/* MPCFill Cards Grid */}
-            <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+            <div style={{ padding: '24px', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}>
               {loadingMpc ? (
                 <div
                   style={{
@@ -1159,6 +1184,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               display: 'flex',
               flexDirection: 'column',
               gap: '20px',
+              overscrollBehavior: 'contain',
             }}
           >
             <div
@@ -1354,16 +1380,16 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           <div
             style={{
               position: 'fixed',
-              left: `${Math.max(16, Math.min(window.innerWidth - 520, previewMousePos.x + 28 + 500 > window.innerWidth ? previewMousePos.x - 528 : previewMousePos.x + 28))}px`,
-              top: `${Math.max(16, Math.min(window.innerHeight - 740, previewMousePos.y - 250))}px`,
-              width: '500px',
+              left: `${Math.max(16, Math.min(window.innerWidth - 420, previewMousePos.x + 24 + 400 > window.innerWidth ? previewMousePos.x - 424 : previewMousePos.x + 24))}px`,
+              top: `${Math.max(16, Math.min(window.innerHeight - 600, previewMousePos.y - 210))}px`,
+              width: '400px',
               maxWidth: 'calc(100vw - 32px)',
               maxHeight: 'calc(100vh - 32px)',
               pointerEvents: 'none',
               zIndex: 100000,
-              borderRadius: '16px',
+              borderRadius: '14px',
               overflow: 'hidden',
-              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.98), 0 0 45px rgba(245, 158, 11, 0.35)',
+              boxShadow: '0 30px 70px rgba(0, 0, 0, 0.98), 0 0 40px rgba(245, 158, 11, 0.3)',
               border: '1px solid rgba(255, 187, 0, 0.45)',
               background: '#070a10',
               animation: 'modal-enter 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards',
@@ -1381,21 +1407,21 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             </div>
             <div
               style={{
-                padding: '10px 16px',
+                padding: '9px 14px',
                 background: 'rgba(10, 14, 23, 0.97)',
                 borderTop: '1px solid rgba(255, 255, 255, 0.08)',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                 <span
                   style={{
                     fontWeight: 700,
-                    fontSize: '0.95rem',
+                    fontSize: '0.9rem',
                     color: '#f8fafc',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    maxWidth: hoveredPreview.dpi ? '380px' : '100%',
+                    maxWidth: hoveredPreview.dpi ? '290px' : '100%',
                   }}
                 >
                   {hoveredPreview.title}
@@ -1403,12 +1429,12 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 {hoveredPreview.dpi ? (
                   <span
                     style={{
-                      fontSize: '0.78rem',
+                      fontSize: '0.74rem',
                       color: '#ffbb00',
                       fontWeight: 800,
                       background: 'rgba(245, 158, 11, 0.18)',
-                      padding: '2px 8px',
-                      borderRadius: '5px',
+                      padding: '2px 7px',
+                      borderRadius: '4px',
                       border: '1px solid rgba(245, 158, 11, 0.4)',
                       flexShrink: 0,
                     }}
@@ -1420,9 +1446,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               {hoveredPreview.subtitle && (
                 <div
                   style={{
-                    fontSize: '0.8rem',
+                    fontSize: '0.78rem',
                     color: '#94a3b8',
-                    marginTop: '3px',
+                    marginTop: '2px',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
