@@ -800,18 +800,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             return (
               <div
                 key={`${c.card.id}-${idx}`}
-                className="card-item-container"
-                style={
-                  isCmd
-                    ? {
-                        border: '2px solid #ffbb00',
-                        boxShadow: '0 0 18px rgba(255, 187, 0, 0.45)',
-                      }
-                    : undefined
-                }
+                className={`card-item-container ${isCmd ? 'is-commander' : ''} ${isFoil ? 'is-foil' : ''}`}
               >
                 <div
-                  className={`card-image-wrapper ${isFoil ? 'foil-sheen' : ''}`}
+                  className="card-image-wrapper"
                   onMouseEnter={(e) => {
                     setMousePos({ x: e.clientX, y: e.clientY });
                     setHoveredPreview({
@@ -862,39 +854,22 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     </div>
                   )}
 
-                  {/* Foil Star Badge */}
-                  {isFoil && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '8px',
-                        left: isCmd ? '106px' : '8px',
-                        background: 'rgba(0,0,0,0.7)',
-                        borderRadius: '50%',
-                        padding: '4px',
-                        color: '#facc15',
-                        display: 'flex',
-                        zIndex: 2,
-                      }}
-                      title="Carta Foil"
-                    >
-                      <Sparkles size={14} />
-                    </div>
-                  )}
-
-                  {/* Quantity badge */}
+                  {/* Quantity badge (Bottom-Left) */}
                   <div
                     style={{
                       position: 'absolute',
-                      top: '8px',
-                      right: '8px',
-                      background: 'rgba(12, 15, 23, 0.85)',
+                      bottom: '8px',
+                      left: '8px',
+                      background: 'rgba(12, 15, 23, 0.88)',
                       border: '1px solid var(--border-medium)',
                       borderRadius: '6px',
                       padding: '2px 8px',
-                      fontSize: '0.85rem',
+                      fontSize: '0.82rem',
                       fontWeight: 700,
                       color: '#f8fafc',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
+                      zIndex: 2,
+                      pointerEvents: 'none',
                     }}
                   >
                     {c.quantity}x
@@ -1742,9 +1717,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               {sortedSideCards.map((c, idx) => {
                 const isFoil = c.isFoil || c.card.isFoil;
                 return (
-                  <div key={`side-grid-${c.card.id}-${idx}`} className="card-item-container">
+                  <div key={`side-grid-${c.card.id}-${idx}`} className={`card-item-container ${isFoil ? 'is-foil' : ''}`}>
                     <div
-                      className={`card-image-wrapper ${isFoil ? 'foil-sheen' : ''}`}
+                      className="card-image-wrapper"
                       onMouseEnter={(e) => {
                         setMousePos({ x: e.clientX, y: e.clientY });
                         setHoveredPreview({
@@ -1766,36 +1741,23 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         preferLarge
                         className="card-image"
                       />
-                      {/* Foil Star Badge */}
-                      {isFoil && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: '8px',
-                            left: '8px',
-                            background: 'rgba(0,0,0,0.7)',
-                            borderRadius: '50%',
-                            padding: '4px',
-                            color: '#facc15',
-                            display: 'flex',
-                          }}
-                          title="Carta Foil"
-                        >
-                          <Sparkles size={14} />
-                        </div>
-                      )}
+
+                      {/* Quantity badge (Bottom-Left) */}
                       <div
                         style={{
                           position: 'absolute',
-                          top: '8px',
-                          right: '8px',
-                          background: 'rgba(12, 15, 23, 0.85)',
+                          bottom: '8px',
+                          left: '8px',
+                          background: 'rgba(12, 15, 23, 0.88)',
                           border: '1px solid var(--border-medium)',
                           borderRadius: '6px',
                           padding: '2px 8px',
-                          fontSize: '0.85rem',
+                          fontSize: '0.82rem',
                           fontWeight: 700,
                           color: '#f8fafc',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
+                          zIndex: 2,
+                          pointerEvents: 'none',
                         }}
                       >
                         {c.quantity}x

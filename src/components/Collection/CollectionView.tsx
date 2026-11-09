@@ -541,10 +541,10 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
           style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardSize}px, 1fr))` }}
         >
           {sortedItems.map((item) => (
-            <div key={item.id} className="card-item-container">
+            <div key={item.id} className={`card-item-container ${item.isFoil ? 'is-foil' : ''}`}>
               {/* Image & Sheen */}
               <div
-                className={`card-image-wrapper ${item.isFoil ? 'foil-sheen' : ''}`}
+                className="card-image-wrapper"
                 onMouseEnter={(e) => {
                   setMousePos({ x: e.clientX, y: e.clientY });
                   setHoveredPreview({
@@ -567,38 +567,22 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                   className="card-image"
                 />
 
-                {/* Foil Star Badge */}
-                {item.isFoil && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '8px',
-                      left: '8px',
-                      background: 'rgba(0,0,0,0.7)',
-                      borderRadius: '50%',
-                      padding: '4px',
-                      color: '#facc15',
-                      display: 'flex',
-                    }}
-                    title="Carta Foil"
-                  >
-                    <Sparkles size={14} />
-                  </div>
-                )}
-
-                {/* Total Quantity Owned Top Badge */}
+                {/* Total Quantity Owned Badge (Bottom-Left) */}
                 <div
                   style={{
                     position: 'absolute',
-                    top: '8px',
-                    right: '8px',
-                    background: 'rgba(12, 15, 23, 0.85)',
+                    bottom: '8px',
+                    left: '8px',
+                    background: 'rgba(12, 15, 23, 0.88)',
                     border: '1px solid var(--border-medium)',
                     borderRadius: '6px',
                     padding: '2px 8px',
-                    fontSize: '0.85rem',
+                    fontSize: '0.82rem',
                     fontWeight: 700,
                     color: '#f8fafc',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
+                    zIndex: 2,
+                    pointerEvents: 'none',
                   }}
                 >
                   {item.quantity}x

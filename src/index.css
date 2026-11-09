@@ -375,30 +375,42 @@ dialog.custom-modal[open] {
   transform: scale(1.03);
 }
 
-/* Foil Shimmer Effect */
-.foil-sheen::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    115deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.05) 30%,
-    rgba(255, 215, 0, 0.15) 45%,
-    rgba(147, 197, 253, 0.2) 50%,
-    rgba(244, 114, 182, 0.15) 55%,
-    transparent 70%
-  );
-  pointer-events: none;
-  animation: foil-sweep 5s infinite linear;
+/* Commander Subtle Golden Border & Delicate Glow */
+.card-item-container.is-commander {
+  border: 1.5px solid rgba(255, 187, 0, 0.75) !important;
+  box-shadow: 0 0 10px rgba(255, 187, 0, 0.22) !important;
 }
 
-@keyframes foil-sweep {
-  0% { transform: translateY(-30%) rotate(25deg); }
-  100% { transform: translateY(30%) rotate(25deg); }
+.card-item-container.is-commander:hover {
+  border-color: rgba(255, 187, 0, 0.95) !important;
+  box-shadow: var(--shadow-lg), 0 0 14px rgba(255, 187, 0, 0.32) !important;
+}
+
+/* Foil Card - Pastel Rainbow Iridescent Border & Soft Glow (Replaces Image Shader) */
+.card-item-container.is-foil {
+  position: relative;
+  border: 1.5px solid transparent !important;
+  background: linear-gradient(var(--bg-surface), var(--bg-surface)) padding-box,
+              linear-gradient(135deg, rgba(244, 114, 182, 0.65), rgba(253, 224, 71, 0.55), rgba(167, 243, 208, 0.6), rgba(147, 197, 253, 0.65), rgba(216, 180, 254, 0.65)) border-box !important;
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.22), 0 0 5px rgba(125, 211, 252, 0.18) !important;
+}
+
+.card-item-container.is-foil:hover {
+  background: linear-gradient(var(--bg-surface), var(--bg-surface)) padding-box,
+              linear-gradient(135deg, rgba(244, 114, 182, 0.85), rgba(253, 224, 71, 0.75), rgba(167, 243, 208, 0.8), rgba(147, 197, 253, 0.85), rgba(216, 180, 254, 0.85)) border-box !important;
+  box-shadow: var(--shadow-lg), 0 0 14px rgba(192, 132, 252, 0.35), 0 0 7px rgba(125, 211, 252, 0.25) !important;
+}
+
+/* Card that is both Commander AND Foil */
+.card-item-container.is-commander.is-foil {
+  border: 1.5px solid transparent !important;
+  background: linear-gradient(var(--bg-surface), var(--bg-surface)) padding-box,
+              linear-gradient(135deg, rgba(255, 187, 0, 0.85), rgba(244, 114, 182, 0.6), rgba(147, 197, 253, 0.6), rgba(255, 187, 0, 0.85)) border-box !important;
+  box-shadow: 0 0 11px rgba(255, 187, 0, 0.28), 0 0 6px rgba(192, 132, 252, 0.22) !important;
+}
+
+.card-item-container.is-commander.is-foil:hover {
+  box-shadow: var(--shadow-lg), 0 0 15px rgba(255, 187, 0, 0.38), 0 0 8px rgba(192, 132, 252, 0.3) !important;
 }
 
 /* Card Art Actions Overlay (Visual Grid "Só Artes" mode) */
