@@ -72,28 +72,55 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   // Active print highlight
   const [activePrintId, setActivePrintId] = useState<string>('');
 
+  // Detect if current card is a token or utility token card
+  const isCardToken = useMemo(() => {
+    if (!card) return false;
+    if (card.layout === 'token' || card.layout === 'double_faced_token') return true;
+    const tl = (card.typeLine || '').toLowerCase();
+    return tl.includes('token') || card.name.toLowerCase().includes('token');
+  }, [card]);
+
+  // MPCFill Catalog Target Type ('CARD' vs 'TOKEN')
+  const [mpcCardType, setMpcCardType] = useState<'CARD' | 'TOKEN'>('CARD');
+
   // Fetch MPCFill alters callback
-  const fetchMpcAlters = useCallback(async (cardName: string, minDpi: number = 200) => {
-    setLoadingMpc(true);
-    setMpcError(null);
-    setMpcProxyNotice(false);
-    try {
-      const alters = await searchMpcFillAlters(cardName, { minDpi });
-      setMpcPrints(alters);
-      if (alters.length === 0) {
-        setMpcError(null);
+  const fetchMpcAlters = useCallback(
+    async (
+      cardName: string,
+      minDpi: number = 200,
+      overrideType?: 'CARD' | 'TOKEN',
+      overrideTypeLine?: string
+    ) => {
+      setLoadingMpc(true);
+      setMpcError(null);
+      setMpcProxyNotice(false);
+      try {
+        const typeToUse = overrideType || mpcCardType;
+        const typeLineToUse = overrideTypeLine || card?.typeLine;
+        const alters = await searchMpcFillAlters(cardName, {
+          minDpi,
+          cardType: typeToUse,
+          typeLine: typeLineToUse,
+        });
+        setMpcPrints(alters);
+        if (alters.length === 0) {
+          setMpcError(null);
+        }
+      } catch (err: any) {
+        if (err?.message === 'PROXY_RETURNED_HTML') {
+          setMpcProxyNotice(true);
+        } else {
+          setMpcError(
+            'Não foi possível conectar à API do MPCFill. Você pode colar o link do Drive ou carregar um XML.'
+          );
+        }
+        setMpcPrints([]);
+      } finally {
+        setLoadingMpc(false);
       }
-    } catch (err: any) {
-      if (err?.message === 'PROXY_RETURNED_HTML') {
-        setMpcProxyNotice(true);
-      } else {
-        setMpcError('Não foi possível conectar à API do MPCFill. Você pode colar o link do Drive ou carregar um XML.');
-      }
-      setMpcPrints([]);
-    } finally {
-      setLoadingMpc(false);
-    }
-  }, []);
+    },
+    [mpcCardType, card?.typeLine]
+  );
 
   // Reset and load on open
   useEffect(() => {
@@ -110,6 +137,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
       setCustomArtist('');
       setCustomUrlInput('');
 
+      // Auto-detect if this card is a token to filter only token alters
+      const initialCardType: 'CARD' | 'TOKEN' = isCardToken ? 'TOKEN' : 'CARD';
+      setMpcCardType(initialCardType);
+
       // 1. Load official prints from Scryfall
       setLoadingOfficial(true);
       getCardPrints(card)
@@ -120,8 +151,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           if (!cancelled) setLoadingOfficial(false);
         });
 
-      // 2. Fetch all MPCFill community alters (>= 200 DPI)
-      fetchMpcAlters(card.name, mpcMinDpi);
+      // 2. Fetch MPCFill community alters (>= 200 DPI)
+      fetchMpcAlters(card.name, mpcMinDpi, initialCardType, card.typeLine);
     } else {
       setOfficialPrints([]);
       setMpcPrints([]);
@@ -129,7 +160,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, card, fetchMpcAlters, mpcMinDpi]);
+  }, [isOpen, card, isCardToken]);
 
   // Filter official prints
   const filteredOfficialPrints = useMemo(() => {
@@ -645,8 +676,27 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   />
                 </div>
 
-                {/* DPI and Sort Selectors */}
+                {/* DPI, Type and Sort Selectors */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {/* Card Type Selector (Cartas Oficiais vs Fichas/Tokens) */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Tag size={14} className="text-amber-400" />
+                    <select
+                      className="input-text"
+                      value={mpcCardType}
+                      onChange={(e) => {
+                        const newType = e.target.value as 'CARD' | 'TOKEN';
+                        setMpcCardType(newType);
+                        fetchMpcAlters(card.name, mpcMinDpi, newType, card.typeLine);
+                      }}
+                      style={{ height: '34px', fontSize: '0.8rem', padding: '0 8px' }}
+                      title="Tipo de item no catálogo MPCFill (Cartas ou Fichas/Tokens)"
+                    >
+                      <option value="CARD">Cartas Oficiais</option>
+                      <option value="TOKEN">Fichas / Tokens</option>
+                    </select>
+                  </div>
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <SlidersHorizontal size={14} className="text-amber-400" />
                     <select
@@ -655,7 +705,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       onChange={(e) => {
                         const newDpi = Number(e.target.value);
                         setMpcMinDpi(newDpi);
-                        fetchMpcAlters(card.name, newDpi);
+                        fetchMpcAlters(card.name, newDpi, mpcCardType, card.typeLine);
                       }}
                       style={{ height: '34px', fontSize: '0.8rem', padding: '0 8px' }}
                       title="Filtrar resolução mínima de DPI"
@@ -687,7 +737,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
-                    onClick={() => fetchMpcAlters(card.name, mpcMinDpi)}
+                    onClick={() => fetchMpcAlters(card.name, mpcMinDpi, mpcCardType, card.typeLine)}
                     disabled={loadingMpc}
                     style={{
                       height: '34px',
@@ -800,7 +850,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
-                    onClick={() => fetchMpcAlters(card.name, mpcMinDpi)}
+                    onClick={() => fetchMpcAlters(card.name, mpcMinDpi, mpcCardType, card.typeLine)}
                     style={{ fontSize: '0.75rem', height: '28px', whiteSpace: 'nowrap' }}
                   >
                     <RefreshCw size={12} /> Tentar Novamente
@@ -823,7 +873,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 !loadingMpc && mpcPrints.length > 0 && (
                   <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between' }}>
                     <span>
-                      Exibindo <strong>{filteredMpcPrints.length}</strong> de <strong>{mpcPrints.length}</strong> artes disponíveis com {mpcMinDpi}+ DPI
+                      Exibindo <strong>{filteredMpcPrints.length}</strong> de <strong>{mpcPrints.length}</strong> artes de {mpcCardType === 'TOKEN' ? 'ficha/token' : 'carta'} com {mpcMinDpi}+ DPI
                     </span>
                     <span style={{ color: '#ffbb00' }}>
                       Clique em qualquer arte para selecioná-la
@@ -849,7 +899,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 >
                   <Loader2 className="animate-spin text-amber-400" size={32} />
                   <span style={{ fontSize: '0.9rem' }}>
-                    Buscando todas as artes disponíveis no MPCFill para <strong>"{card.name}"</strong> (&gt;{mpcMinDpi} DPI)...
+                    Buscando artes de {mpcCardType === 'TOKEN' ? 'fichas/tokens' : 'cartas'} no MPCFill para <strong>"{card.name}"</strong> (&gt;{mpcMinDpi} DPI)...
                   </span>
                 </div>
               ) : filteredMpcPrints.length === 0 ? (
@@ -870,7 +920,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       ? 'Nenhuma arte corresponde aos filtros selecionados. Tente ajustar a busca ou o DPI mínimo.'
                       : (
                         <>
-                          Nenhuma arte foi carregada automaticamente para <strong>{card.name}</strong>.
+                          Nenhuma arte de {mpcCardType === 'TOKEN' ? 'ficha/token' : 'carta'} foi encontrada automaticamente para <strong>{card.name}</strong>.
                           Certifique-se de que o servidor local (<code>npm run dev</code>) foi reiniciado, ou use a barra acima para colar o link/ID do Google Drive ou carregar um XML.
                         </>
                       )}
@@ -879,7 +929,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm"
-                      onClick={() => fetchMpcAlters(card.name, mpcMinDpi)}
+                      onClick={() => fetchMpcAlters(card.name, mpcMinDpi, mpcCardType, card.typeLine)}
                       style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                       <RefreshCw size={14} className="text-amber-400" /> Tentar Novamente

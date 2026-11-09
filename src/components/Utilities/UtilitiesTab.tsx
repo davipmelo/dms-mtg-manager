@@ -273,6 +273,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
           collectorNumber: items[artTargetIndex].collectorNumber,
           imageUrl: items[artTargetIndex].imageUrl,
           imageUrlLarge: items[artTargetIndex].imageUrlLarge,
+          layout: 'token',
         }
       : null;
 

@@ -444,6 +444,9 @@ export function extractAltersFromXmlForCard(xmlString: string, targetCardName: s
 export interface MpcSearchOptions {
   minDpi?: number;
   maxDpi?: number;
+  cardType?: 'CARD' | 'TOKEN';
+  typeLine?: string;
+  fuzzySearch?: boolean;
 }
 
 export interface MpcCardPrint extends CardPrint {
@@ -485,9 +488,23 @@ export async function searchMpcFillAlters(
   try {
     const minDpi = options?.minDpi ?? 200;
     const maxDpi = options?.maxDpi ?? 2400;
+    const targetCardType = options?.cardType || 'CARD';
 
-    const cleanQuery = cardName
-      .split('//')[0]
+    let cleanQuery = cardName.split('//')[0].trim();
+
+    // If searching for tokens, clean the query from "Token", "Ficha", "1/1", etc.
+    if (targetCardType === 'TOKEN') {
+      cleanQuery = cleanQuery.replace(/\b(tokens?|ficha[s]?)\b/gi, '').trim();
+      cleanQuery = cleanQuery.replace(/\b\d+\/\d+\b/g, '').trim();
+      if (!cleanQuery && options?.typeLine) {
+        const parts = options.typeLine.split(/[—\-]/);
+        if (parts[1]) {
+          cleanQuery = parts[1].trim();
+        }
+      }
+    }
+
+    cleanQuery = cleanQuery
       .toLowerCase()
       .replace(/[~`!@#$%^&*(){}\[\];:"'’<,.>?/\\|_+=]/g, ' ')
       .replace(/\s+/g, ' ')
@@ -524,7 +541,7 @@ export async function searchMpcFillAlters(
 
     // 2. Query editorSearch
     const searchBody = {
-      queries: [{ query: cleanQuery, cardType: 'CARD' }],
+      queries: [{ query: cleanQuery, cardType: targetCardType }],
       searchSettings: {
         filterSettings: {
           excludesTags: [],
@@ -534,7 +551,10 @@ export async function searchMpcFillAlters(
           maximumSize: 50,
           minimumDPI: minDpi,
         },
-        searchTypeSettings: { filterCardbacks: false, fuzzySearch: true },
+        searchTypeSettings: {
+          filterCardbacks: false,
+          fuzzySearch: options?.fuzzySearch !== undefined ? options.fuzzySearch : true,
+        },
         sourceSettings: { sources: cachedMpcSources || [] },
       },
     };
@@ -555,7 +575,14 @@ export async function searchMpcFillAlters(
     if (!searchRes.ok) return [];
 
     const searchData = await searchRes.json();
-    const ids: string[] = searchData?.results?.[cleanQuery]?.CARD || [];
+    const resultObj =
+      searchData?.results?.[cleanQuery] ||
+      (searchData?.results ? (Object.values(searchData.results)[0] as any) : undefined);
+
+    const ids: string[] =
+      targetCardType === 'TOKEN'
+        ? resultObj?.TOKEN || resultObj?.CARD || []
+        : resultObj?.CARD || resultObj?.TOKEN || [];
     if (!ids || ids.length === 0) return [];
 
     // 3. Query card metadata for all matching alter IDs (chunked if very large)
