@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ProxyItem, Deck, Card, TokenCard } from '../../types';
 import { CardImage } from '../Common/CardImage';
 import {
@@ -6,6 +6,12 @@ import {
   ProxyPdfOptions,
   DEFAULT_PROXY_PDF_OPTIONS,
 } from '../../services/proxyPdfService';
+import {
+  MpcFillOrder,
+  parseMpcFillXml,
+  buildProxyItemsFromMpcOrder,
+  buildDeckFromMpcOrder,
+} from '../../services/mpcFillService';
 import {
   Printer,
   Trash2,
@@ -25,6 +31,11 @@ import {
   ChevronUp,
   FileText,
   HelpCircle,
+  Upload,
+  FileCode,
+  X,
+  Check,
+  ExternalLink,
 } from 'lucide-react';
 
 const COLOR_PRESETS = [
@@ -43,6 +54,8 @@ interface ProxyStudioProps {
   onRemoveItem: (id: string) => void;
   onClearAll: () => void;
   onAddDeckToProxies: (deck: Deck) => void;
+  onAddProxies?: (items: ProxyItem[], replace?: boolean) => void;
+  onSaveDeckFromMpc?: (deck: Deck) => void;
   onOpenArtSelector?: (card: Card | TokenCard, proxyItemId: string) => void;
   decks: Deck[];
 }
@@ -53,6 +66,8 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
   onRemoveItem,
   onClearAll,
   onAddDeckToProxies,
+  onAddProxies,
+  onSaveDeckFromMpc,
   onOpenArtSelector,
   decks,
 }) => {
@@ -79,6 +94,15 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
   const [pdfProgress, setPdfProgress] = useState<{ current: number; total: number; percentage: number } | null>(null);
+
+  // MPCFill Import state
+  const mpcFileInputRef = useRef<HTMLInputElement>(null);
+  const [isMpcModalOpen, setIsMpcModalOpen] = useState<boolean>(false);
+  const [mpcParsedOrder, setMpcParsedOrder] = useState<MpcFillOrder | null>(null);
+  const [mpcReplaceQueue, setMpcReplaceQueue] = useState<boolean>(true);
+  const [mpcIncludeCardback, setMpcIncludeCardback] = useState<boolean>(false);
+  const [mpcSaveAsDeck, setMpcSaveAsDeck] = useState<boolean>(true);
+  const [mpcDeckName, setMpcDeckName] = useState<string>('');
 
   // Flatten proxies into individual card instances for exact 9-card page chunks
   // If an un-split double-faced card is present in the queue, expand each copy to Front then Back
@@ -176,6 +200,74 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
     }
   };
 
+  const handleMpcFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = parseMpcFillXml(text, file.name);
+        setMpcParsedOrder(parsed);
+        const suggestedDeckName = file.name
+          .replace(/\.xml$/i, '')
+          .replace(/[_-]+/g, ' ')
+          .trim()
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+        setMpcDeckName(suggestedDeckName ? `${suggestedDeckName} (MPCFill)` : 'Deck MPCFill');
+        setMpcReplaceQueue(proxies.length > 0);
+        setMpcIncludeCardback(false);
+        setMpcSaveAsDeck(true);
+        setIsMpcModalOpen(true);
+      } catch (err: any) {
+        console.error('Erro ao ler XML do MPCFill:', err);
+        alert(err?.message || 'Erro ao processar o arquivo XML do MPCFill.');
+      } finally {
+        if (mpcFileInputRef.current) {
+          mpcFileInputRef.current.value = '';
+        }
+      }
+    };
+    reader.onerror = () => {
+      alert('Erro ao ler o arquivo selecionado.');
+      if (mpcFileInputRef.current) {
+        mpcFileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirmMpcImport = () => {
+    if (!mpcParsedOrder) return;
+
+    try {
+      const items = buildProxyItemsFromMpcOrder(mpcParsedOrder, {
+        includeDefaultBack: mpcIncludeCardback,
+      });
+
+      if (items.length === 0) {
+        alert('Nenhuma carta encontrada para importar.');
+        return;
+      }
+
+      if (mpcSaveAsDeck && onSaveDeckFromMpc) {
+        const newDeck = buildDeckFromMpcOrder(mpcParsedOrder, mpcDeckName);
+        onSaveDeckFromMpc(newDeck);
+      }
+
+      if (onAddProxies) {
+        onAddProxies(items, mpcReplaceQueue);
+      }
+
+      setIsMpcModalOpen(false);
+      setMpcParsedOrder(null);
+    } catch (err: any) {
+      console.error('Erro ao importar cartas do MPCFill:', err);
+      alert(err?.message || 'Erro ao importar as cartas do MPCFill.');
+    }
+  };
+
   // 1-Click Presets
   const applyPreset = (preset: 'guillotine' | 'hobbyknife' | 'minimal' | 'economical') => {
     switch (preset) {
@@ -270,6 +362,33 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Hidden file input for MPCFill XML */}
+            <input
+              ref={mpcFileInputRef}
+              type="file"
+              accept=".xml"
+              style={{ display: 'none' }}
+              onChange={handleMpcFileSelect}
+            />
+
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => mpcFileInputRef.current?.click()}
+              disabled={isDownloadingPdf}
+              title="Importar cartas alter de um arquivo XML gerado pelo MPCFill.com com artes em alta resolução"
+              style={{
+                borderColor: 'rgba(255, 187, 0, 0.45)',
+                color: '#ffbb00',
+                background: 'rgba(255, 187, 0, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Sparkles size={14} className="text-amber-400" /> Importar XML MPCFill
+            </button>
+
             {proxies.length > 0 && (
               <button
                 type="button"
@@ -311,7 +430,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
           </div>
         </div>
 
-        {/* Quick Add Deck to Proxies */}
+        {/* Quick Add Deck to Proxies & MPCFill import */}
         <div
           style={{
             marginTop: '16px',
@@ -319,34 +438,63 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
             borderTop: '1px solid var(--border-subtle)',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
             gap: '12px',
             flexWrap: 'wrap',
           }}
         >
-          <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
-            Adicionar Deck Inteiro à Impressão:
-          </span>
-          <select
-            className="select-field"
-            value={selectedDeckId}
-            onChange={(e) => setSelectedDeckId(e.target.value)}
-            style={{ width: 'auto', minWidth: '220px' }}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
+              Adicionar Deck Inteiro à Impressão:
+            </span>
+            <select
+              className="select-field"
+              value={selectedDeckId}
+              onChange={(e) => setSelectedDeckId(e.target.value)}
+              style={{ width: 'auto', minWidth: '220px' }}
+            >
+              <option value="">Selecione um deck...</option>
+              {decks.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} ({d.cards.length} cartas)
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleAddDeck}
+              disabled={!selectedDeckId}
+            >
+              <Plus size={14} /> Adicionar Deck à Fila
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
           >
-            <option value="">Selecione um deck...</option>
-            {decks.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name} ({d.cards.length} cartas)
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={handleAddDeck}
-            disabled={!selectedDeckId}
-          >
-            <Plus size={14} /> Adicionar Deck à Fila
-          </button>
+            <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+              Ou importar do MPCFill:
+            </span>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => mpcFileInputRef.current?.click()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                borderColor: 'rgba(255, 187, 0, 0.35)',
+              }}
+            >
+              <FileCode size={14} className="text-amber-400" />
+              Carregar Arquivo XML (.xml)
+            </button>
+          </div>
         </div>
 
         {/* Customizable Cut Lines & Crop Marks Controls Bar */}
@@ -885,8 +1033,26 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
               Sua fila de proxies está vazia
             </h3>
             <p style={{ fontSize: '0.9rem', color: '#94a3b8', maxWidth: '460px' }}>
-              Adicione cartas da sua coleção, de um deck completo ou da aba de Utilitários (Fichas, Planos, Emblemas, Masmorras) para gerar suas folhas prontas para impressão A4.
+              Adicione cartas da sua coleção, de um deck completo, da aba de Utilitários ou importe uma lista de cartas alter diretamente do MPCFill.
             </p>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => mpcFileInputRef.current?.click()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                borderColor: 'rgba(255, 187, 0, 0.45)',
+                color: '#ffbb00',
+                background: 'rgba(255, 187, 0, 0.08)',
+                padding: '10px 20px',
+                marginTop: '4px',
+              }}
+            >
+              <Sparkles size={16} className="text-amber-400" />
+              Importar XML do MPCFill.com
+            </button>
           </div>
         ) : (
           pages.map((pageCards, pageIdx) => (
@@ -1100,6 +1266,507 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
           ))
         )}
       </div>
+
+      {/* MPCFill Import Modal */}
+      {isMpcModalOpen && mpcParsedOrder && (
+        <div
+          className="print-hide"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsMpcModalOpen(false);
+            }
+          }}
+        >
+          <div
+            className="glass-panel"
+            style={{
+              width: '100%',
+              maxWidth: '820px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              background: '#0f172a',
+              border: '1px solid rgba(255, 187, 0, 0.35)',
+              borderRadius: '16px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 187, 0, 0.12)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'rgba(30, 41, 59, 0.6)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: 'rgba(255, 187, 0, 0.15)',
+                    border: '1px solid rgba(255, 187, 0, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Sparkles size={22} className="text-amber-400" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                    Importar Cartas Alter do MPCFill
+                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        color: '#94a3b8',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <FileCode size={12} className="text-amber-400" />
+                      {mpcParsedOrder.fileName || 'pedido.xml'}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>•</span>
+                    <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>
+                      Google Drive CDN Ativo (Alta Resolução)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-ghost btn-icon"
+                onClick={() => setIsMpcModalOpen(false)}
+                style={{ color: '#94a3b8' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body (Scrollable) */}
+            <div
+              style={{
+                padding: '24px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+              }}
+            >
+              {/* Order Stats Grid */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                  gap: '12px',
+                }}
+              >
+                <div
+                  style={{
+                    background: 'rgba(30, 41, 59, 0.5)',
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                  }}
+                >
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Total de Cartas Alter</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', marginTop: '2px' }}>
+                    {mpcParsedOrder.fronts.length}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: 'rgba(30, 41, 59, 0.5)',
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                  }}
+                >
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Cartas Dupla-Face</div>
+                  <div
+                    style={{
+                      fontSize: '1.25rem',
+                      fontWeight: 700,
+                      color: mpcParsedOrder.backs.length > 0 ? '#c084fc' : '#94a3b8',
+                      marginTop: '2px',
+                    }}
+                  >
+                    {mpcParsedOrder.backs.length > 0
+                      ? `${mpcParsedOrder.backs.length} com verso`
+                      : 'Nenhuma'}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: 'rgba(30, 41, 59, 0.5)',
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                  }}
+                >
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Folhas A4 Estimadas</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffbb00', marginTop: '2px' }}>
+                    {Math.ceil(
+                      (mpcParsedOrder.fronts.length +
+                        (mpcIncludeCardback && mpcParsedOrder.cardbackId
+                          ? mpcParsedOrder.fronts.length
+                          : mpcParsedOrder.backs.length)) /
+                        9
+                    )}{' '}
+                    folhas
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: 'rgba(30, 41, 59, 0.5)',
+                    padding: '12px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                  }}
+                >
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Estoque / Acabamento</div>
+                  <div
+                    style={{
+                      fontSize: '0.9rem',
+                      fontWeight: 600,
+                      color: '#cbd5e1',
+                      marginTop: '4px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {mpcParsedOrder.details.stock || 'Padrão MPC'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Visual Card Gallery Preview */}
+              <div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '10px',
+                  }}
+                >
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#cbd5e1', margin: 0 }}>
+                    Prévia das Artes Selecionadas ({mpcParsedOrder.fronts.length} cartas)
+                  </h4>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                    Role para visualizar todas as cartas
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '12px',
+                    overflowX: 'auto',
+                    paddingBottom: '10px',
+                    paddingTop: '4px',
+                  }}
+                >
+                  {mpcParsedOrder.fronts.slice(0, 30).map((card, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        flexShrink: 0,
+                        width: '95px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '95px',
+                          height: '133px',
+                          borderRadius: '6px',
+                          overflow: 'hidden',
+                          background: '#1e293b',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
+                        }}
+                      >
+                        <img
+                          src={card.imageUrl}
+                          alt={card.name}
+                          crossOrigin="anonymous"
+                          loading="lazy"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                          }}
+                        />
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          color: '#f8fafc',
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                        title={card.name}
+                      >
+                        {card.name}
+                      </span>
+                      {card.alterVariant && (
+                        <span
+                          style={{
+                            fontSize: '0.62rem',
+                            color: '#94a3b8',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                          title={card.alterVariant}
+                        >
+                          {card.alterVariant}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  {mpcParsedOrder.fronts.length > 30 && (
+                    <div
+                      style={{
+                        flexShrink: 0,
+                        width: '95px',
+                        height: '133px',
+                        borderRadius: '6px',
+                        background: 'rgba(30, 41, 59, 0.5)',
+                        border: '1px dashed rgba(255, 255, 255, 0.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#94a3b8',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        textAlign: 'center',
+                        padding: '10px',
+                      }}
+                    >
+                      +{mpcParsedOrder.fronts.length - 30} cartas
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Import Options */}
+              <div
+                style={{
+                  background: 'rgba(30, 41, 59, 0.4)',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-subtle)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px',
+                }}
+              >
+                {/* Queue option (replace vs append) */}
+                {proxies.length > 0 && (
+                  <div>
+                    <label
+                      style={{
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        color: '#f8fafc',
+                        marginBottom: '8px',
+                        display: 'block',
+                      }}
+                    >
+                      Destino na Fila de Impressão:
+                    </label>
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                      <label
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.85rem',
+                          color: '#cbd5e1',
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="mpcQueueMode"
+                          checked={mpcReplaceQueue}
+                          onChange={() => setMpcReplaceQueue(true)}
+                        />
+                        <span>
+                          <strong>Substituir fila atual</strong> (recomendado para imprimir este deck completo)
+                        </span>
+                      </label>
+                      <label
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.85rem',
+                          color: '#cbd5e1',
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="mpcQueueMode"
+                          checked={!mpcReplaceQueue}
+                          onChange={() => setMpcReplaceQueue(false)}
+                        />
+                        <span>Adicionar ao final da fila existente</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cardback Option */}
+                {mpcParsedOrder.cardbackId && (
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '10px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      color: '#cbd5e1',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={mpcIncludeCardback}
+                      onChange={(e) => setMpcIncludeCardback(e.target.checked)}
+                      style={{ marginTop: '3px' }}
+                    />
+                    <div>
+                      <strong>Imprimir verso padrão para todas as cartas normais</strong>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
+                        O arquivo inclui um verso padrão de Magic / sleeve ({mpcParsedOrder.cardbackId}).
+                        Se desmarcado, apenas as cartas frente (e os versos de cartas dupla-face) serão impressos,
+                        economizando papel caso você use sleeves com cartas reais.
+                      </div>
+                    </div>
+                  </label>
+                )}
+
+                {/* Save as Deck Option */}
+                {onSaveDeckFromMpc && (
+                  <div>
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        color: '#cbd5e1',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={mpcSaveAsDeck}
+                        onChange={(e) => setMpcSaveAsDeck(e.target.checked)}
+                      />
+                      <span>
+                        <strong>Salvar também como um novo Deck na Biblioteca</strong>
+                      </span>
+                    </label>
+
+                    {mpcSaveAsDeck && (
+                      <div style={{ marginTop: '10px', paddingLeft: '24px' }}>
+                        <label
+                          style={{
+                            fontSize: '0.75rem',
+                            color: '#94a3b8',
+                            display: 'block',
+                            marginBottom: '4px',
+                          }}
+                        >
+                          Nome do Deck:
+                        </label>
+                        <input
+                          type="text"
+                          className="input-field"
+                          value={mpcDeckName}
+                          onChange={(e) => setMpcDeckName(e.target.value)}
+                          placeholder="Nome do deck..."
+                          style={{ maxWidth: '380px' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '16px 24px',
+                borderTop: '1px solid var(--border-subtle)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                gap: '12px',
+                background: 'rgba(30, 41, 59, 0.6)',
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setIsMpcModalOpen(false)}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleConfirmMpcImport}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 24px',
+                }}
+              >
+                <Sparkles size={16} />
+                Importar {mpcParsedOrder.fronts.length} Cartas para o Proxy Studio
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

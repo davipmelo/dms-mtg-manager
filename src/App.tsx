@@ -1027,6 +1027,16 @@ export function App() {
             }}
             onClearAll={() => updateProxiesState([])}
             onAddDeckToProxies={handleAddDeckToProxies}
+            onAddProxies={(items, replace) => {
+              if (replace) {
+                updateProxiesState(items);
+              } else {
+                updateProxiesState([...proxies, ...items]);
+              }
+            }}
+            onSaveDeckFromMpc={(newDeck) => {
+              updateDecksState([newDeck, ...decks]);
+            }}
             onOpenArtSelector={(card, proxyItemId) => {
               const normalized: Card =
                 'cmc' in card

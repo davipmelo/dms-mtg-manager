@@ -125,6 +125,7 @@ export const CardImage: React.FC<CardImageProps> = ({
       className={className}
       style={style}
       loading={loading}
+      crossOrigin="anonymous"
       onError={() => {
         if (attemptIndex + 1 < candidates.length) {
           setAttemptIndex((prev) => prev + 1);
