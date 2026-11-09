@@ -23,6 +23,8 @@ import {
   ZoomOut,
   Eye,
   EyeOff,
+  Trash2,
+  CheckSquare,
 } from 'lucide-react';
 
 interface CollectionViewProps {
@@ -45,7 +47,29 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
   onRemoveItem,
   onOpenImportModal,
 }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  // View mode: Grid is now primary, persisted across sessions
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('dms_collection_view_mode');
+    return (saved as ViewMode) || 'grid';
+  });
+
+  const handleSetViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('dms_collection_view_mode', mode);
+  };
+
+  // Batch Selection state for quick removal in list/table view
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
+
+  const handleToggleSelectItem = (id: string) => {
+    setSelectedItemIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [isMultiOnly, setIsMultiOnly] = useState(false);
@@ -224,6 +248,38 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
       return sortDirection === 'asc' ? cmp : -cmp;
     });
   }, [filteredItems, sortColumn, sortDirection]);
+
+  // Selection states for Table / List view
+  const allFilteredSelected =
+    sortedItems.length > 0 && sortedItems.every((i) => selectedItemIds.has(i.id));
+  const someFilteredSelected = sortedItems.some((i) => selectedItemIds.has(i.id));
+
+  const handleToggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelectedItemIds(new Set());
+    } else {
+      const next = new Set(selectedItemIds);
+      sortedItems.forEach((i) => next.add(i.id));
+      setSelectedItemIds(next);
+    }
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedItemIds.size === 0) return;
+    const count = selectedItemIds.size;
+    if (
+      window.confirm(
+        `Deseja realmente remover ${count} ${
+          count === 1 ? 'carta selecionada' : 'cartas selecionadas'
+        } da coleção?`
+      )
+    ) {
+      selectedItemIds.forEach((id) => {
+        onRemoveItem(id);
+      });
+      setSelectedItemIds(new Set());
+    }
+  };
 
   // Aggregate stats
   const totalCardsCount = useMemo(() => collection.reduce((sum, i) => sum + i.quantity, 0), [collection]);
@@ -413,27 +469,27 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
             <option value="in_use">🟡 Apenas Em Uso nos Decks</option>
           </select>
 
-          {/* Layout View Switcher (Reordered: Table/List [principal] -> Grid -> Stacked) */}
+          {/* Layout View Switcher: Grade Visual (Principal) -> Tabela / Lista (Secundária) */}
           <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-darkest)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-            <button
-              className={`btn btn-icon ${viewMode === 'table' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => {
-                setHoveredCardImg(null);
-                setViewMode('table');
-              }}
-              title="Visualização em Tabela / Lista (Principal)"
-            >
-              <List size={16} />
-            </button>
             <button
               className={`btn btn-icon ${viewMode === 'grid' ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => {
                 setHoveredCardImg(null);
-                setViewMode('grid');
+                handleSetViewMode('grid');
               }}
-              title="Visualização em Grade Visual"
+              title="Visualização em Grade Visual (Principal)"
             >
               <Grid size={16} />
+            </button>
+            <button
+              className={`btn btn-icon ${viewMode === 'table' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => {
+                setHoveredCardImg(null);
+                handleSetViewMode('table');
+              }}
+              title="Visualização em Lista / Tabela (Secundária)"
+            >
+              <List size={16} />
             </button>
           </div>
 
@@ -674,6 +730,14 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                       >
                         <Printer size={15} />
                       </button>
+                      <button
+                        className="btn btn-ghost btn-icon"
+                        style={{ padding: '5px', color: '#f43f5e' }}
+                        onClick={() => onRemoveItem(item.id)}
+                        title="Remover carta da coleção"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -683,20 +747,86 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
         </div>
       ) : (
         /* 2. TABLE / COMPACT LIST VIEW */
-        <div className="glass-panel" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#94a3b8' }}>
-                <th
-                  onClick={() => handleSort('quantity')}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    color: sortColumn === 'quantity' ? '#ffbb00' : '#94a3b8',
-                  }}
-                  title="Ordenar por Quantidade"
+        <div>
+          {/* Bulk Action Toolbar for List View */}
+          {selectedItemIds.size > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                borderRadius: '10px',
+                padding: '10px 16px',
+                marginBottom: '12px',
+                animation: 'modal-enter 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', color: '#fca5a5' }}>
+                <CheckSquare size={17} color="#ef4444" />
+                <span>
+                  <strong>{selectedItemIds.size}</strong> {selectedItemIds.size === 1 ? 'carta selecionada' : 'cartas selecionadas'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setSelectedItemIds(new Set())}
+                  style={{ fontSize: '0.8rem', color: '#cbd5e1' }}
                 >
+                  Limpar Seleção
+                </button>
+                <button
+                  className="btn btn-danger btn-sm"
+                  style={{
+                    background: '#ef4444',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    padding: '6px 14px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                  onClick={handleBatchDelete}
+                >
+                  <Trash2 size={14} /> Remover Selecionadas ({selectedItemIds.size})
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="glass-panel" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#94a3b8' }}>
+                  {/* Select All Checkbox */}
+                  <th style={{ width: '40px', padding: '12px 14px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={allFilteredSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = !allFilteredSelected && someFilteredSelected;
+                      }}
+                      onChange={handleToggleSelectAll}
+                      style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#ffbb00' }}
+                      title={allFilteredSelected ? 'Desmarcar todas' : 'Selecionar todas as cartas da lista'}
+                    />
+                  </th>
+                  <th
+                    onClick={() => handleSort('quantity')}
+                    style={{
+                      padding: '12px 16px',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      color: sortColumn === 'quantity' ? '#ffbb00' : '#94a3b8',
+                    }}
+                    title="Ordenar por Quantidade"
+                  >
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                     <span>Qtd.</span>
                     <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'quantity' ? 1 : 0.25 }}>
@@ -827,108 +957,133 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
               </tr>
             </thead>
             <tbody>
-              {sortedItems.map((item) => (
-                <tr
-                  key={item.id}
-                  style={{ borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.15s ease' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  <td style={{ padding: '10px 16px', fontWeight: 700 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button
-                        className="btn btn-ghost btn-icon"
-                        style={{ padding: '2px' }}
-                        onClick={() => onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
+              {sortedItems.map((item) => {
+                const isSelected = selectedItemIds.has(item.id);
+                return (
+                  <tr
+                    key={item.id}
+                    style={{
+                      borderBottom: '1px solid var(--border-subtle)',
+                      transition: 'background 0.15s ease',
+                      backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    {/* Row Checkbox */}
+                    <td style={{ width: '40px', padding: '10px 14px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelectItem(item.id)}
+                        style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#ffbb00' }}
+                      />
+                    </td>
+                    <td style={{ padding: '10px 16px', fontWeight: 700 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          className="btn btn-ghost btn-icon"
+                          style={{ padding: '2px' }}
+                          onClick={() => onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span>{item.quantity}</span>
+                        <button
+                          className="btn btn-ghost btn-icon"
+                          style={{ padding: '2px' }}
+                          onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 16px' }}>
+                      <span style={{ color: '#10b981', fontWeight: 600 }}>{item.availableQuantity ?? item.quantity}</span>
+                      <span style={{ color: '#64748b' }}> / </span>
+                      <span style={{ color: '#f59e0b', fontWeight: 600 }}>{item.inUseQuantity ?? 0}</span>
+                    </td>
+                    <td style={{ padding: '10px 16px', fontWeight: 600, color: '#f8fafc' }}>
+                      <span
+                        style={{
+                          cursor: 'pointer',
+                          borderBottom: '1px dotted rgba(148, 163, 184, 0.45)',
+                          paddingBottom: '1px',
+                          transition: 'color 0.15s ease, border-color 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#a5b4fc';
+                          e.currentTarget.style.borderColor = '#818cf8';
+                          setMousePos({ x: e.clientX, y: e.clientY });
+                          setHoveredCardImg(item.card.imageUrlLarge || item.card.imageUrl);
+                        }}
+                        onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#f8fafc';
+                          e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.45)';
+                          setHoveredCardImg(null);
+                        }}
                       >
-                        <Minus size={12} />
-                      </button>
-                      <span>{item.quantity}</span>
-                      <button
-                        className="btn btn-ghost btn-icon"
-                        style={{ padding: '2px' }}
-                        onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                      >
-                        <Plus size={12} />
-                      </button>
-                    </div>
-                  </td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span style={{ color: '#10b981', fontWeight: 600 }}>{item.availableQuantity ?? item.quantity}</span>
-                    <span style={{ color: '#64748b' }}> / </span>
-                    <span style={{ color: '#f59e0b', fontWeight: 600 }}>{item.inUseQuantity ?? 0}</span>
-                  </td>
-                  <td style={{ padding: '10px 16px', fontWeight: 600, color: '#f8fafc' }}>
-                    <span
-                      style={{
-                        cursor: 'pointer',
-                        borderBottom: '1px dotted rgba(148, 163, 184, 0.45)',
-                        paddingBottom: '1px',
-                        transition: 'color 0.15s ease, border-color 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = '#a5b4fc';
-                        e.currentTarget.style.borderColor = '#818cf8';
-                        setMousePos({ x: e.clientX, y: e.clientY });
-                        setHoveredCardImg(item.card.imageUrlLarge || item.card.imageUrl);
-                      }}
-                      onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = '#f8fafc';
-                        e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.45)';
-                        setHoveredCardImg(null);
-                      }}
-                    >
-                      {item.card.name}
-                    </span>{' '}
-                    {item.isFoil && <Sparkles size={12} className="inline text-amber-400" />}
-                  </td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <ManaCostRenderer manaCost={item.card.manaCost} />
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#94a3b8' }}>
-                    {item.card.typeLine}
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#64748b' }}>
-                    {item.card.setCode}
-                  </td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span className={`badge badge-rarity-${item.card.rarity.toLowerCase()}`}>
-                      {item.card.rarity}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#10b981' }}>
-                    {item.card.priceUsd ? `$${(item.card.priceUsd * item.quantity).toFixed(2)}` : '—'}
-                  </td>
-                  <td style={{ padding: '10px 16px', textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: '6px' }}>
-                      <button
-                        className="btn btn-ghost btn-icon"
-                        style={{ padding: '4px' }}
-                        onClick={() => onOpenArtSelector(item.card, item.id)}
-                        title="Trocar Arte"
-                      >
-                        <ImageIcon size={15} />
-                      </button>
-                      <button
-                        className="btn btn-ghost btn-icon"
-                        style={{ padding: '4px' }}
-                        onClick={() => onAddToProxies(item.card, 1)}
-                        title="Adicionar à Impressão"
-                      >
-                        <Printer size={15} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {item.card.name}
+                      </span>{' '}
+                      {item.isFoil && <Sparkles size={12} className="inline text-amber-400" />}
+                    </td>
+                    <td style={{ padding: '10px 16px' }}>
+                      <ManaCostRenderer manaCost={item.card.manaCost} />
+                    </td>
+                    <td style={{ padding: '10px 16px', color: '#94a3b8' }}>
+                      {item.card.typeLine}
+                    </td>
+                    <td style={{ padding: '10px 16px', color: '#64748b' }}>
+                      {item.card.setCode}
+                    </td>
+                    <td style={{ padding: '10px 16px' }}>
+                      <span className={`badge badge-rarity-${item.card.rarity.toLowerCase()}`}>
+                        {item.card.rarity}
+                      </span>
+                    </td>
+                    <td style={{ padding: '10px 16px', color: '#10b981' }}>
+                      {item.card.priceUsd ? `$${(item.card.priceUsd * item.quantity).toFixed(2)}` : '—'}
+                    </td>
+                    <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', gap: '6px' }}>
+                        <button
+                          className="btn btn-ghost btn-icon"
+                          style={{ padding: '4px' }}
+                          onClick={() => onOpenArtSelector(item.card, item.id)}
+                          title="Trocar Arte"
+                        >
+                          <ImageIcon size={15} />
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-icon"
+                          style={{ padding: '4px' }}
+                          onClick={() => onAddToProxies(item.card, 1)}
+                          title="Adicionar à Impressão"
+                        >
+                          <Printer size={15} />
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-icon"
+                          style={{ padding: '4px', color: '#f43f5e' }}
+                          onClick={() => onRemoveItem(item.id)}
+                          title="Remover carta da coleção"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+      </div>
       )}
 
       {/* Floating Card Image Tooltip (for Table / Stacked views) */}

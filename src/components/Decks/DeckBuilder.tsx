@@ -28,6 +28,7 @@ import {
   ZoomOut,
   Eye,
   EyeOff,
+  CheckSquare,
 } from 'lucide-react';
 
 interface DeckBuilderProps {
@@ -64,8 +65,28 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   onOpenExportModal,
   onOpenImportModal,
 }) => {
-  // View mode: Table/List is default/primary
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  // View mode: Grid is default/primary, persisted across sessions
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('dms_deck_view_mode');
+    return (saved as ViewMode) || 'grid';
+  });
+
+  const handleSetViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('dms_deck_view_mode', mode);
+  };
+
+  // Selection state for quick removal in list/table view
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+
+  const handleToggleSelectCard = (id: string) => {
+    setSelectedCardIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
   const [showCharts, setShowCharts] = useState(true);
   const [hoveredCardImg, setHoveredCardImg] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -321,6 +342,63 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     () => sortCardItems(filteredSideCards),
     [filteredSideCards, sortColumn, sortDirection, collection]
   );
+
+  // Selection helpers for Mainboard & Sideboard
+  const allMainSelected =
+    sortedMainCards.length > 0 && sortedMainCards.every((c) => selectedCardIds.has(c.card.id));
+  const someMainSelected = sortedMainCards.some((c) => selectedCardIds.has(c.card.id));
+
+  const handleToggleSelectAllMain = () => {
+    if (allMainSelected) {
+      setSelectedCardIds((prev) => {
+        const next = new Set(prev);
+        sortedMainCards.forEach((c) => next.delete(c.card.id));
+        return next;
+      });
+    } else {
+      const next = new Set(selectedCardIds);
+      sortedMainCards.forEach((c) => next.add(c.card.id));
+      setSelectedCardIds(next);
+    }
+  };
+
+  const allSideSelected =
+    sortedSideCards.length > 0 && sortedSideCards.every((c) => selectedCardIds.has(c.card.id));
+  const someSideSelected = sortedSideCards.some((c) => selectedCardIds.has(c.card.id));
+
+  const handleToggleSelectAllSide = () => {
+    if (allSideSelected) {
+      setSelectedCardIds((prev) => {
+        const next = new Set(prev);
+        sortedSideCards.forEach((c) => next.delete(c.card.id));
+        return next;
+      });
+    } else {
+      const next = new Set(selectedCardIds);
+      sortedSideCards.forEach((c) => next.add(c.card.id));
+      setSelectedCardIds(next);
+    }
+  };
+
+  const handleBatchDeleteDeckCards = () => {
+    if (selectedCardIds.size === 0) return;
+    const count = selectedCardIds.size;
+    if (
+      window.confirm(
+        `Deseja realmente remover ${count} ${
+          count === 1 ? 'carta selecionada' : 'cartas selecionadas'
+        } deste deck?`
+      )
+    ) {
+      const nextCards = deck.cards.filter((c) => !selectedCardIds.has(c.card.id));
+      onUpdateDeck({
+        ...deck,
+        cards: nextCards,
+        updatedAt: new Date().toISOString(),
+      });
+      setSelectedCardIds(new Set());
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -636,7 +714,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             )}
           </div>
 
-          {/* Layout View Switcher: Table/List (principal) -> Grid -> Stacked */}
+          {/* Layout View Switcher: Grade Visual (Principal) -> Tabela / Lista (Secundária) */}
           <div
             style={{
               display: 'flex',
@@ -648,24 +726,24 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             }}
           >
             <button
-              className={`btn btn-icon ${viewMode === 'table' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => {
-                setHoveredCardImg(null);
-                setViewMode('table');
-              }}
-              title="Visualização em Tabela / Lista (Principal)"
-            >
-              <List size={16} />
-            </button>
-            <button
               className={`btn btn-icon ${viewMode === 'grid' ? 'btn-primary' : 'btn-ghost'}`}
               onClick={() => {
                 setHoveredCardImg(null);
-                setViewMode('grid');
+                handleSetViewMode('grid');
               }}
-              title="Visualização em Grade Visual"
+              title="Visualização em Grade Visual (Principal)"
             >
               <Grid size={16} />
+            </button>
+            <button
+              className={`btn btn-icon ${viewMode === 'table' ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => {
+                setHoveredCardImg(null);
+                handleSetViewMode('table');
+              }}
+              title="Visualização em Lista / Tabela (Secundária)"
+            >
+              <List size={16} />
             </button>
           </div>
 
@@ -983,29 +1061,95 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           })}
         </div>
       ) : (
-        /* 2. TABLE / LIST VIEW (PRINCIPAL) */
-        <div className="glass-panel" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table
-            style={{
-              width: '100%',
-              minWidth: '700px',
-              borderCollapse: 'collapse',
-              textAlign: 'left',
-              fontSize: '0.85rem',
-            }}
-          >
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#94a3b8' }}>
-                <th
-                  onClick={() => handleSort('quantity')}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    color: sortColumn === 'quantity' ? '#ffbb00' : '#94a3b8',
-                  }}
-                  title="Ordenar por Quantidade"
+        /* 2. TABLE / LIST VIEW */
+        <div>
+          {/* Bulk Action Toolbar for Deck Cards */}
+          {selectedCardIds.size > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                borderRadius: '10px',
+                padding: '10px 16px',
+                marginBottom: '12px',
+                animation: 'modal-enter 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', color: '#fca5a5' }}>
+                <CheckSquare size={17} color="#ef4444" />
+                <span>
+                  <strong>{selectedCardIds.size}</strong> {selectedCardIds.size === 1 ? 'carta selecionada' : 'cartas selecionadas'} no deck
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setSelectedCardIds(new Set())}
+                  style={{ fontSize: '0.8rem', color: '#cbd5e1' }}
                 >
+                  Limpar Seleção
+                </button>
+                <button
+                  className="btn btn-danger btn-sm"
+                  style={{
+                    background: '#ef4444',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    padding: '6px 14px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                  onClick={handleBatchDeleteDeckCards}
+                >
+                  <Trash2 size={14} /> Remover do Deck ({selectedCardIds.size})
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="glass-panel" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table
+              style={{
+                width: '100%',
+                minWidth: '700px',
+                borderCollapse: 'collapse',
+                textAlign: 'left',
+                fontSize: '0.85rem',
+              }}
+            >
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#94a3b8' }}>
+                  {/* Select All Checkbox */}
+                  <th style={{ width: '40px', padding: '12px 14px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={allMainSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = !allMainSelected && someMainSelected;
+                      }}
+                      onChange={handleToggleSelectAllMain}
+                      style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#ffbb00' }}
+                      title={allMainSelected ? 'Desmarcar todas' : 'Selecionar todas as cartas do baralho principal'}
+                    />
+                  </th>
+                  <th
+                    onClick={() => handleSort('quantity')}
+                    style={{
+                      padding: '12px 16px',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      color: sortColumn === 'quantity' ? '#ffbb00' : '#94a3b8',
+                    }}
+                    title="Ordenar por Quantidade"
+                  >
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                     <span>Qtd.</span>
                     <span
@@ -1189,6 +1333,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 const availQty = linked?.availableQuantity ?? 0;
                 const inUseQty = linked?.inUseQuantity ?? c.quantity;
                 const isFoil = c.isFoil || c.card.isFoil;
+                const isSelected = selectedCardIds.has(c.card.id);
 
                 return (
                   <tr
@@ -1196,14 +1341,24 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     style={{
                       borderBottom: '1px solid var(--border-subtle)',
                       transition: 'background 0.15s ease',
+                      backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
+                      if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
+                      if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
+                    {/* Row Checkbox */}
+                    <td style={{ width: '40px', padding: '10px 14px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelectCard(c.card.id)}
+                        style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#ffbb00' }}
+                      />
+                    </td>
                     <td style={{ padding: '10px 16px', fontWeight: 700 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <button
@@ -1314,6 +1469,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             </tbody>
           </table>
         </div>
+      </div>
       )}
 
       {/* Sideboard Section (if exists) */}
@@ -1337,6 +1493,19 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               >
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#94a3b8' }}>
+                    {/* Select All Checkbox for Sideboard */}
+                    <th style={{ width: '40px', padding: '12px 14px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={allSideSelected}
+                        ref={(el) => {
+                          if (el) el.indeterminate = !allSideSelected && someSideSelected;
+                        }}
+                        onChange={handleToggleSelectAllSide}
+                        style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#ffbb00' }}
+                        title={allSideSelected ? 'Desmarcar todas' : 'Selecionar todas as cartas do sideboard'}
+                      />
+                    </th>
                     <th style={{ padding: '12px 16px' }}>Qtd.</th>
                     <th style={{ padding: '12px 16px' }}>Disponível / Uso</th>
                     <th style={{ padding: '12px 16px' }}>Nome</th>
@@ -1354,6 +1523,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     const availQty = linked?.availableQuantity ?? 0;
                     const inUseQty = linked?.inUseQuantity ?? c.quantity;
                     const isFoil = c.isFoil || c.card.isFoil;
+                    const isSelected = selectedCardIds.has(c.card.id);
 
                     return (
                       <tr
@@ -1361,14 +1531,24 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         style={{
                           borderBottom: '1px solid var(--border-subtle)',
                           transition: 'background 0.15s ease',
+                          backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
+                          if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent';
+                          if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
                         }}
                       >
+                        {/* Row Checkbox */}
+                        <td style={{ width: '40px', padding: '10px 14px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleSelectCard(c.card.id)}
+                            style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#ffbb00' }}
+                          />
+                        </td>
                         <td style={{ padding: '10px 16px', fontWeight: 700 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <button
