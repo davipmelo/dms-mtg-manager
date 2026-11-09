@@ -169,3 +169,22 @@ export interface SystemBackup {
 }
 
 export type ViewMode = 'table' | 'grid';
+
+export interface UserProfile {
+  uid: string;
+  username: string;
+  email?: string; // Private / confidential
+  isAnonymous?: boolean;
+}
+
+export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'offline';
+
+export interface CloudUserData {
+  app: 'dms-mtg-manager';
+  schemaVersion: number;
+  updatedAt: string;
+  collection: CollectionItem[];
+  decks: Deck[];
+  proxies: ProxyItem[];
+}
+

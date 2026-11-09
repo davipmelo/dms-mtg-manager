@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   CollectionItem,
   Deck,
@@ -10,6 +10,9 @@ import {
   DeckFormat,
   TokenCard,
   SystemBackup,
+  UserProfile,
+  SyncStatus,
+  CloudUserData,
 } from './types';
 import {
   getStoredCollection,
@@ -20,6 +23,12 @@ import {
   saveProxies,
   calculateCollectionDeckUsage,
 } from './services/storage';
+import {
+  subscribeToAuth,
+  saveUserCloudData,
+  loadUserCloudData,
+  logoutUser,
+} from './services/firebase';
 import { getCardByName, resolveCardFaces } from './services/scryfall';
 
 import { CollectionView } from './components/Collection/CollectionView';
@@ -34,6 +43,9 @@ import { ArtSelectorModal } from './components/Modals/ArtSelectorModal';
 import { ImportExportModal } from './components/Modals/ImportExportModal';
 import { EditDeckModal } from './components/Modals/EditDeckModal';
 import { MtgLogo } from './components/Common/MtgLogo';
+import { AuthModal } from './components/Auth/AuthModal';
+import { UserMenu } from './components/Auth/UserMenu';
+import { SyncConflictModal } from './components/Auth/SyncConflictModal';
 
 import {
   FolderArchive,
@@ -75,6 +87,29 @@ export function App() {
     proxyItemId?: string;
   }>({});
 
+  // User Authentication & Cloud Sync
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalInitialTab, setAuthModalInitialTab] = useState<
+    'login' | 'register' | 'forgot' | 'settings'
+  >('login');
+  const [pendingCloudData, setPendingCloudData] = useState<CloudUserData | null>(null);
+  const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
+
+  // Sync References
+  const rawCollectionRef = useRef(rawCollection);
+  rawCollectionRef.current = rawCollection;
+  const decksRef = useRef(decks);
+  decksRef.current = decks;
+  const proxiesRef = useRef(proxies);
+  proxiesRef.current = proxies;
+
+  const isCloudLoadingRef = useRef(false);
+  const isFirstRender = useRef(true);
+  const syncTimeoutRef = useRef<any>(null);
+
   // Initialize data on load
   useEffect(() => {
     const loadedCollection = getStoredCollection();
@@ -103,6 +138,206 @@ export function App() {
   const updateProxiesState = (updated: ProxyItem[]) => {
     setProxies(updated);
     saveProxies(updated);
+  };
+
+  // Auth state listener and initial sync
+  useEffect(() => {
+    const unsubscribe = subscribeToAuth(async (user) => {
+      setCurrentUser(user);
+
+      if (!user) {
+        setSyncStatus('idle');
+        return;
+      }
+
+      try {
+        isCloudLoadingRef.current = true;
+        setSyncStatus('syncing');
+        const cloudData = await loadUserCloudData(user.uid);
+
+        if (!cloudData) {
+          // New account or no data on cloud yet:
+          // Back up current local cards/decks to cloud
+          const curCol = rawCollectionRef.current;
+          const curDks = decksRef.current;
+          const curPrx = proxiesRef.current;
+
+          if (curCol.length > 0 || curDks.length > 0 || curPrx.length > 0) {
+            await saveUserCloudData(user.uid, {
+              collection: curCol,
+              decks: curDks,
+              proxies: curPrx,
+            });
+          }
+          setSyncStatus('synced');
+          setLastSyncedAt(new Date());
+          return;
+        }
+
+        const curCol = rawCollectionRef.current;
+        const curDks = decksRef.current;
+        const curPrx = proxiesRef.current;
+        const hasLocalCustomData =
+          curCol.length > 0 || curDks.length > 0 || curPrx.length > 0;
+
+        if (!hasLocalCustomData) {
+          // Local device is empty: download from cloud
+          updateCollectionState(cloudData.collection || []);
+          updateDecksState(cloudData.decks || []);
+          updateProxiesState(cloudData.proxies || []);
+          setSyncStatus('synced');
+          setLastSyncedAt(new Date(cloudData.updatedAt || Date.now()));
+        } else {
+          // Compare cloud and local
+          const isIdentical =
+            JSON.stringify(cloudData.decks) === JSON.stringify(curDks) &&
+            JSON.stringify(cloudData.collection) === JSON.stringify(curCol);
+
+          if (isIdentical) {
+            setSyncStatus('synced');
+            setLastSyncedAt(new Date(cloudData.updatedAt || Date.now()));
+          } else {
+            // Prompt conflict modal
+            setPendingCloudData(cloudData);
+            setIsConflictModalOpen(true);
+            setSyncStatus('synced');
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao verificar dados na nuvem:', err);
+        setSyncStatus('offline');
+      } finally {
+        isCloudLoadingRef.current = false;
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Auto-sync changes to Cloud Firestore
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (!currentUser || isCloudLoadingRef.current) return;
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    setSyncStatus('syncing');
+
+    syncTimeoutRef.current = setTimeout(async () => {
+      try {
+        await saveUserCloudData(currentUser.uid, {
+          collection: rawCollection,
+          decks,
+          proxies,
+        });
+        setSyncStatus('synced');
+        setLastSyncedAt(new Date());
+      } catch (err) {
+        console.error('Falha no auto-sync:', err);
+        setSyncStatus('offline');
+      }
+    }, 2000);
+
+    return () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    };
+  }, [rawCollection, decks, proxies, currentUser]);
+
+  // Manual Sync & Logout Handlers
+  const handleForceSync = async () => {
+    if (!currentUser) return;
+    setSyncStatus('syncing');
+    try {
+      await saveUserCloudData(currentUser.uid, {
+        collection: rawCollectionRef.current,
+        decks: decksRef.current,
+        proxies: proxiesRef.current,
+      });
+      setSyncStatus('synced');
+      setLastSyncedAt(new Date());
+    } catch (err) {
+      setSyncStatus('offline');
+      throw err;
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setCurrentUser(null);
+      setSyncStatus('idle');
+    } catch (err) {
+      console.error('Erro ao sair da conta:', err);
+    }
+  };
+
+  // Sync Conflict Resolution Handlers
+  const handleConflictMerge = () => {
+    if (!pendingCloudData) return;
+    handleRestoreSystemBackup(
+      {
+        app: 'dms-mtg-manager',
+        schemaVersion: pendingCloudData.schemaVersion || 1,
+        exportedAt: pendingCloudData.updatedAt || new Date().toISOString(),
+        collection: pendingCloudData.collection,
+        decks: pendingCloudData.decks,
+        proxies: pendingCloudData.proxies,
+      },
+      'merge'
+    );
+    setIsConflictModalOpen(false);
+    setPendingCloudData(null);
+    if (currentUser) {
+      setTimeout(() => {
+        saveUserCloudData(currentUser.uid, {
+          collection: rawCollectionRef.current,
+          decks: decksRef.current,
+          proxies: proxiesRef.current,
+        })
+          .then(() => {
+            setSyncStatus('synced');
+            setLastSyncedAt(new Date());
+          })
+          .catch((err) => console.error(err));
+      }, 100);
+    }
+  };
+
+  const handleConflictUseCloud = () => {
+    if (!pendingCloudData) return;
+    updateCollectionState(pendingCloudData.collection || []);
+    updateDecksState(pendingCloudData.decks || []);
+    updateProxiesState(pendingCloudData.proxies || []);
+    setIsConflictModalOpen(false);
+    setPendingCloudData(null);
+    setSyncStatus('synced');
+    setLastSyncedAt(new Date(pendingCloudData.updatedAt || Date.now()));
+  };
+
+  const handleConflictUseLocal = () => {
+    setIsConflictModalOpen(false);
+    setPendingCloudData(null);
+    if (currentUser) {
+      setSyncStatus('syncing');
+      saveUserCloudData(currentUser.uid, {
+        collection: rawCollectionRef.current,
+        decks: decksRef.current,
+        proxies: proxiesRef.current,
+      })
+        .then(() => {
+          setSyncStatus('synced');
+          setLastSyncedAt(new Date());
+        })
+        .catch((err) => {
+          console.error(err);
+          setSyncStatus('offline');
+        });
+    }
   };
 
   // Full System Backup Restore Handler
@@ -936,6 +1171,19 @@ export function App() {
           >
             <Upload size={14} /> Exportar
           </button>
+
+          {/* User Account & Cloud Sync Menu */}
+          <UserMenu
+            user={currentUser}
+            syncStatus={syncStatus}
+            lastSyncedAt={lastSyncedAt}
+            onOpenAuthModal={(tab) => {
+              setAuthModalInitialTab(tab || 'login');
+              setIsAuthModalOpen(true);
+            }}
+            onLogout={handleLogout}
+            onForceSync={handleForceSync}
+          />
         </div>
       </header>
 
@@ -1115,6 +1363,32 @@ export function App() {
             updateDecksState(decks.map((d) => (d.id === updated.id ? updated : d)));
             setEditingDeck(null);
           }}
+        />
+      )}
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialTab={authModalInitialTab}
+        onAuthSuccess={(user) => {
+          setCurrentUser(user);
+        }}
+      />
+
+      {/* Sync Conflict Resolution Modal */}
+      {pendingCloudData && (
+        <SyncConflictModal
+          isOpen={isConflictModalOpen}
+          cloudData={pendingCloudData}
+          localData={{
+            collection: rawCollection,
+            decks,
+            proxies,
+          }}
+          onMerge={handleConflictMerge}
+          onUseCloud={handleConflictUseCloud}
+          onUseLocal={handleConflictUseLocal}
         />
       )}
     </div>

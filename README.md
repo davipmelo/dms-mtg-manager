@@ -35,7 +35,23 @@ O repositório Git e o workflow oficial de deploy automático (`.github/workflow
 
 ---
 
-## 💾 Portabilidade Completa (Troca de Máquina / Navegador)
+## ☁️ Sincronização em Nuvem & Sistema de Contas
+
+O aplicativo agora conta com **sincronização automática em nuvem** entre múltiplos dispositivos (PC, notebook, celular ou tablet):
+
+1. **Cadastro Simples e Seguro**: Crie sua conta informando apenas **Nome de Usuário**, **E-mail** e **Senha**.
+2. **Privacidade Total**: O e-mail do usuário é estritamente confidencial, protegido por regras de segurança e nunca é exibido publicamente para terceiros.
+3. **Criptografia e Segurança**: Autenticação com senhas protegidas por criptografia moderna e regras de acesso exclusivas por usuário via Firebase Auth & Cloud Firestore.
+4. **Recuperação de Senha ("Esqueci minha senha")**: Envio direto de link seguro por e-mail para cadastrar uma nova senha.
+5. **Sincronização Automática em Segundo Plano**: Qualquer alteração em decks ou na coleção é salva localmente e enviada automaticamente para a nuvem.
+6. **Resolução Inteligente de Conflitos**: Opção de mesclar dados locais e remotos ao fazer login em um novo dispositivo.
+7. **Configuração Flexível**:
+   - Funciona imediatamente em **Modo Local Demonstrativo (offline seguro)** sem configuração prévia.
+   - Para conectar sua própria nuvem oficial gratuita, basta colar o JSON de configuração do Firebase no botão **"⚙️ Configurações da Nuvem"** ou configurar o arquivo `.env` (conforme `.env.example`).
+
+---
+
+## 💾 Portabilidade Completa (Troca de Máquina / Backup Manual)
 
 Como o aplicativo roda 100% na web sem exigir login ou servidor externo, seus dados ficam salvos localmente no navegador (`localStorage`). Para continuar trabalhando em outra máquina:
 

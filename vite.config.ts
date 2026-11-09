@@ -34,6 +34,7 @@ export default defineConfig({
           charts: ['chart.js', 'react-chartjs-2'],
           icons: ['lucide-react'],
           pdf: ['jspdf'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
         },
       },
     },
