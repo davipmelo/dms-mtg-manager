@@ -84,7 +84,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
         setMpcError(null);
       }
     } catch (err: any) {
-      if (err?.message === 'VITE_PROXY_NOT_ACTIVE') {
+      if (err?.message === 'PROXY_RETURNED_HTML') {
         setMpcProxyNotice(true);
       } else {
         setMpcError('Não foi possível conectar à API do MPCFill. Você pode colar o link do Drive ou carregar um XML.');

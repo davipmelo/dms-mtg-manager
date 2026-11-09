@@ -453,12 +453,15 @@ export interface MpcCardPrint extends CardPrint {
   dateCreated?: string;
 }
 
+export const CLOUDFLARE_MPC_PROXY = 'https://mpcfill-proxy.anancinho.workers.dev';
+
 // Memory cache for MPCFill sources
 let cachedMpcSources: Array<[number, boolean]> | null = null;
 
 /**
  * Queries the MPCFill backend API to search for community alter arts for a card name.
- * Uses Vite proxy (/api-mpcfill) in development / local preview.
+ * Uses the Cloudflare Worker proxy in production (https://mpcfill-proxy.anancinho.workers.dev)
+ * and in local development with CORS enabled.
  */
 export async function searchMpcFillAlters(
   cardName: string,
@@ -477,16 +480,9 @@ export async function searchMpcFillAlters(
 
     if (!cleanQuery) return [];
 
-    // Base URL: in dev / local server use Vite proxy route, or direct if hosted on same domain
-    const isDev =
-      Boolean((import.meta as any).env?.DEV) ||
-      (typeof window !== 'undefined' &&
-        (window.location.hostname === 'localhost' ||
-          window.location.hostname === '127.0.0.1' ||
-          window.location.hostname.startsWith('192.168.') ||
-          window.location.hostname.startsWith('10.') ||
-          Boolean(window.location.port)));
-    const baseUrl = isDev ? '/api-mpcfill' : 'https://mpcfill.com';
+    // Base URL: Use configured Cloudflare Worker proxy (CORS-enabled for davimelo.com and localhost)
+    const baseUrl =
+      (import.meta as any).env?.VITE_MPC_PROXY_URL || CLOUDFLARE_MPC_PROXY;
 
     // 1. Get sources if not cached
     if (!cachedMpcSources) {
@@ -494,7 +490,7 @@ export async function searchMpcFillAlters(
         const sourcesRes = await fetch(`${baseUrl}/2/sources/`);
         const contentType = sourcesRes.headers.get('content-type') || '';
         if (contentType.includes('text/html')) {
-          throw new Error('VITE_PROXY_NOT_ACTIVE');
+          throw new Error('PROXY_RETURNED_HTML');
         }
         if (sourcesRes.ok) {
           const sourcesData = await sourcesRes.json();
@@ -503,7 +499,7 @@ export async function searchMpcFillAlters(
           }
         }
       } catch (err: any) {
-        if (err?.message === 'VITE_PROXY_NOT_ACTIVE') {
+        if (err?.message === 'PROXY_RETURNED_HTML') {
           throw err;
         }
         // Fallback to synthetic sources array
@@ -538,7 +534,7 @@ export async function searchMpcFillAlters(
 
     const contentType = searchRes.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
-      throw new Error('VITE_PROXY_NOT_ACTIVE');
+      throw new Error('PROXY_RETURNED_HTML');
     }
 
     if (!searchRes.ok) return [];
