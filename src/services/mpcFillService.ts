@@ -441,38 +441,72 @@ export function extractAltersFromXmlForCard(xmlString: string, targetCardName: s
   }
 }
 
+export interface MpcSearchOptions {
+  minDpi?: number;
+  maxDpi?: number;
+}
+
+export interface MpcCardPrint extends CardPrint {
+  dpi?: number;
+  sourceName?: string;
+  tags?: string[];
+  dateCreated?: string;
+}
+
 // Memory cache for MPCFill sources
 let cachedMpcSources: Array<[number, boolean]> | null = null;
 
 /**
  * Queries the MPCFill backend API to search for community alter arts for a card name.
- * Uses Vite proxy in development or direct endpoint if accessible.
+ * Uses Vite proxy (/api-mpcfill) in development / local preview.
  */
-export async function searchMpcFillAlters(cardName: string): Promise<CardPrint[]> {
+export async function searchMpcFillAlters(
+  cardName: string,
+  options?: MpcSearchOptions
+): Promise<MpcCardPrint[]> {
   try {
+    const minDpi = options?.minDpi ?? 200;
+    const maxDpi = options?.maxDpi ?? 2400;
+
     const cleanQuery = cardName
+      .split('//')[0]
       .toLowerCase()
-      .replace(/[~`!@#$%^&*(){}\[\];:"'’<,.>?/\\|_+=]/g, '')
+      .replace(/[~`!@#$%^&*(){}\[\];:"'’<,.>?/\\|_+=]/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim();
 
     if (!cleanQuery) return [];
 
-    // Base URL: Vite dev server proxy or direct
-    const isDev = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    // Base URL: in dev / local server use Vite proxy route, or direct if hosted on same domain
+    const isDev =
+      Boolean((import.meta as any).env?.DEV) ||
+      (typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' ||
+          window.location.hostname === '127.0.0.1' ||
+          window.location.hostname.startsWith('192.168.') ||
+          window.location.hostname.startsWith('10.') ||
+          Boolean(window.location.port)));
     const baseUrl = isDev ? '/api-mpcfill' : 'https://mpcfill.com';
 
     // 1. Get sources if not cached
     if (!cachedMpcSources) {
       try {
         const sourcesRes = await fetch(`${baseUrl}/2/sources/`);
+        const contentType = sourcesRes.headers.get('content-type') || '';
+        if (contentType.includes('text/html')) {
+          throw new Error('VITE_PROXY_NOT_ACTIVE');
+        }
         if (sourcesRes.ok) {
           const sourcesData = await sourcesRes.json();
           if (sourcesData && sourcesData.results) {
             cachedMpcSources = Object.values(sourcesData.results).map((s: any) => [s.pk, true]);
           }
         }
-      } catch {
-        // Fallback to minimal array if sources fetch fails
+      } catch (err: any) {
+        if (err?.message === 'VITE_PROXY_NOT_ACTIVE') {
+          throw err;
+        }
+        // Fallback to synthetic sources array
         cachedMpcSources = Array.from({ length: 300 }, (_, i) => [i + 1, true]);
       }
     }
@@ -485,9 +519,9 @@ export async function searchMpcFillAlters(cardName: string): Promise<CardPrint[]
           excludesTags: [],
           includesTags: [],
           languages: ['en'],
-          maximumDPI: 1200,
+          maximumDPI: maxDpi,
           maximumSize: 50,
-          minimumDPI: 0,
+          minimumDPI: minDpi,
         },
         searchTypeSettings: { filterCardbacks: false, fuzzySearch: true },
         sourceSettings: { sources: cachedMpcSources || [] },
@@ -502,50 +536,81 @@ export async function searchMpcFillAlters(cardName: string): Promise<CardPrint[]
       body: JSON.stringify(searchBody),
     });
 
+    const contentType = searchRes.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      throw new Error('VITE_PROXY_NOT_ACTIVE');
+    }
+
     if (!searchRes.ok) return [];
 
     const searchData = await searchRes.json();
     const ids: string[] = searchData?.results?.[cleanQuery]?.CARD || [];
     if (!ids || ids.length === 0) return [];
 
-    // 3. Query card metadata for top 24 results
-    const topIds = ids.slice(0, 24);
-    let cardsMetaMap: Record<string, any> = {};
+    // 3. Query card metadata for all matching alter IDs (chunked if very large)
+    const chunkSize = 150;
+    const cardsMetaMap: Record<string, any> = {};
 
-    try {
-      const metaRes = await fetch(`${baseUrl}/2/cards/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ cardIdentifiers: topIds }),
-      });
-      if (metaRes.ok) {
-        const metaData = await metaRes.json();
-        cardsMetaMap = metaData?.results || {};
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      try {
+        const metaRes = await fetch(`${baseUrl}/2/cards/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ cardIdentifiers: chunk }),
+        });
+        if (metaRes.ok) {
+          const metaData = await metaRes.json();
+          if (metaData?.results) {
+            Object.assign(cardsMetaMap, metaData.results);
+          }
+        }
+      } catch (e) {
+        console.warn('Erro ao carregar metadados do lote MPCFill:', e);
       }
-    } catch {
-      // Ignore metadata error and use IDs directly
     }
 
     // 4. Transform into CardPrint
-    const prints: CardPrint[] = topIds.map((id, index) => {
+    const prints: MpcCardPrint[] = ids.map((id, index) => {
       const meta = cardsMetaMap[id];
       const imageUrl = `https://lh3.googleusercontent.com/d/${id}`;
+      const dpiNum = meta?.dpi ? Number(meta.dpi) : undefined;
       return {
         id: `mpc-alter-${id}`,
         setCode: 'MPC',
         setName: meta?.name || `MPCFill Alter #${index + 1}`,
-        collectorNumber: meta?.dpi ? `${meta.dpi} DPI` : '★',
+        collectorNumber: dpiNum ? `${dpiNum} DPI` : '★',
         artist: meta?.sourceName || meta?.source || 'Comunidade MPCFill',
         imageUrl,
         imageUrlLarge: imageUrl,
         imageUrlArtCrop: imageUrl,
+        releasedAt: meta?.dateCreated || undefined,
+        dpi: dpiNum,
+        sourceName: meta?.sourceName || meta?.source || 'Comunidade MPCFill',
+        tags: meta?.tags || [],
+        dateCreated: meta?.dateCreated,
       };
     });
 
-    return prints;
-  } catch (err) {
+    // Filter by minDpi if specified
+    const filteredPrints = prints.filter((p) => {
+      if (p.dpi !== undefined) {
+        return p.dpi >= minDpi;
+      }
+      return true;
+    });
+
+    // Default sort by highest DPI first
+    filteredPrints.sort((a, b) => (b.dpi || 0) - (a.dpi || 0));
+
+    return filteredPrints;
+  } catch (err: any) {
+    if (err?.message === 'VITE_PROXY_NOT_ACTIVE') {
+      console.warn('Vite proxy não ativo. Reinicie o servidor Vite para carregar o proxy MPCFill.');
+      throw err;
+    }
     console.warn('Erro ao consultar MPCFill API:', err);
     return [];
   }

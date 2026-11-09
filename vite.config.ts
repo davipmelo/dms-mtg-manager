@@ -1,6 +1,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+const mpcProxy = {
+  '/api-mpcfill': {
+    target: 'https://mpcfill.com',
+    changeOrigin: true,
+    rewrite: (path: string) => path.replace(/^\/api-mpcfill/, ''),
+    headers: {
+      Referer: 'https://mpcfill.com/editor',
+      Origin: 'https://mpcfill.com',
+    },
+  },
+};
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -8,17 +20,11 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false,
-    proxy: {
-      '/api-mpcfill': {
-        target: 'https://mpcfill.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api-mpcfill/, ''),
-        headers: {
-          Referer: 'https://mpcfill.com/editor',
-          Origin: 'https://mpcfill.com',
-        },
-      },
-    },
+    proxy: mpcProxy,
+  },
+  preview: {
+    port: 5173,
+    proxy: mpcProxy,
   },
   build: {
     rollupOptions: {
