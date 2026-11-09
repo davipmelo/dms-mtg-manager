@@ -430,6 +430,12 @@ export function getFriendlyErrorMessage(err: any): string {
   if (code === 'auth/network-request-failed') {
     return 'Falha de conexão com a internet. Verifique sua rede.';
   }
+  if (code === 'auth/configuration-not-found') {
+    return 'O provedor de E-mail/Senha ainda não foi ativado no Firebase Console. Vá em Authentication > Sign-in method e ative "E-mail/senha".';
+  }
+  if (code === 'auth/unauthorized-domain') {
+    return 'Domínio não autorizado. Adicione seu domínio em Firebase Console > Authentication > Settings > Authorized domains.';
+  }
   if (code === 'permission-denied') {
     return 'Acesso não autorizado aos dados na nuvem.';
   }
