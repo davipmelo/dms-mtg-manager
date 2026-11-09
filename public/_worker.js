@@ -56,3 +56,4 @@ export default {
     return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Not found', { status: 404 });
   },
 };
+
