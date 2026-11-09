@@ -9,6 +9,7 @@ import {
   extractAltersFromXmlForCard,
   extractGoogleDriveId,
 } from '../../services/mpcFillService';
+import { compressImageFile } from '../../services/imageUtils';
 import { CardImage } from '../Common/CardImage';
 import {
   X,
@@ -67,6 +68,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   const [customTitle, setCustomTitle] = useState<string>('');
   const [customArtist, setCustomArtist] = useState<string>('');
   const [customUrlInput, setCustomUrlInput] = useState<string>('');
+  const [isCompressingCustomImage, setIsCompressingCustomImage] = useState<boolean>(false);
   const customFileInputRef = useRef<HTMLInputElement>(null);
 
   // Active print highlight
@@ -271,19 +273,34 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   };
 
   // Handle local image file upload in Custom Art tab
-  const handleCustomImageFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCustomImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      setCustomImageUrl(dataUrl);
+    setIsCompressingCustomImage(true);
+    try {
+      // Compress and resize image so it remains lightweight (~40-60KB) for Cloud Firestore sync
+      const compressedDataUrl = await compressImageFile(file, 800, 1120, 0.82);
+      setCustomImageUrl(compressedDataUrl);
       if (!customTitle && card) {
         setCustomTitle(file.name.replace(/\.[^/.]+$/, ''));
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err: any) {
+      console.error('Falha ao otimizar imagem local:', err);
+      // Fallback to uncompressed read if canvas is unsupported
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        setCustomImageUrl(dataUrl);
+        if (!customTitle && card) {
+          setCustomTitle(file.name.replace(/\.[^/.]+$/, ''));
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setIsCompressingCustomImage(false);
+      if (customFileInputRef.current) customFileInputRef.current.value = '';
+    }
   };
 
   // Handle custom URL input confirmation
@@ -1225,15 +1242,29 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       transition: 'all 0.2s ease',
                     }}
                   >
-                    <Upload size={32} className="text-emerald-400" />
-                    <div>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f8fafc' }}>
-                        Clique para escolher a imagem
-                      </span>
-                      <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '4px 0 0' }}>
-                        Suporta PNG, JPG, JPEG ou WEBP (alta resolução recomendada)
-                      </p>
-                    </div>
+                    {isCompressingCustomImage ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                        <Loader2 size={32} className="animate-spin text-amber-400" />
+                        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f8fafc' }}>
+                          Otimizando imagem para nuvem...
+                        </span>
+                        <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>
+                          Compactando com alta resolução para sincronização instantânea
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload size={32} className="text-emerald-400" />
+                        <div>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f8fafc' }}>
+                            Clique para escolher a imagem
+                          </span>
+                          <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '4px 0 0' }}>
+                            Suporta PNG, JPG, JPEG ou WEBP (otimização e sincronização automática)
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 

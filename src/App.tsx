@@ -470,13 +470,26 @@ export function App() {
 
   // Update Collection Quantity
   const handleUpdateCollectionQuantity = (itemId: string, newQty: number) => {
-    if (newQty <= 0) {
-      updateCollectionState(rawCollection.filter((i) => i.id !== itemId));
-    } else {
-      updateCollectionState(
-        rawCollection.map((i) => (i.id === itemId ? { ...i, quantity: newQty } : i))
-      );
-    }
+    setRawCollection((prev) => {
+      let next: CollectionItem[];
+      if (newQty <= 0) {
+        next = prev.filter((i) => i.id !== itemId);
+      } else {
+        next = prev.map((i) => (i.id === itemId ? { ...i, quantity: newQty } : i));
+      }
+      saveCollection(next);
+      return next;
+    });
+  };
+
+  // Batch Remove Collection Items
+  const handleRemoveCollectionItems = (itemIds: string[]) => {
+    const idSet = new Set(itemIds);
+    setRawCollection((prev) => {
+      const next = prev.filter((i) => !idSet.has(i.id));
+      saveCollection(next);
+      return next;
+    });
   };
 
   // Create Deck Handler
@@ -1208,6 +1221,7 @@ export function App() {
             }}
             onAddToProxies={handleAddCardToProxies}
             onRemoveItem={(id) => handleUpdateCollectionQuantity(id, 0)}
+            onRemoveItems={handleRemoveCollectionItems}
             onOpenImportModal={() => {
               setImportExportMode('import');
               setImportExportDeckId('collection');

@@ -17,7 +17,8 @@ import {
   setDoc,
   Firestore,
 } from 'firebase/firestore';
-import { UserProfile, CloudUserData, CollectionItem, Deck, ProxyItem } from '../types';
+import { UserProfile, CloudUserData, CollectionItem, Deck, ProxyItem, Card } from '../types';
+import { compressDataUrlIfNeeded } from './imageUtils';
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -345,6 +346,72 @@ export function subscribeToAuth(callback: AuthCallback): () => void {
    CLOUD SYNC API (Firestore per-user sync)
    ================================================================================= */
 
+async function optimizeCardImages<T extends Card>(card: T): Promise<T> {
+  if (!card) return card;
+  const isImageLarge = (url?: string) => Boolean(url && url.startsWith('data:image/') && url.length > 150000);
+  if (!isImageLarge(card.imageUrl) && !isImageLarge(card.imageUrlLarge) && !isImageLarge(card.imageUrlArtCrop)) {
+    return card;
+  }
+
+  const optimizedUrl = await compressDataUrlIfNeeded(card.imageUrl);
+  const optimizedLarge =
+    card.imageUrlLarge === card.imageUrl ? optimizedUrl : await compressDataUrlIfNeeded(card.imageUrlLarge);
+  const optimizedCrop =
+    card.imageUrlArtCrop === card.imageUrl ? optimizedUrl : await compressDataUrlIfNeeded(card.imageUrlArtCrop);
+
+  return {
+    ...card,
+    imageUrl: optimizedUrl || card.imageUrl,
+    imageUrlLarge: optimizedLarge || card.imageUrlLarge,
+    imageUrlArtCrop: optimizedCrop || card.imageUrlArtCrop,
+  };
+}
+
+async function optimizeCollectionImages(items: CollectionItem[]): Promise<CollectionItem[]> {
+  if (!items || items.length === 0) return items;
+  return Promise.all(
+    items.map(async (item) => ({
+      ...item,
+      card: await optimizeCardImages(item.card),
+    }))
+  );
+}
+
+async function optimizeDecksImages(decks: Deck[]): Promise<Deck[]> {
+  if (!decks || decks.length === 0) return decks;
+  return Promise.all(
+    decks.map(async (deck) => {
+      const optimizedCards = await Promise.all(
+        deck.cards.map(async (dc) => ({
+          ...dc,
+          card: await optimizeCardImages(dc.card),
+        }))
+      );
+      const optimizedCover = await compressDataUrlIfNeeded(deck.coverImageUrl);
+      const optimizedCommander = deck.commanderCard ? await optimizeCardImages(deck.commanderCard) : deck.commanderCard;
+      const optimizedPartner = deck.partnerCard ? await optimizeCardImages(deck.partnerCard) : deck.partnerCard;
+
+      return {
+        ...deck,
+        cards: optimizedCards,
+        coverImageUrl: optimizedCover,
+        commanderCard: optimizedCommander,
+        partnerCard: optimizedPartner,
+      };
+    })
+  );
+}
+
+async function optimizeProxiesImages(proxies: ProxyItem[]): Promise<ProxyItem[]> {
+  if (!proxies || proxies.length === 0) return proxies;
+  return Promise.all(
+    proxies.map(async (proxy) => ({
+      ...proxy,
+      card: await optimizeCardImages(proxy.card as Card),
+    }))
+  );
+}
+
 export async function saveUserCloudData(
   uid: string,
   data: {
@@ -355,18 +422,26 @@ export async function saveUserCloudData(
 ): Promise<void> {
   const instances = getFirebaseInstances();
 
+  // Compress oversized user-uploaded base64 images so they stay safely under Firestore's 1MB limit
+  const collection = await optimizeCollectionImages(data.collection);
+  const decks = await optimizeDecksImages(data.decks);
+  const proxies = await optimizeProxiesImages(data.proxies);
+
   const payload: CloudUserData = {
     app: 'dms-mtg-manager',
     schemaVersion: 1,
     updatedAt: new Date().toISOString(),
-    collection: data.collection,
-    decks: data.decks,
-    proxies: data.proxies,
+    collection,
+    decks,
+    proxies,
   };
+
+  // Strip all undefined properties recursively (Firestore setDoc rejects any undefined values)
+  const sanitizedPayload = JSON.parse(JSON.stringify(payload));
 
   if (instances) {
     const userDocRef = doc(instances.db, 'userData', uid);
-    await setDoc(userDocRef, payload);
+    await setDoc(userDocRef, sanitizedPayload);
     return;
   }
 
@@ -374,7 +449,7 @@ export async function saveUserCloudData(
   try {
     const rawAll = localStorage.getItem(STORAGE_KEY_SIMULATED_CLOUD_DATA);
     const all = rawAll ? JSON.parse(rawAll) : {};
-    all[uid] = payload;
+    all[uid] = sanitizedPayload;
     localStorage.setItem(STORAGE_KEY_SIMULATED_CLOUD_DATA, JSON.stringify(all));
   } catch (err) {
     console.error('Erro ao salvar dados na simulação de nuvem:', err);
@@ -438,6 +513,12 @@ export function getFriendlyErrorMessage(err: any): string {
   }
   if (code === 'permission-denied') {
     return 'Acesso não autorizado aos dados na nuvem.';
+  }
+  if (message.includes('exceeds the maximum allowed size') || message.includes('maximum allowed size')) {
+    return 'Os dados ultrapassam o limite de tamanho do Firestore (1MB). A compressão automática foi aplicada para imagens.';
+  }
+  if (message.includes('Unsupported field value: undefined')) {
+    return 'Erro de formatação de dados para a nuvem. Tentando sincronizar com sanitização automática...';
   }
 
   return message || 'Ocorreu um erro ao processar sua solicitação.';

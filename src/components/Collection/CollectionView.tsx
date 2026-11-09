@@ -33,6 +33,7 @@ interface CollectionViewProps {
   onOpenArtSelector: (card: Card, collectionItemId: string) => void;
   onAddToProxies: (card: Card, qty: number) => void;
   onRemoveItem: (id: string) => void;
+  onRemoveItems?: (itemIds: string[]) => void;
   onOpenImportModal: () => void;
 }
 
@@ -45,6 +46,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
   onOpenArtSelector,
   onAddToProxies,
   onRemoveItem,
+  onRemoveItems,
   onOpenImportModal,
 }) => {
   // View mode: Grid is now primary, persisted across sessions
@@ -274,9 +276,14 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
         } da coleção?`
       )
     ) {
-      selectedItemIds.forEach((id) => {
-        onRemoveItem(id);
-      });
+      const ids = Array.from(selectedItemIds);
+      if (onRemoveItems) {
+        onRemoveItems(ids);
+      } else {
+        ids.forEach((id) => {
+          onRemoveItem(id);
+        });
+      }
       setSelectedItemIds(new Set());
     }
   };
