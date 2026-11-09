@@ -866,19 +866,15 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         position: 'absolute',
                         top: '8px',
                         left: '8px',
-                        background: 'linear-gradient(135deg, rgba(255,187,0,0.9), rgba(217,119,6,0.9))',
-                        borderRadius: '6px',
-                        padding: '2px 6px',
-                        fontSize: '0.7rem',
-                        fontWeight: 800,
-                        color: '#000',
+                        background: 'rgba(0,0,0,0.7)',
+                        borderRadius: '50%',
+                        padding: '4px',
+                        color: '#facc15',
                         display: 'flex',
-                        alignItems: 'center',
-                        gap: '3px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                       }}
+                      title="Carta Foil"
                     >
-                      <Sparkles size={11} /> FOIL
+                      <Sparkles size={14} />
                     </div>
                   )}
 
@@ -1731,25 +1727,22 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         preferLarge
                         className="card-image"
                       />
+                      {/* Foil Star Badge */}
                       {isFoil && (
                         <div
                           style={{
                             position: 'absolute',
                             top: '8px',
                             left: '8px',
-                            background: 'linear-gradient(135deg, rgba(255,187,0,0.9), rgba(217,119,6,0.9))',
-                            borderRadius: '6px',
-                            padding: '2px 6px',
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
-                            color: '#000',
+                            background: 'rgba(0,0,0,0.7)',
+                            borderRadius: '50%',
+                            padding: '4px',
+                            color: '#facc15',
                             display: 'flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                           }}
+                          title="Carta Foil"
                         >
-                          <Sparkles size={11} /> FOIL
+                          <Sparkles size={14} />
                         </div>
                       )}
                       <div

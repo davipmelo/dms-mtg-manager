@@ -47,7 +47,7 @@ import { EditDeckModal } from './components/Modals/EditDeckModal';
 import { MtgLogo } from './components/Common/MtgLogo';
 import { AuthModal } from './components/Auth/AuthModal';
 import { UserMenu } from './components/Auth/UserMenu';
-import { SyncConflictModal } from './components/Auth/SyncConflictModal';
+import { useModalOverlay } from './hooks/useModalOverlay';
 
 import {
   FolderArchive,
@@ -99,8 +99,15 @@ export function App() {
   const [authModalInitialTab, setAuthModalInitialTab] = useState<
     'login' | 'register' | 'forgot'
   >('login');
-  const [pendingCloudData, setPendingCloudData] = useState<CloudUserData | null>(null);
-  const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
+  // Proxy Deck Transfer Progress
+  const [proxyDeckProgress, setProxyDeckProgress] = useState<{
+    current: number;
+    total: number;
+    cardName: string;
+    deckName: string;
+  } | null>(null);
+
+  useModalOverlay(!!proxyDeckProgress, () => {});
 
   // Sync References
   const rawCollectionRef = useRef(rawCollection);
@@ -178,35 +185,12 @@ export function App() {
           return;
         }
 
-        const curCol = rawCollectionRef.current;
-        const curDks = decksRef.current;
-        const curPrx = proxiesRef.current;
-        const hasLocalCustomData =
-          curCol.length > 0 || curDks.length > 0 || curPrx.length > 0;
-
-        if (!hasLocalCustomData) {
-          // Local device is empty: download from cloud
-          updateCollectionState(cloudData.collection || []);
-          updateDecksState(cloudData.decks || []);
-          updateProxiesState(cloudData.proxies || []);
-          setSyncStatus('synced');
-          setLastSyncedAt(new Date(cloudData.updatedAt || Date.now()));
-        } else {
-          // Compare cloud and local
-          const isIdentical =
-            JSON.stringify(cloudData.decks) === JSON.stringify(curDks) &&
-            JSON.stringify(cloudData.collection) === JSON.stringify(curCol);
-
-          if (isIdentical) {
-            setSyncStatus('synced');
-            setLastSyncedAt(new Date(cloudData.updatedAt || Date.now()));
-          } else {
-            // Prompt conflict modal
-            setPendingCloudData(cloudData);
-            setIsConflictModalOpen(true);
-            setSyncStatus('synced');
-          }
-        }
+        // When user is logged in: Cloud is the single source of truth!
+        updateCollectionState(cloudData.collection || []);
+        updateDecksState(cloudData.decks || []);
+        updateProxiesState(cloudData.proxies || []);
+        setSyncStatus('synced');
+        setLastSyncedAt(new Date(cloudData.updatedAt || Date.now()));
       } catch (err) {
         console.error('Erro ao verificar dados na nuvem:', err);
         setSyncStatus('offline');
@@ -277,70 +261,6 @@ export function App() {
       setSyncStatus('idle');
     } catch (err) {
       console.error('Erro ao sair da conta:', err);
-    }
-  };
-
-  // Sync Conflict Resolution Handlers
-  const handleConflictMerge = () => {
-    if (!pendingCloudData) return;
-    handleRestoreSystemBackup(
-      {
-        app: 'dms-mtg-manager',
-        schemaVersion: pendingCloudData.schemaVersion || 1,
-        exportedAt: pendingCloudData.updatedAt || new Date().toISOString(),
-        collection: pendingCloudData.collection,
-        decks: pendingCloudData.decks,
-        proxies: pendingCloudData.proxies,
-      },
-      'merge'
-    );
-    setIsConflictModalOpen(false);
-    setPendingCloudData(null);
-    if (currentUser) {
-      setTimeout(() => {
-        saveUserCloudData(currentUser.uid, {
-          collection: rawCollectionRef.current,
-          decks: decksRef.current,
-          proxies: proxiesRef.current,
-        })
-          .then(() => {
-            setSyncStatus('synced');
-            setLastSyncedAt(new Date());
-          })
-          .catch((err) => console.error(err));
-      }, 100);
-    }
-  };
-
-  const handleConflictUseCloud = () => {
-    if (!pendingCloudData) return;
-    updateCollectionState(pendingCloudData.collection || []);
-    updateDecksState(pendingCloudData.decks || []);
-    updateProxiesState(pendingCloudData.proxies || []);
-    setIsConflictModalOpen(false);
-    setPendingCloudData(null);
-    setSyncStatus('synced');
-    setLastSyncedAt(new Date(pendingCloudData.updatedAt || Date.now()));
-  };
-
-  const handleConflictUseLocal = () => {
-    setIsConflictModalOpen(false);
-    setPendingCloudData(null);
-    if (currentUser) {
-      setSyncStatus('syncing');
-      saveUserCloudData(currentUser.uid, {
-        collection: rawCollectionRef.current,
-        decks: decksRef.current,
-        proxies: proxiesRef.current,
-      })
-        .then(() => {
-          setSyncStatus('synced');
-          setLastSyncedAt(new Date());
-        })
-        .catch((err) => {
-          console.error(err);
-          setSyncStatus('offline');
-        });
     }
   };
 
@@ -951,11 +871,35 @@ export function App() {
     // Combined deck entries: Commander(s) first, then remaining cards alphabetically
     const sortedDeckEntries = [...commanderCards, ...otherCards];
 
+    let shouldReplace = false;
+    if (proxies.length > 0) {
+      shouldReplace = window.confirm(
+        `Sua fila de proxies já possui ${proxies.reduce((s, p) => s + p.quantity, 0)} carta(s).\n\nDeseja SUBSTITUIR a fila atual pelo deck completo "${deck.name}" para que o Comandante fique exatamente em 1º lugar na página 1?\n\n[OK = Substituir e colocar Comandante em 1º lugar]\n[Cancelar = Adicionar cartas ao final da fila atual]`
+      );
+    }
+
+    setProxyDeckProgress({
+      current: 0,
+      total: sortedDeckEntries.length,
+      cardName: 'Iniciando preparação do deck...',
+      deckName: deck.name,
+    });
+
     // Expand double-faced cards (DFCs and Meld) into Front face first, immediately followed by Back face
     const deckProxyItems: ProxyItem[] = [];
 
     for (let idx = 0; idx < sortedDeckEntries.length; idx++) {
       const entry = sortedDeckEntries[idx];
+      setProxyDeckProgress({
+        current: idx + 1,
+        total: sortedDeckEntries.length,
+        cardName: entry.card.name,
+        deckName: deck.name,
+      });
+
+      // Small delay to allow UI to repaint progress
+      await new Promise((r) => setTimeout(r, 6));
+
       let faces = entry.card.cardFaces;
 
       // If faces not yet cached, resolve faces (supports DFCs, meld, battles, etc.)
@@ -1014,19 +958,13 @@ export function App() {
       }
     }
 
-    if (proxies.length > 0) {
-      const shouldReplace = window.confirm(
-        `Sua fila de proxies já possui ${proxies.reduce((s, p) => s + p.quantity, 0)} carta(s).\n\nDeseja SUBSTITUIR a fila atual pelo deck completo "${deck.name}" para que o Comandante fique exatamente em 1º lugar na página 1?\n\n[OK = Substituir e colocar Comandante em 1º lugar]\n[Cancelar = Adicionar cartas ao final da fila atual]`
-      );
-      if (shouldReplace) {
-        updateProxiesState(deckProxyItems);
-      } else {
-        updateProxiesState([...proxies, ...deckProxyItems]);
-      }
-    } else {
+    if (shouldReplace) {
       updateProxiesState(deckProxyItems);
+    } else {
+      updateProxiesState([...proxies, ...deckProxyItems]);
     }
 
+    setProxyDeckProgress(null);
     setActiveTab('proxies');
   };
 
@@ -1481,20 +1419,112 @@ export function App() {
         }}
       />
 
-      {/* Sync Conflict Resolution Modal */}
-      {pendingCloudData && (
-        <SyncConflictModal
-          isOpen={isConflictModalOpen}
-          cloudData={pendingCloudData}
-          localData={{
-            collection: rawCollection,
-            decks,
-            proxies,
+      {/* Proxy Deck Sending Progress Modal */}
+      {proxyDeckProgress && (
+        <div
+          className="modal-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '20px',
           }}
-          onMerge={handleConflictMerge}
-          onUseCloud={handleConflictUseCloud}
-          onUseLocal={handleConflictUseLocal}
-        />
+        >
+          <div
+            className="glass-panel"
+            style={{
+              width: '460px',
+              maxWidth: '92vw',
+              padding: '28px 24px',
+              background: '#0c0f17',
+              borderRadius: '16px',
+              border: '1px solid rgba(255, 187, 0, 0.45)',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.9), 0 0 35px rgba(255, 187, 0, 0.2)',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+          >
+            <div
+              style={{
+                width: '54px',
+                height: '54px',
+                borderRadius: '50%',
+                background: 'rgba(255, 187, 0, 0.15)',
+                border: '1px solid rgba(255, 187, 0, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto',
+                color: '#ffbb00',
+              }}
+            >
+              <Printer size={26} className="animate-pulse" />
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                Enviando Deck para Impressão
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '6px 0 0' }}>
+                Preparando cartas do deck <strong>{proxyDeckProgress.deckName}</strong>
+              </p>
+            </div>
+
+            {/* Progress Bar */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div
+                style={{
+                  width: '100%',
+                  height: '10px',
+                  background: 'rgba(255,255,255,0.08)',
+                  borderRadius: '6px',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    width: `${Math.round((proxyDeckProgress.current / Math.max(1, proxyDeckProgress.total)) * 100)}%`,
+                    height: '100%',
+                    background: 'linear-gradient(90deg, #ffbb00, #f59e0b)',
+                    transition: 'width 0.15s ease',
+                    borderRadius: '6px',
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#cbd5e1' }}>
+                <span>
+                  {proxyDeckProgress.current} de {proxyDeckProgress.total} cartas
+                </span>
+                <span style={{ fontWeight: 700, color: '#ffbb00' }}>
+                  {Math.round((proxyDeckProgress.current / Math.max(1, proxyDeckProgress.total)) * 100)}%
+                </span>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                fontSize: '0.82rem',
+                color: '#94a3b8',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {proxyDeckProgress.cardName}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

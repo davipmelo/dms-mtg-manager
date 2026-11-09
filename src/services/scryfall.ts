@@ -561,6 +561,19 @@ export async function resolveCardFaces(card: Card | TokenCard): Promise<CardFace
     return null;
   }
 
+  // If card has a known single-faced layout and no meld/split indicators, skip network
+  if (
+    card.layout &&
+    !['transform', 'modal_dfc', 'meld', 'battle', 'reversible_card', 'double_faced_token', 'flip', 'split'].includes(
+      card.layout
+    ) &&
+    !card.name.includes(' // ') &&
+    !MELD_PAIRS_MAP[normalizedName]
+  ) {
+    singleFacedCache.add(normalizedName);
+    return null;
+  }
+
   // 3. Query Scryfall to resolve potential DFC (transform, modal_dfc, battle, meld, reversible)
   try {
     let resolved: Card | null = null;
