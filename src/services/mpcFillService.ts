@@ -455,6 +455,21 @@ export interface MpcCardPrint extends CardPrint {
 
 export const CLOUDFLARE_MPC_PROXY = 'https://mpcfill-proxy.anancinho.workers.dev';
 
+export function getProxyBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const envUrl = (import.meta as any).env?.VITE_MPC_PROXY_URL;
+    if (envUrl) return envUrl;
+
+    const isLocalhost =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1';
+    if (isLocalhost) {
+      return '/api-mpcfill';
+    }
+  }
+  return CLOUDFLARE_MPC_PROXY;
+}
+
 // Memory cache for MPCFill sources
 let cachedMpcSources: Array<[number, boolean]> | null = null;
 
@@ -480,9 +495,9 @@ export async function searchMpcFillAlters(
 
     if (!cleanQuery) return [];
 
-    // Base URL: Use configured Cloudflare Worker proxy (CORS-enabled for davimelo.com and localhost)
-    const baseUrl =
-      (import.meta as any).env?.VITE_MPC_PROXY_URL || CLOUDFLARE_MPC_PROXY;
+    // Base URL: Use configured Cloudflare Worker proxy (CORS-enabled for davimelo.com)
+    // or local Vite proxy (/api-mpcfill) when running in local development
+    const baseUrl = getProxyBaseUrl();
 
     // 1. Get sources if not cached
     if (!cachedMpcSources) {
@@ -603,8 +618,8 @@ export async function searchMpcFillAlters(
 
     return filteredPrints;
   } catch (err: any) {
-    if (err?.message === 'VITE_PROXY_NOT_ACTIVE') {
-      console.warn('Vite proxy não ativo. Reinicie o servidor Vite para carregar o proxy MPCFill.');
+    if (err?.message === 'PROXY_RETURNED_HTML' || err?.message === 'VITE_PROXY_NOT_ACTIVE') {
+      console.warn('Proxy MPCFill retornou HTML ou não está ativo.');
       throw err;
     }
     console.warn('Erro ao consultar MPCFill API:', err);
