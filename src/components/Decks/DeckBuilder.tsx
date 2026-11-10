@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Deck, DeckCard, ViewMode, Card, CollectionItem, isDoubleFacedCard } from '../../types';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Deck, DeckCard, ViewMode, Card, CollectionItem, CardCategory, isDoubleFacedCard } from '../../types';
 import { resolveCardFaces } from '../../services/scryfall';
+import { normalizeDeck } from '../../services/storage';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
 import { InteractiveCharts } from '../Analytics/InteractiveCharts';
@@ -39,7 +40,13 @@ interface DeckBuilderProps {
   collection?: CollectionItem[];
   onBack: () => void;
   onUpdateDeck: (updated: Deck) => void;
-  onOpenArtSelector: (card: Card, cardIndex: number, face?: 'front' | 'back') => void;
+  onOpenArtSelector: (
+    card: Card,
+    cardIndex: number,
+    face?: 'front' | 'back',
+    instanceId?: string,
+    category?: CardCategory | 'commander' | 'partner'
+  ) => void;
   onAddToProxies?: (card: Card, quantity: number) => void;
   onSendDeckToProxies: (deck: Deck) => void;
   onOpenExportModal: (deckId: string) => void;
@@ -280,13 +287,57 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     );
   };
 
-  // Helper to find index of a card copy in deck.cards
+  // Auto-normalize deck on mount/update if any card lacks instanceId or has qty > 1
+  useEffect(() => {
+    const needsNorm = (deck.cards || []).some(
+      (c) => !c.instanceId || (c.quantity && c.quantity > 1)
+    );
+    if (needsNorm) {
+      onUpdateDeck(normalizeDeck(deck));
+    }
+  }, [deck, onUpdateDeck]);
+
+  // Helper to find index of a card copy in deck.cards with multi-tier fallback
   const findDeckCardIndex = useCallback(
     (c: DeckCard): number => {
-      const idx = deck.cards.findIndex(
-        (item) => item === c || (item.instanceId && c.instanceId && item.instanceId === c.instanceId)
+      // 1. Direct object equality or exact instanceId match
+      let idx = deck.cards.findIndex(
+        (item) => item === c || (Boolean(item.instanceId) && Boolean(c.instanceId) && item.instanceId === c.instanceId)
       );
       if (idx !== -1) return idx;
+
+      // 2. Base instanceId match (if c.instanceId was appended with '-0', '-1')
+      if (c.instanceId) {
+        const baseId = c.instanceId.replace(/-\d+$/, '');
+        idx = deck.cards.findIndex((item) => item.instanceId === baseId);
+        if (idx !== -1) return idx;
+      }
+
+      // 3. Match by card id and category
+      idx = deck.cards.findIndex(
+        (item) => item.card.id === c.card.id && item.category === c.category
+      );
+      if (idx !== -1) return idx;
+
+      // 4. Match by card name and category
+      idx = deck.cards.findIndex(
+        (item) =>
+          item.card.name.toLowerCase() === c.card.name.toLowerCase() &&
+          item.category === c.category
+      );
+      if (idx !== -1) return idx;
+
+      // 5. Match by card id anywhere in deck
+      idx = deck.cards.findIndex((item) => item.card.id === c.card.id);
+      if (idx !== -1) return idx;
+
+      // 6. Match by card name anywhere in deck
+      idx = deck.cards.findIndex(
+        (item) => item.card.name.toLowerCase() === c.card.name.toLowerCase()
+      );
+      if (idx !== -1) return idx;
+
+      // 7. Fallback indexOf
       return deck.cards.indexOf(c);
     },
     [deck.cards]
@@ -1026,7 +1077,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           setHoveredPreview(null);
-                          onOpenArtSelector(c.card, findDeckCardIndex(c), isFlipped ? 'back' : 'front');
+                          onOpenArtSelector(c.card, findDeckCardIndex(c), isFlipped ? 'back' : 'front', c.instanceId, c.category);
                         }}
                         title={isFlipped ? 'Trocar Arte do Verso' : 'Trocar Arte / Edição'}
                       >
@@ -1181,7 +1232,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       <button
                         className="btn btn-ghost btn-icon"
                         style={{ padding: '5px' }}
-                        onClick={() => onOpenArtSelector(c.card, findDeckCardIndex(c), isFlipped ? 'back' : 'front')}
+                        onClick={() => onOpenArtSelector(c.card, findDeckCardIndex(c), isFlipped ? 'back' : 'front', c.instanceId, c.category)}
                         title={isFlipped ? 'Trocar Arte do Verso' : 'Trocar Arte / Edição'}
                       >
                         <ImageIcon size={15} />
@@ -1631,7 +1682,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         <button
                           className="btn btn-ghost btn-icon"
                           style={{ padding: '4px' }}
-                          onClick={() => onOpenArtSelector(c.card, findDeckCardIndex(c))}
+                          onClick={() => onOpenArtSelector(c.card, findDeckCardIndex(c), undefined, c.instanceId, c.category)}
                           title="Trocar Arte"
                         >
                           <ImageIcon size={15} />
@@ -1827,7 +1878,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                             <button
                               className="btn btn-ghost btn-icon"
                               style={{ padding: '4px' }}
-                              onClick={() => onOpenArtSelector(c.card, findDeckCardIndex(c))}
+                              onClick={() => onOpenArtSelector(c.card, findDeckCardIndex(c), undefined, c.instanceId, c.category)}
                               title="Trocar Arte"
                             >
                               <ImageIcon size={15} />

@@ -249,6 +249,61 @@ export function saveCollection(collection: CollectionItem[]): void {
   }
 }
 
+export function normalizeDeck(deck: Deck): Deck {
+  if (!deck) return deck;
+  let commanderCard = deck.commanderCard;
+  if (commanderCard) {
+    const res = repairCardRecord(commanderCard);
+    if (res.repaired) {
+      commanderCard = res.card;
+    }
+  }
+
+  let partnerCard = deck.partnerCard;
+  if (partnerCard) {
+    const res = repairCardRecord(partnerCard);
+    if (res.repaired) {
+      partnerCard = res.card;
+    }
+  }
+
+  const seenInstanceIds = new Set<string>();
+  const unGroupedCards: DeckCard[] = [];
+
+  for (const dc of deck.cards || []) {
+    if (!dc || !dc.card || typeof dc.card.name !== 'string') continue;
+    const repaired = repairCardRecord(dc.card).card;
+    const qty = Math.max(1, Number(dc.quantity) || 1);
+    for (let q = 0; q < qty; q++) {
+      let instId = dc.instanceId && qty === 1 ? dc.instanceId : undefined;
+      if (!instId || seenInstanceIds.has(instId)) {
+        instId = `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${q}`;
+      }
+      seenInstanceIds.add(instId);
+      unGroupedCards.push({
+        ...dc,
+        card: { ...repaired },
+        quantity: 1,
+        category: dc.category || 'main',
+        instanceId: instId,
+      });
+    }
+  }
+
+  const hasBrokenCover = BROKEN_IMAGE_SNIPPETS.some((s) => deck.coverImageUrl?.includes(s));
+  const coverImageUrl = hasBrokenCover
+    ? commanderCard?.imageUrlArtCrop || unGroupedCards[0]?.card.imageUrlArtCrop
+    : deck.coverImageUrl || commanderCard?.imageUrlArtCrop;
+
+  return {
+    ...deck,
+    commanderCard,
+    partnerCard,
+    coverImageUrl,
+    cards: unGroupedCards,
+  };
+}
+
 export function getStoredDecks(): Deck[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.DECKS);
@@ -279,7 +334,7 @@ export function getStoredDecks(): Deck[] {
         }
       }
 
-      const nextCards = deck.cards.map((dc) => {
+      const nextCards = (deck.cards || []).map((dc) => {
         const res = repairCardRecord(dc.card);
         if (res.repaired) {
           deckRepaired = true;
@@ -288,20 +343,25 @@ export function getStoredDecks(): Deck[] {
         return dc;
       });
 
-      // Un-group cards in deck: each copy must be an individual 1x DeckCard
+      // Un-group cards in deck: each copy must be an individual 1x DeckCard with a unique instanceId
+      const seenInstanceIds = new Set<string>();
       const unGroupedCards: DeckCard[] = [];
       let hadGroupedCards = false;
       for (const dc of nextCards) {
         const qty = Math.max(1, Number(dc.quantity) || 1);
         if (qty > 1 || !dc.instanceId) hadGroupedCards = true;
         for (let q = 0; q < qty; q++) {
+          let instId = dc.instanceId && qty === 1 ? dc.instanceId : undefined;
+          if (!instId || seenInstanceIds.has(instId)) {
+            instId = `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}-${q}`;
+          }
+          seenInstanceIds.add(instId);
           unGroupedCards.push({
             ...dc,
             card: { ...dc.card },
             quantity: 1,
-            instanceId: dc.instanceId && qty === 1
-              ? dc.instanceId
-              : `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            category: dc.category || 'main',
+            instanceId: instId,
           });
         }
       }
@@ -487,33 +547,11 @@ export function parseSystemBackup(rawJson: string): SystemBackup {
   const normalizedDecks: Deck[] = parsed.decks
     .filter((deck: any) => deck && typeof deck.name === 'string' && Array.isArray(deck.cards))
     .map((deck: any, idx: number) => {
-      const commanderCard = deck.commanderCard ? repairCardRecord(deck.commanderCard).card : undefined;
-      const partnerCard = deck.partnerCard ? repairCardRecord(deck.partnerCard).card : undefined;
-      const cards: DeckCard[] = [];
-      for (const dc of (deck.cards || [])) {
-        if (!dc || !dc.card || typeof dc.card.name !== 'string') continue;
-        const repaired = repairCardRecord(dc.card).card;
-        const qty = Math.max(1, Number(dc.quantity) || 1);
-        for (let q = 0; q < qty; q++) {
-          cards.push({
-            ...dc,
-            card: { ...repaired },
-            quantity: 1,
-            category: dc.category || 'main',
-            instanceId: dc.instanceId && qty === 1
-              ? dc.instanceId
-              : `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          });
-        }
-      }
-
+      const normalized = normalizeDeck(deck);
       return {
-        ...deck,
+        ...normalized,
         id: deck.id || `deck-restored-${idx + 1}`,
         format: deck.format || 'commander',
-        commanderCard,
-        partnerCard,
-        cards,
         createdAt: deck.createdAt || new Date().toISOString(),
         updatedAt: deck.updatedAt || new Date().toISOString(),
       };

@@ -20,6 +20,7 @@ import {
   saveCollection,
   getStoredDecks,
   saveDecks,
+  normalizeDeck,
   getStoredProxies,
   saveProxies,
   calculateCollectionDeckUsage,
@@ -91,6 +92,10 @@ export function App() {
     deckCardIndex?: number;
     proxyItemId?: string;
     face?: 'front' | 'back';
+    targetCardId?: string;
+    targetCardName?: string;
+    targetInstanceId?: string;
+    targetCategory?: CardCategory | 'commander' | 'partner';
   }>({});
 
   // User Authentication & Cloud Sync
@@ -189,7 +194,7 @@ export function App() {
 
         // When user is logged in: Cloud is the single source of truth!
         updateCollectionState(cloudData.collection || []);
-        updateDecksState(cloudData.decks || []);
+        updateDecksState((cloudData.decks || []).map(normalizeDeck));
         updateProxiesState(cloudData.proxies || []);
         setSyncStatus('synced');
         setLastSyncedAt(new Date(cloudData.updatedAt || Date.now()));
@@ -270,7 +275,7 @@ export function App() {
   const handleRestoreSystemBackup = (backup: SystemBackup, mode: 'replace' | 'merge') => {
     if (mode === 'replace') {
       updateCollectionState(backup.collection);
-      updateDecksState(backup.decks);
+      updateDecksState(backup.decks.map(normalizeDeck));
       updateProxiesState(backup.proxies);
       setActiveDeckId(null);
       return;
@@ -307,7 +312,7 @@ export function App() {
         ? `deck-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
         : incomingDeck.id;
       existingDeckIds.add(safeId);
-      mergedDecks.push({ ...incomingDeck, id: safeId });
+      mergedDecks.push(normalizeDeck({ ...incomingDeck, id: safeId }));
     }
 
     const mergedProxies = [...proxies];
@@ -797,14 +802,34 @@ export function App() {
       );
     }
 
-    if (
-      activeDeckId &&
-      typeof artSelectorContext.deckCardIndex === 'number' &&
-      artSelectorContext.deckCardIndex >= 0
-    ) {
+    if (activeDeckId) {
       const activeDeck = decks.find((d) => d.id === activeDeckId);
-      if (activeDeck && activeDeck.cards[artSelectorContext.deckCardIndex]) {
-        const targetEntry = activeDeck.cards[artSelectorContext.deckCardIndex];
+      if (activeDeck) {
+        // Resolve target card index in activeDeck.cards with multi-tier fallback
+        let targetIndex = -1;
+        if (
+          typeof artSelectorContext.deckCardIndex === 'number' &&
+          artSelectorContext.deckCardIndex >= 0 &&
+          activeDeck.cards[artSelectorContext.deckCardIndex]
+        ) {
+          targetIndex = artSelectorContext.deckCardIndex;
+        } else if (artSelectorContext.targetInstanceId) {
+          targetIndex = activeDeck.cards.findIndex(
+            (c) => c.instanceId === artSelectorContext.targetInstanceId
+          );
+        }
+        if (targetIndex === -1 && artSelectorContext.targetCardId) {
+          targetIndex = activeDeck.cards.findIndex(
+            (c) => c.card.id === artSelectorContext.targetCardId
+          );
+        }
+        if (targetIndex === -1 && (artSelectorContext.targetCardName || artSelectorCard.name)) {
+          const qName = (artSelectorContext.targetCardName || artSelectorCard.name).toLowerCase();
+          targetIndex = activeDeck.cards.findIndex(
+            (c) => c.card.name.toLowerCase() === qName
+          );
+        }
+
         // Find or create matching collection entry for this new art (grouping identical arts)
         const matchedCol = rawCollection.find(
           (c) =>
@@ -830,52 +855,45 @@ export function App() {
         }
 
         const nextCards = [...activeDeck.cards];
-        nextCards[artSelectorContext.deckCardIndex] = {
-          ...targetEntry,
-          card: newCardData,
-          collectionItemId: newColId,
-        };
-        const isCommander = targetEntry.category === 'commander';
-        const isPartner = targetEntry.category === 'partner';
+        let isCommander = false;
+        let isPartner = false;
+
+        if (targetIndex >= 0 && nextCards[targetIndex]) {
+          const targetEntry = nextCards[targetIndex];
+          isCommander = targetEntry.category === 'commander';
+          isPartner = targetEntry.category === 'partner';
+          nextCards[targetIndex] = {
+            ...targetEntry,
+            card: newCardData,
+            collectionItemId: newColId,
+          };
+        }
+
+        const isDirectCommander =
+          activeDeck.commanderCard?.id === artSelectorCard.id ||
+          activeDeck.commanderCard?.name.toLowerCase() === artSelectorCard.name.toLowerCase() ||
+          artSelectorContext.targetCategory === 'commander';
+
+        const isDirectPartner =
+          activeDeck.partnerCard?.id === artSelectorCard.id ||
+          activeDeck.partnerCard?.name.toLowerCase() === artSelectorCard.name.toLowerCase() ||
+          artSelectorContext.targetCategory === 'partner';
+
+        const updatedCommander = isCommander || isDirectCommander ? newCardData : activeDeck.commanderCard;
+        const updatedPartner = isPartner || isDirectPartner ? newCardData : activeDeck.partnerCard;
+        const updatedCover = (isCommander || isDirectCommander)
+          ? newCardData.imageUrlArtCrop || newCardData.imageUrl
+          : activeDeck.coverImageUrl;
+
         updateDecksState(
           decks.map((d) =>
             d.id === activeDeckId
               ? {
                   ...d,
                   cards: nextCards,
-                  commanderCard: isCommander ? newCardData : d.commanderCard,
-                  partnerCard: isPartner ? newCardData : d.partnerCard,
-                  coverImageUrl: isCommander
-                    ? newCardData.imageUrlArtCrop || newCardData.imageUrl
-                    : d.coverImageUrl,
-                  updatedAt: new Date().toISOString(),
-                }
-              : d
-          )
-        );
-      }
-    } else if (
-      activeDeckId &&
-      (artSelectorContext.deckCardIndex === undefined || artSelectorContext.deckCardIndex === -1)
-    ) {
-      const activeDeck = decks.find((d) => d.id === activeDeckId);
-      if (
-        activeDeck &&
-        (activeDeck.commanderCard?.id === artSelectorCard.id ||
-          activeDeck.partnerCard?.id === artSelectorCard.id)
-      ) {
-        const isCommander = activeDeck.commanderCard?.id === artSelectorCard.id;
-        const isPartner = activeDeck.partnerCard?.id === artSelectorCard.id;
-        updateDecksState(
-          decks.map((d) =>
-            d.id === activeDeckId
-              ? {
-                  ...d,
-                  commanderCard: isCommander ? newCardData : d.commanderCard,
-                  partnerCard: isPartner ? newCardData : d.partnerCard,
-                  coverImageUrl: isCommander
-                    ? newCardData.imageUrlArtCrop || newCardData.imageUrl
-                    : d.coverImageUrl,
+                  commanderCard: updatedCommander,
+                  partnerCard: updatedPartner,
+                  coverImageUrl: updatedCover,
                   updatedAt: new Date().toISOString(),
                 }
               : d
@@ -1154,28 +1172,59 @@ export function App() {
         }
       }
     } else if (
-      typeof artSelectorContext.deckCardIndex === 'number' &&
       syncedActiveDeck &&
       syncedActiveDeck.cards.length > 0
     ) {
-      const idx = artSelectorContext.deckCardIndex;
-      const total = syncedActiveDeck.cards.length;
-      artSelectorHasPrev = idx > 0;
-      artSelectorHasNext = idx < total - 1;
-      artSelectorLabel = `Carta ${idx + 1} de ${total}`;
-      if (artSelectorHasPrev) {
-        onArtNavigatePrev = () => {
-          const prevCard = syncedActiveDeck.cards[idx - 1];
-          setArtSelectorCard(prevCard.card);
-          setArtSelectorContext({ deckCardIndex: idx - 1 });
-        };
+      let idx = typeof artSelectorContext.deckCardIndex === 'number' && artSelectorContext.deckCardIndex >= 0
+        ? artSelectorContext.deckCardIndex
+        : -1;
+      if (idx === -1 && artSelectorContext.targetInstanceId) {
+        idx = syncedActiveDeck.cards.findIndex(
+          (c) => c.instanceId === artSelectorContext.targetInstanceId
+        );
       }
-      if (artSelectorHasNext) {
-        onArtNavigateNext = () => {
-          const nextCard = syncedActiveDeck.cards[idx + 1];
-          setArtSelectorCard(nextCard.card);
-          setArtSelectorContext({ deckCardIndex: idx + 1 });
-        };
+      if (idx === -1 && artSelectorContext.targetCardId) {
+        idx = syncedActiveDeck.cards.findIndex(
+          (c) => c.card.id === artSelectorContext.targetCardId
+        );
+      }
+      if (idx === -1 && artSelectorCard) {
+        idx = syncedActiveDeck.cards.findIndex(
+          (c) => c.card.name.toLowerCase() === artSelectorCard.name.toLowerCase()
+        );
+      }
+
+      if (idx >= 0) {
+        const total = syncedActiveDeck.cards.length;
+        artSelectorHasPrev = idx > 0;
+        artSelectorHasNext = idx < total - 1;
+        artSelectorLabel = `Carta ${idx + 1} de ${total}`;
+        if (artSelectorHasPrev) {
+          onArtNavigatePrev = () => {
+            const prevCard = syncedActiveDeck.cards[idx - 1];
+            setArtSelectorCard(prevCard.card);
+            setArtSelectorContext({
+              deckCardIndex: idx - 1,
+              targetCardId: prevCard.card.id,
+              targetCardName: prevCard.card.name,
+              targetInstanceId: prevCard.instanceId,
+              targetCategory: prevCard.category,
+            });
+          };
+        }
+        if (artSelectorHasNext) {
+          onArtNavigateNext = () => {
+            const nextCard = syncedActiveDeck.cards[idx + 1];
+            setArtSelectorCard(nextCard.card);
+            setArtSelectorContext({
+              deckCardIndex: idx + 1,
+              targetCardId: nextCard.card.id,
+              targetCardName: nextCard.card.name,
+              targetInstanceId: nextCard.instanceId,
+              targetCategory: nextCard.category,
+            });
+          };
+        }
       }
     } else if (artSelectorContext.proxyItemId) {
       const idx = proxies.findIndex((p) => p.id === artSelectorContext.proxyItemId);
@@ -1404,9 +1453,16 @@ export function App() {
               onUpdateDeck={(updatedDeck) => {
                 updateDecksState(decks.map((d) => (d.id === updatedDeck.id ? updatedDeck : d)));
               }}
-              onOpenArtSelector={(card, cardIndex, face) => {
+              onOpenArtSelector={(card, cardIndex, face, instanceId, category) => {
                 setArtSelectorCard(card);
-                setArtSelectorContext({ deckCardIndex: cardIndex, face: face || 'front' });
+                setArtSelectorContext({
+                  deckCardIndex: cardIndex,
+                  face: face || 'front',
+                  targetCardId: card.id,
+                  targetCardName: card.name,
+                  targetInstanceId: instanceId,
+                  targetCategory: category,
+                });
               }}
               onAddToProxies={handleAddCardToProxies}
               onSendDeckToProxies={handleAddDeckToProxies}
