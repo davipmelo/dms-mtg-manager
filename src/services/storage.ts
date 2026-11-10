@@ -268,7 +268,7 @@ export function normalizeDeck(deck: Deck): Deck {
   }
 
   const seenInstanceIds = new Set<string>();
-  const unGroupedCards: DeckCard[] = [];
+  let unGroupedCards: DeckCard[] = [];
 
   for (const dc of deck.cards || []) {
     if (!dc || !dc.card || typeof dc.card.name !== 'string') continue;
@@ -290,10 +290,80 @@ export function normalizeDeck(deck: Deck): Deck {
     }
   }
 
+  // Commander cleanup for Commander/Brawl format decks:
+  // Detect if there are multiple non-partner commanders, or an alien commanderCard
+  if (deck.format === 'commander' || deck.format === 'brawl') {
+    const commandersInCards = unGroupedCards.filter((c) => c.category === 'commander');
+
+    // Case A: deck.cards already has a commander, but deck.commanderCard is a different orphan card
+    if (
+      commanderCard &&
+      commandersInCards.length > 0 &&
+      !unGroupedCards.some((c) => c.card.name.toLowerCase() === commanderCard!.name.toLowerCase())
+    ) {
+      // Reconcile: commanderCard should be the actual commander in the deck cards!
+      commanderCard = commandersInCards[0].card;
+    }
+
+    // Case B: deck.cards contains multiple cards marked as 'commander' without partner
+    if (commandersInCards.length > 1) {
+      const hasPartner = (c: Card) => {
+        const text = `${c.typeLine || ''} ${c.oracleText || ''}`.toLowerCase();
+        return (
+          text.includes('partner') ||
+          text.includes('friends forever') ||
+          text.includes('choose a background') ||
+          text.includes("doctor's companion")
+        );
+      };
+      const allPartners = commandersInCards.every((c) => hasPartner(c.card));
+      if (!allPartners) {
+        // If deck has 101 cards, and one commander doesn't match the rest of the deck, remove the extra
+        if (unGroupedCards.length === 101) {
+          const nonCmdColors = new Set(
+            unGroupedCards
+              .filter((c) => c.category !== 'commander')
+              .flatMap((c) => c.card.colors || [])
+          );
+          let intruderIndex = unGroupedCards.findIndex((c) => {
+            if (c.category !== 'commander') return false;
+            const cColors = c.card.colors || [];
+            return cColors.length > 0 && !cColors.some((col) => nonCmdColors.has(col));
+          });
+          if (intruderIndex === -1) {
+            intruderIndex = unGroupedCards.findIndex((c) => c.category === 'commander');
+          }
+          if (intruderIndex !== -1) {
+            unGroupedCards.splice(intruderIndex, 1);
+          }
+        } else {
+          // Demote secondary commander to 'main'
+          let foundPrimary = false;
+          unGroupedCards = unGroupedCards.map((c) => {
+            if (c.category === 'commander') {
+              if (!foundPrimary) {
+                foundPrimary = true;
+                return c;
+              }
+              return { ...c, category: 'main' as const };
+            }
+            return c;
+          });
+        }
+      }
+    }
+
+    // Ensure commanderCard is set to the primary commander in deck
+    const finalCommanders = unGroupedCards.filter((c) => c.category === 'commander');
+    if (finalCommanders.length > 0) {
+      commanderCard = finalCommanders[0].card;
+    }
+  }
+
   const hasBrokenCover = BROKEN_IMAGE_SNIPPETS.some((s) => deck.coverImageUrl?.includes(s));
   const coverImageUrl = hasBrokenCover
     ? commanderCard?.imageUrlArtCrop || unGroupedCards[0]?.card.imageUrlArtCrop
-    : deck.coverImageUrl || commanderCard?.imageUrlArtCrop;
+    : commanderCard?.imageUrlArtCrop || deck.coverImageUrl;
 
   return {
     ...deck,

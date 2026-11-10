@@ -217,4 +217,33 @@ export function isDoubleFacedCard(card?: Card | TokenCard | null): boolean {
   return false;
 }
 
+/**
+ * Safely compares two cards to determine if they represent the exact same print/art version.
+ * Prevents MPCFill alters or custom arts with generic set codes/numbers from erroneously matching
+ * cards with different names.
+ */
+export function isSameCardPrint(a?: Card | null, b?: Card | null): boolean {
+  if (!a || !b) return false;
+  if (a.name.toLowerCase().trim() !== b.name.toLowerCase().trim()) return false;
+  if (a.id === b.id) return true;
+  const isAlterOrCustom =
+    a.setCode === 'MPC' ||
+    a.setCode === 'CUSTOM' ||
+    a.collectorNumber === '★' ||
+    b.setCode === 'MPC' ||
+    b.setCode === 'CUSTOM' ||
+    b.collectorNumber === '★';
+  if (isAlterOrCustom) {
+    return Boolean(a.imageUrl && b.imageUrl && a.imageUrl === b.imageUrl);
+  }
+  return Boolean(
+    a.setCode &&
+      b.setCode &&
+      a.setCode.toLowerCase() === b.setCode.toLowerCase() &&
+      a.collectorNumber &&
+      b.collectorNumber &&
+      a.collectorNumber === b.collectorNumber
+  );
+}
+
 

@@ -14,6 +14,7 @@ import {
   SyncStatus,
   CloudUserData,
   isDoubleFacedCard,
+  isSameCardPrint,
 } from './types';
 import {
   getStoredCollection,
@@ -284,11 +285,8 @@ export function App() {
     // Merge mode: distinguish different card arts
     const mergedCollection = [...rawCollection];
     for (const incoming of backup.collection) {
-      const idx = mergedCollection.findIndex(
-        (existing) =>
-          existing.card.id === incoming.card.id ||
-          (existing.card.setCode.toLowerCase() === incoming.card.setCode.toLowerCase() &&
-            existing.card.collectorNumber === incoming.card.collectorNumber)
+      const idx = mergedCollection.findIndex((existing) =>
+        isSameCardPrint(existing.card, incoming.card)
       );
       if (idx >= 0) {
         mergedCollection[idx] = {
@@ -344,11 +342,8 @@ export function App() {
     targetDeckId?: string
   ) => {
     // Check if EXACT print already in collection (distinct arts treated separately)
-    const existingColIdx = rawCollection.findIndex(
-      (item) =>
-        item.card.id === card.id ||
-        (item.card.setCode.toLowerCase() === card.setCode.toLowerCase() &&
-          item.card.collectorNumber === card.collectorNumber)
+    const existingColIdx = rawCollection.findIndex((item) =>
+      isSameCardPrint(item.card, card)
     );
 
     let colItemId: string;
@@ -423,11 +418,8 @@ export function App() {
     const linkedCards: DeckCard[] = [];
 
     for (const c of deckData.cards || []) {
-      const colIdx = nextCollection.findIndex(
-        (col) =>
-          col.card.id === c.card.id ||
-          (col.card.setCode.toLowerCase() === c.card.setCode.toLowerCase() &&
-            col.card.collectorNumber === c.card.collectorNumber)
+      const colIdx = nextCollection.findIndex((col) =>
+        isSameCardPrint(col.card, c.card)
       );
       let colId: string;
       if (colIdx >= 0) {
@@ -489,11 +481,8 @@ export function App() {
     const cardToColId = new Map<string, string>();
 
     for (const item of importedCards) {
-      const idx = nextCollection.findIndex(
-        (col) =>
-          col.card.id === item.card.id ||
-          (col.card.setCode.toLowerCase() === item.card.setCode.toLowerCase() &&
-            col.card.collectorNumber === item.card.collectorNumber)
+      const idx = nextCollection.findIndex((col) =>
+        isSameCardPrint(col.card, item.card)
       );
       if (idx >= 0) {
         cardToColId.set(item.card.id, nextCollection[idx].id);
@@ -805,37 +794,43 @@ export function App() {
     if (activeDeckId) {
       const activeDeck = decks.find((d) => d.id === activeDeckId);
       if (activeDeck) {
-        // Resolve target card index in activeDeck.cards with multi-tier fallback
+        const targetCardName = (artSelectorContext.targetCardName || artSelectorCard.name).toLowerCase();
         let targetIndex = -1;
-        if (
-          typeof artSelectorContext.deckCardIndex === 'number' &&
-          artSelectorContext.deckCardIndex >= 0 &&
-          activeDeck.cards[artSelectorContext.deckCardIndex]
-        ) {
-          targetIndex = artSelectorContext.deckCardIndex;
-        } else if (artSelectorContext.targetInstanceId) {
+
+        // 1. Strongest match: exact instanceId (guarantees targeting the exact card copy!)
+        if (artSelectorContext.targetInstanceId) {
           targetIndex = activeDeck.cards.findIndex(
             (c) => c.instanceId === artSelectorContext.targetInstanceId
           );
         }
+
+        // 2. Exact cardId match
         if (targetIndex === -1 && artSelectorContext.targetCardId) {
           targetIndex = activeDeck.cards.findIndex(
             (c) => c.card.id === artSelectorContext.targetCardId
           );
         }
-        if (targetIndex === -1 && (artSelectorContext.targetCardName || artSelectorCard.name)) {
-          const qName = (artSelectorContext.targetCardName || artSelectorCard.name).toLowerCase();
+
+        // 3. Deck card index IF and ONLY IF the card at that index has the matching name
+        if (
+          targetIndex === -1 &&
+          typeof artSelectorContext.deckCardIndex === 'number' &&
+          artSelectorContext.deckCardIndex >= 0 &&
+          activeDeck.cards[artSelectorContext.deckCardIndex]?.card.name.toLowerCase() === targetCardName
+        ) {
+          targetIndex = artSelectorContext.deckCardIndex;
+        }
+
+        // 4. Fallback: match by card name
+        if (targetIndex === -1) {
           targetIndex = activeDeck.cards.findIndex(
-            (c) => c.card.name.toLowerCase() === qName
+            (c) => c.card.name.toLowerCase() === targetCardName
           );
         }
 
         // Find or create matching collection entry for this new art (grouping identical arts)
-        const matchedCol = rawCollection.find(
-          (c) =>
-            c.card.id === newCardData.id ||
-            (c.card.setCode.toLowerCase() === newCardData.setCode.toLowerCase() &&
-              c.card.collectorNumber === newCardData.collectorNumber)
+        const matchedCol = rawCollection.find((c) =>
+          isSameCardPrint(c.card, newCardData)
         );
 
         let newColId: string;
@@ -855,13 +850,11 @@ export function App() {
         }
 
         const nextCards = [...activeDeck.cards];
-        let isCommander = false;
-        let isPartner = false;
+        const targetEntry = targetIndex >= 0 ? nextCards[targetIndex] : undefined;
+        const isEntryCommander = targetEntry?.category === 'commander';
+        const isEntryPartner = targetEntry?.category === 'partner';
 
-        if (targetIndex >= 0 && nextCards[targetIndex]) {
-          const targetEntry = nextCards[targetIndex];
-          isCommander = targetEntry.category === 'commander';
-          isPartner = targetEntry.category === 'partner';
+        if (targetIndex >= 0 && targetEntry) {
           nextCards[targetIndex] = {
             ...targetEntry,
             card: newCardData,
@@ -870,18 +863,23 @@ export function App() {
         }
 
         const isDirectCommander =
-          activeDeck.commanderCard?.id === artSelectorCard.id ||
-          activeDeck.commanderCard?.name.toLowerCase() === artSelectorCard.name.toLowerCase() ||
-          artSelectorContext.targetCategory === 'commander';
+          Boolean(activeDeck.commanderCard && (
+            activeDeck.commanderCard.id === artSelectorCard.id ||
+            activeDeck.commanderCard.name.toLowerCase() === targetCardName
+          )) || artSelectorContext.targetCategory === 'commander';
 
         const isDirectPartner =
-          activeDeck.partnerCard?.id === artSelectorCard.id ||
-          activeDeck.partnerCard?.name.toLowerCase() === artSelectorCard.name.toLowerCase() ||
-          artSelectorContext.targetCategory === 'partner';
+          Boolean(activeDeck.partnerCard && (
+            activeDeck.partnerCard.id === artSelectorCard.id ||
+            activeDeck.partnerCard.name.toLowerCase() === targetCardName
+          )) || artSelectorContext.targetCategory === 'partner';
 
-        const updatedCommander = isCommander || isDirectCommander ? newCardData : activeDeck.commanderCard;
-        const updatedPartner = isPartner || isDirectPartner ? newCardData : activeDeck.partnerCard;
-        const updatedCover = (isCommander || isDirectCommander)
+        const shouldUpdateCommander = isEntryCommander || isDirectCommander;
+        const shouldUpdatePartner = isEntryPartner || isDirectPartner;
+
+        const updatedCommander = shouldUpdateCommander ? newCardData : activeDeck.commanderCard;
+        const updatedPartner = shouldUpdatePartner ? newCardData : activeDeck.partnerCard;
+        const updatedCover = shouldUpdateCommander
           ? newCardData.imageUrlArtCrop || newCardData.imageUrl
           : activeDeck.coverImageUrl;
 
@@ -1132,7 +1130,11 @@ export function App() {
     const colMap = new Map(rawCollection.map((c) => [c.id, c.card]));
     const syncedCards = activeDeck.cards.map((dc) => {
       if (dc.collectionItemId && colMap.has(dc.collectionItemId)) {
-        return { ...dc, card: colMap.get(dc.collectionItemId)! };
+        const colCard = colMap.get(dc.collectionItemId)!;
+        // Safeguard: ONLY sync from collection if card names match!
+        if (colCard.name.toLowerCase() === dc.card.name.toLowerCase()) {
+          return { ...dc, card: colCard };
+        }
       }
       return dc;
     });
@@ -1557,11 +1559,13 @@ export function App() {
         defaultDeckId={activeDeckId || undefined}
       />
 
-      <DeckCreationModal
-        isOpen={isCreateDeckModalOpen}
-        onClose={() => setIsCreateDeckModalOpen(false)}
-        onCreateDeck={handleCreateDeck}
-      />
+      {isCreateDeckModalOpen && (
+        <DeckCreationModal
+          isOpen={isCreateDeckModalOpen}
+          onClose={() => setIsCreateDeckModalOpen(false)}
+          onCreateDeck={handleCreateDeck}
+        />
+      )}
 
       <ArtSelectorModal
         isOpen={!!artSelectorCard}

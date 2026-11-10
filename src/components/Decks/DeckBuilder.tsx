@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Deck, DeckCard, ViewMode, Card, CollectionItem, CardCategory, isDoubleFacedCard } from '../../types';
+import { Deck, DeckCard, ViewMode, Card, CollectionItem, CardCategory, isDoubleFacedCard, isSameCardPrint } from '../../types';
 import { resolveCardFaces } from '../../services/scryfall';
 import { normalizeDeck } from '../../services/storage';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
@@ -271,27 +271,34 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   const getCollectionItemForCard = (c: DeckCard): CollectionItem | undefined => {
     if (!collection || collection.length === 0) return undefined;
     if (c.collectionItemId) {
-      const match = collection.find((item) => item.id === c.collectionItemId);
+      const match = collection.find(
+        (item) => item.id === c.collectionItemId && item.card.name.toLowerCase() === c.card.name.toLowerCase()
+      );
       if (match) return match;
     }
     const byId = collection.find((item) => item.card.id === c.card.id);
     if (byId) return byId;
-    const bySetAndNumber = collection.find(
-      (item) =>
-        item.card.setCode.toLowerCase() === c.card.setCode.toLowerCase() &&
-        item.card.collectorNumber === c.card.collectorNumber
-    );
-    if (bySetAndNumber) return bySetAndNumber;
+    const byPrint = collection.find((item) => isSameCardPrint(item.card, c.card));
+    if (byPrint) return byPrint;
     return collection.find(
       (item) => item.card.name.toLowerCase() === c.card.name.toLowerCase()
     );
   };
 
-  // Auto-normalize deck on mount/update if any card lacks instanceId or has qty > 1
+  // Auto-normalize deck on mount/update if needed (missing instanceId, qty > 1, or duplicate non-partner commanders)
   useEffect(() => {
-    const needsNorm = (deck.cards || []).some(
-      (c) => !c.instanceId || (c.quantity && c.quantity > 1)
-    );
+    const hasMultipleCommanders =
+      (deck.format === 'commander' || deck.format === 'brawl') &&
+      deck.cards.filter((c) => c.category === 'commander').length > 1;
+    const hasOrphanCommander =
+      deck.commanderCard &&
+      !deck.cards.some((c) => c.card.name.toLowerCase() === deck.commanderCard!.name.toLowerCase()) &&
+      deck.cards.length >= 100;
+    const needsNorm =
+      hasMultipleCommanders ||
+      hasOrphanCommander ||
+      (deck.cards || []).some((c) => !c.instanceId || (c.quantity && c.quantity > 1));
+
     if (needsNorm) {
       onUpdateDeck(normalizeDeck(deck));
     }

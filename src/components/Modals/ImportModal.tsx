@@ -69,6 +69,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       setImportDestination(defaultDeckId ? defaultDeckId : defaultDestination);
       setNewDeckFormat('commander');
       setNewDeckCommanderName('');
+      setNewDeckName('');
+      setImportText('');
+      setParsedPreviewCount(0);
       setImportWarnings(null);
       setPendingImportData(null);
     }

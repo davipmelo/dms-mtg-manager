@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Deck, DeckFormat, Card, CardPrint } from '../../types';
 import {
   searchAutocomplete,
@@ -62,6 +62,24 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
 
   // Art Selector state for commander / partner
   const [artSelectorTarget, setArtSelectorTarget] = useState<'commander' | 'partner' | null>(null);
+
+  // Automatically reset modal state whenever it is opened to prevent commander leaking from previous decks
+  useEffect(() => {
+    if (isOpen) {
+      setName('');
+      setFormat('commander');
+      setDescription('');
+      setCommanderQuery('');
+      setCommanderSuggestions([]);
+      setSelectedCommander(null);
+      setCommanderWarning(null);
+      setPartnerQuery('');
+      setPartnerSuggestions([]);
+      setSelectedPartner(null);
+      setPartnerWarning(null);
+      setArtSelectorTarget(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -233,6 +251,11 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
     }
 
     onCreateDeck(newDeck);
+    setName('');
+    setSelectedCommander(null);
+    setSelectedPartner(null);
+    setCommanderQuery('');
+    setPartnerQuery('');
     onClose();
   };
 

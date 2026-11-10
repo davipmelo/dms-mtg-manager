@@ -142,7 +142,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
         existingCardsMap.set(dc.card.name.toLowerCase(), dc.card);
       });
 
-      const updatedDeckCards: DeckCard[] = [];
+      let updatedDeckCards: DeckCard[] = [];
 
       for (let i = 0; i < parsedLines.length; i++) {
         const item = parsedLines[i];
@@ -180,14 +180,33 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
         }
       }
 
-      // Ensure commander card is in deck.cards for commander formats
-      if (commanderCard && !updatedDeckCards.some((dc) => dc.card.id === commanderCard.id)) {
-        updatedDeckCards.unshift({
-          card: commanderCard,
-          quantity: 1,
-          category: 'commander',
-          instanceId: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      // Ensure commander card is in deck.cards for commander formats, and demote old non-partner commanders
+      if (commanderCard) {
+        updatedDeckCards = updatedDeckCards.map((dc) => {
+          if (
+            dc.category === 'commander' &&
+            dc.card.id !== commanderCard.id &&
+            dc.card.name.toLowerCase() !== commanderCard.name.toLowerCase()
+          ) {
+            return { ...dc, category: 'main' as const };
+          }
+          return dc;
         });
+
+        if (
+          !updatedDeckCards.some(
+            (dc) =>
+              dc.card.id === commanderCard.id ||
+              dc.card.name.toLowerCase() === commanderCard.name.toLowerCase()
+          )
+        ) {
+          updatedDeckCards.unshift({
+            card: commanderCard,
+            quantity: 1,
+            category: 'commander',
+            instanceId: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          });
+        }
       }
 
       const updatedDeck: Deck = {
