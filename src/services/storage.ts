@@ -1,9 +1,10 @@
-import { CollectionItem, Deck, DeckCard, ProxyItem, Card, SystemBackup } from '../types';
+import { CollectionItem, Deck, DeckCard, ProxyItem, Card, SystemBackup, DeckTag } from '../types';
 
 const STORAGE_KEYS = {
   COLLECTION: 'dms_mtg_collection_v1',
   DECKS: 'dms_mtg_decks_v1',
   PROXIES: 'dms_mtg_proxies_v1',
+  DECK_TAGS: 'dms_mtg_deck_tags_v1',
 };
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -507,6 +508,37 @@ export function saveProxies(proxies: ProxyItem[]): void {
   }
 }
 
+export const DEFAULT_DECK_TAGS: DeckTag[] = [
+  { id: 'tag-competitive', name: 'Competitivo', color: '#ef4444' },
+  { id: 'tag-casual', name: 'Casual', color: '#3b82f6' },
+  { id: 'tag-wip', name: 'Em Construção', color: '#f59e0b' },
+  { id: 'tag-tribal', name: 'Tribal', color: '#10b981' },
+  { id: 'tag-combo', name: 'Combo', color: '#8b5cf6' },
+];
+
+export function getStoredDeckTags(): DeckTag[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.DECK_TAGS);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEYS.DECK_TAGS, JSON.stringify(DEFAULT_DECK_TAGS));
+      return DEFAULT_DECK_TAGS;
+    }
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    return DEFAULT_DECK_TAGS;
+  } catch {
+    return DEFAULT_DECK_TAGS;
+  }
+}
+
+export function saveStoredDeckTags(tags: DeckTag[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.DECK_TAGS, JSON.stringify(tags));
+  } catch (err) {
+    console.error('Error saving deck tags to storage:', err);
+  }
+}
+
 /**
  * Computes "inUseQuantity", "availableQuantity", and "usedInDecks" for each card/art print in collection.
  * Different arts are tracked separately so that each printing shows its own accurate availability.
@@ -565,7 +597,8 @@ export function calculateCollectionDeckUsage(
 export function createSystemBackup(
   collection: CollectionItem[],
   decks: Deck[],
-  proxies: ProxyItem[]
+  proxies: ProxyItem[],
+  deckTags?: DeckTag[]
 ): SystemBackup {
   const cleanCollection: CollectionItem[] = collection.map(
     ({ inUseQuantity, availableQuantity, usedInDecks, ...rest }) => rest
@@ -578,6 +611,7 @@ export function createSystemBackup(
     collection: cleanCollection,
     decks,
     proxies,
+    deckTags: deckTags || getStoredDeckTags(),
   };
 }
 
@@ -638,6 +672,16 @@ export function parseSystemBackup(rawJson: string): SystemBackup {
         }))
     : [];
 
+  const normalizedDeckTags: DeckTag[] = Array.isArray(parsed.deckTags)
+    ? parsed.deckTags
+        .filter((t: any) => t && typeof t.name === 'string' && typeof t.color === 'string')
+        .map((t: any, idx: number) => ({
+          id: t.id || `tag-${Date.now()}-${idx}`,
+          name: t.name.trim(),
+          color: t.color || '#3b82f6',
+        }))
+    : getStoredDeckTags();
+
   return {
     app: (parsed.app === 'dms-mtg-manager' ? 'dms-mtg-manager' : 'proliferate'),
     schemaVersion: Number(parsed.schemaVersion) || 1,
@@ -645,5 +689,6 @@ export function parseSystemBackup(rawJson: string): SystemBackup {
     collection: normalizedCollection,
     decks: normalizedDecks,
     proxies: normalizedProxies,
+    deckTags: normalizedDeckTags,
   };
 }

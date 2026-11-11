@@ -17,6 +17,7 @@ import {
   isDoubleFacedCard,
   isSameCardPrint,
   isCardNameMatch,
+  DeckTag,
 } from './types';
 import {
   getStoredCollection,
@@ -26,6 +27,8 @@ import {
   normalizeDeck,
   getStoredProxies,
   saveProxies,
+  getStoredDeckTags,
+  saveStoredDeckTags,
   calculateCollectionDeckUsage,
 } from './services/storage';
 import {
@@ -49,6 +52,7 @@ import { BackupModal } from './components/Modals/BackupModal';
 import { ExportModal } from './components/Modals/ExportModal';
 import { ImportModal } from './components/Modals/ImportModal';
 import { EditDeckModal } from './components/Modals/EditDeckModal';
+import { ManageTagsModal } from './components/Modals/ManageTagsModal';
 import { MtgLogo } from './components/Common/MtgLogo';
 import { AuthModal } from './components/Auth/AuthModal';
 import { UserMenu } from './components/Auth/UserMenu';
@@ -83,6 +87,8 @@ export function App() {
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isManageTagsModalOpen, setIsManageTagsModalOpen] = useState(false);
+  const [deckTags, setDeckTags] = useState<DeckTag[]>([]);
   const [importDefaultDestination, setImportDefaultDestination] = useState<
     'collection' | 'new_deck' | string
   >('collection');
@@ -136,10 +142,12 @@ export function App() {
     const loadedCollection = getStoredCollection();
     const loadedDecks = getStoredDecks();
     const loadedProxies = getStoredProxies();
+    const loadedTags = getStoredDeckTags();
 
     setRawCollection(loadedCollection);
     setDecks(loadedDecks);
     setProxies(loadedProxies);
+    setDeckTags(loadedTags);
   }, []);
 
   // Compute dynamic In-Use vs Available collection usage (Requirement 4)
@@ -154,6 +162,11 @@ export function App() {
   const updateDecksState = (updated: Deck[]) => {
     setDecks(updated);
     saveDecks(updated);
+  };
+
+  const updateDeckTagsState = (updated: DeckTag[]) => {
+    setDeckTags(updated);
+    saveStoredDeckTags(updated);
   };
 
   const updateProxiesState = (updated: ProxyItem[]) => {
@@ -1596,10 +1609,13 @@ export function App() {
                 setImportDefaultDestination(deckId);
                 setIsImportModalOpen(true);
               }}
+              deckTags={deckTags}
+              onOpenManageTags={() => setIsManageTagsModalOpen(true)}
             />
           ) : (
             <DeckManager
               decks={decks}
+              deckTags={deckTags}
               onOpenDeck={(deckId) => setActiveDeckId(deckId)}
               onOpenCreateModal={() => setIsCreateDeckModalOpen(true)}
               onOpenImportModal={() => {
@@ -1611,6 +1627,10 @@ export function App() {
               }}
               onSendDeckToProxies={handleAddDeckToProxies}
               onEditDeck={(deck) => setEditingDeck(deck)}
+              onUpdateDeck={(updatedDeck) => {
+                updateDecksState(decks.map((d) => (d.id === updatedDeck.id ? updatedDeck : d)));
+              }}
+              onOpenManageTags={() => setIsManageTagsModalOpen(true)}
             />
           ))}
 
@@ -1740,6 +1760,19 @@ export function App() {
             updateDecksState(decks.map((d) => (d.id === updated.id ? updated : d)));
             setEditingDeck(null);
           }}
+          deckTags={deckTags}
+          onOpenManageTags={() => setIsManageTagsModalOpen(true)}
+        />
+      )}
+
+      {isManageTagsModalOpen && (
+        <ManageTagsModal
+          isOpen={isManageTagsModalOpen}
+          onClose={() => setIsManageTagsModalOpen(false)}
+          tags={deckTags}
+          onUpdateTags={updateDeckTagsState}
+          decks={decks}
+          onUpdateDecks={updateDecksState}
         />
       )}
 

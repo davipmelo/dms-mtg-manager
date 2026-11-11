@@ -94,10 +94,18 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
   const frontFaceName = useMemo(() => {
     if (!card) return '';
-    if (dfcFaces?.[0]?.name) return dfcFaces[0].name.trim();
-    if (card.cardFaces?.[0]?.name) return card.cardFaces[0].name.trim();
-    if (card.name.includes('//')) return card.name.split('//')[0].trim();
-    return card.name.trim();
+    let fName = '';
+    if (dfcFaces?.[0]?.name) {
+      fName = dfcFaces[0].name;
+    } else if (card.cardFaces?.[0]?.name) {
+      fName = card.cardFaces[0].name;
+    } else {
+      fName = card.name;
+    }
+    if (fName.includes('//')) {
+      fName = fName.split('//')[0];
+    }
+    return fName.trim();
   }, [card, dfcFaces]);
 
   const backFaceName = useMemo(() => {
@@ -121,7 +129,15 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     return '';
   }, [card, dfcFaces]);
 
-  const currentFaceName = activeFace === 'back' ? (backFaceName || `${card?.name || ''} (Verso)`) : frontFaceName;
+  const currentFaceName = useMemo(() => {
+    let name = activeFace === 'back' ? (backFaceName || `${card?.name || ''} (Verso)`) : frontFaceName;
+    if (activeFace === 'front' && name.includes('//')) {
+      name = name.split('//')[0].trim();
+    } else if (activeFace === 'back' && name.includes('//')) {
+      name = name.split('//')[1].trim();
+    }
+    return name.trim();
+  }, [activeFace, backFaceName, frontFaceName, card?.name]);
 
   const currentFrontThumbnail = useMemo(() => {
     if (faceThumbnails.front) return faceThumbnails.front;
@@ -457,7 +473,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     if (activeFace === 'back' && !backFaceName && resolvingFaces) {
       return;
     }
-    const targetName = activeFace === 'back' ? (backFaceName || `${card.name} (Verso)`) : frontFaceName;
+    const targetName = currentFaceName;
     if (!targetName) return;
 
     const cacheKey = `${card.name}-${activeFace}-${targetName}`;
@@ -465,7 +481,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     lastMpcTargetRef.current = cacheKey;
     const initialCardType: 'CARD' | 'TOKEN' = isCardToken ? 'TOKEN' : 'CARD';
     fetchMpcAlters(targetName, mpcMinDpi, initialCardType, card.typeLine);
-  }, [isOpen, activeFace, card?.name, backFaceName, frontFaceName, isCardToken, fetchMpcAlters, mpcMinDpi, resolvingFaces]);
+  }, [isOpen, activeFace, card?.name, currentFaceName, isCardToken, fetchMpcAlters, mpcMinDpi, resolvingFaces]);
 
   // Keyboard navigation for previous/next card (Left/Right arrows when not typing)
   useEffect(() => {

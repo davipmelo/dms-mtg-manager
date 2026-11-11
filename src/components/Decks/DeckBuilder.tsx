@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Deck, DeckCard, ViewMode, Card, CollectionItem, CardCategory, isDoubleFacedCard, isSameCardPrint, isCardNameMatch } from '../../types';
+import { Deck, DeckCard, ViewMode, Card, CollectionItem, CardCategory, isDoubleFacedCard, isSameCardPrint, isCardNameMatch, DeckTag } from '../../types';
 import { resolveCardFaces } from '../../services/scryfall';
 import { normalizeDeck } from '../../services/storage';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
@@ -38,6 +38,7 @@ import {
 interface DeckBuilderProps {
   deck: Deck;
   collection?: CollectionItem[];
+  deckTags?: DeckTag[];
   onBack: () => void;
   onUpdateDeck: (updated: Deck) => void;
   onOpenArtSelector: (
@@ -51,6 +52,7 @@ interface DeckBuilderProps {
   onSendDeckToProxies: (deck: Deck) => void;
   onOpenExportModal: (deckId: string) => void;
   onOpenImportModal?: (deckId: string) => void;
+  onOpenManageTags?: () => void;
 }
 
 type SortColumn =
@@ -67,6 +69,7 @@ type SortColumn =
 export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   deck,
   collection = [],
+  deckTags = [],
   onBack,
   onUpdateDeck,
   onOpenArtSelector,
@@ -74,6 +77,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   onSendDeckToProxies,
   onOpenExportModal,
   onOpenImportModal,
+  onOpenManageTags,
 }) => {
   // View mode: Grid is default/primary, persisted across sessions
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -707,7 +711,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Top Navigation & Deck Header */}
       <div className="glass-panel" style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
           <button className="btn btn-ghost btn-sm" onClick={onBack}>
             <ArrowLeft size={16} /> Voltar aos Decks
           </button>
@@ -719,6 +723,45 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           >
             {totalCardsCount} / {targetCardsCount} Cartas
           </span>
+
+          {/* Deck Tags */}
+          {deck.tags && deck.tags.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              {deck.tags.map((tIdOrName) => {
+                const tag = deckTags.find(
+                  (t) => t.id === tIdOrName || t.name.toLowerCase() === tIdOrName.toLowerCase()
+                ) || { id: tIdOrName, name: tIdOrName, color: '#3b82f6' };
+
+                return (
+                  <span
+                    key={tag.id}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: tag.color,
+                      backgroundColor: `${tag.color}20`,
+                      border: `1px solid ${tag.color}50`,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: tag.color,
+                      }}
+                    />
+                    {tag.name}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div
@@ -2058,6 +2101,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           onClose={() => setIsEditModalOpen(false)}
           deck={deck}
           collection={collection}
+          deckTags={deckTags}
+          onOpenManageTags={onOpenManageTags}
           onSaveDeck={(updated) => {
             onUpdateDeck(updated);
           }}

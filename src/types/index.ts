@@ -109,6 +109,12 @@ export interface DeckCard {
   instanceId?: string;
 }
 
+export interface DeckTag {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface Deck {
   id: string;
   name: string;
@@ -170,6 +176,7 @@ export interface SystemBackup {
   collection: CollectionItem[];
   decks: Deck[];
   proxies: ProxyItem[];
+  deckTags?: DeckTag[];
 }
 
 export type ViewMode = 'table' | 'grid';

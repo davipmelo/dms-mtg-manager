@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Deck, DeckFormat, DeckCard, Card, CollectionItem } from '../../types';
+import { Deck, DeckFormat, DeckCard, Card, CollectionItem, DeckTag } from '../../types';
 import { parseCardList } from '../../services/importer';
 import { getCardByName, getCardBySetAndNumber, getCardBySetAndName } from '../../services/scryfall';
 import { useModalOverlay } from '../../hooks/useModalOverlay';
-import { X, Save, Edit3, Crown, AlertTriangle, FileText, Loader2, Sparkles } from 'lucide-react';
+import { X, Save, Edit3, Crown, AlertTriangle, FileText, Loader2, Sparkles, Check, Tag } from 'lucide-react';
 
 interface EditDeckModalProps {
   isOpen: boolean;
@@ -11,6 +11,8 @@ interface EditDeckModalProps {
   deck: Deck;
   collection: CollectionItem[];
   onSaveDeck: (updatedDeck: Deck) => void;
+  deckTags?: DeckTag[];
+  onOpenManageTags?: () => void;
 }
 
 export const EditDeckModal: React.FC<EditDeckModalProps> = ({
@@ -19,10 +21,13 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
   deck,
   collection: _collection,
   onSaveDeck,
+  deckTags = [],
+  onOpenManageTags,
 }) => {
   const [deckName, setDeckName] = useState(deck.name);
   const [deckFormat, setDeckFormat] = useState<DeckFormat>(deck.format);
   const [description, setDescription] = useState(deck.description || '');
+  const [selectedTags, setSelectedTags] = useState<string[]>(deck.tags || []);
   const [cardListText, setCardListText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressText, setProgressText] = useState('');
@@ -41,6 +46,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
       setDeckName(deck.name);
       setDeckFormat(deck.format);
       setDescription(deck.description || '');
+      setSelectedTags(deck.tags || []);
       setCommanderCard(deck.commanderCard);
       setCommanderInput(
         deck.commanderCard
@@ -216,6 +222,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
         description: description.trim() || undefined,
         commanderCard: commanderCard,
         cards: updatedDeckCards,
+        tags: selectedTags,
         updatedAt: new Date().toISOString(),
       };
 
@@ -414,18 +421,96 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
 
           {/* Description */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
-              Descrição / Estratégia (Opcional)
-            </label>
-            <input
-              type="text"
-              className="input-text"
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#cbd5e1' }}>
+                Descrição do Deck (exibida no card)
+              </label>
+              {description && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setDescription('')}
+                  style={{ fontSize: '0.72rem', padding: '1px 6px', color: '#94a3b8' }}
+                  title="Remover texto da descrição"
+                >
+                  Limpar descrição
+                </button>
+              )}
+            </div>
+            <textarea
+              className="textarea-field"
+              rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Ex: Focado em marcadores +1/+1 e planeswalkers infect..."
+              placeholder="Adicione uma descrição, tema ou anotações para este deck..."
               disabled={isProcessing}
             />
           </div>
+
+          {/* Tags Selection */}
+          {deckTags && deckTags.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Tag size={14} className="text-amber-400" /> Tags do Deck
+                </label>
+                {onOpenManageTags && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={onOpenManageTags}
+                    style={{ fontSize: '0.72rem', padding: '2px 8px', color: '#ffbb00' }}
+                  >
+                    + Gerenciar Tags
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {deckTags.map((tag) => {
+                  const isSelected = selectedTags.includes(tag.id) || selectedTags.includes(tag.name);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedTags(selectedTags.filter((t) => t !== tag.id && t !== tag.name));
+                        } else {
+                          setSelectedTags([...selectedTags, tag.id]);
+                        }
+                      }}
+                      style={{
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        color: isSelected ? '#ffffff' : tag.color,
+                        backgroundColor: isSelected ? tag.color : `${tag.color}15`,
+                        border: `1px solid ${isSelected ? tag.color : `${tag.color}50`}`,
+                        boxShadow: isSelected ? `0 0 10px ${tag.color}66` : 'none',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: '7px',
+                          height: '7px',
+                          borderRadius: '50%',
+                          backgroundColor: isSelected ? '#ffffff' : tag.color,
+                        }}
+                      />
+                      {tag.name}
+                      {isSelected && <Check size={12} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Card list textarea */}
           <div>
