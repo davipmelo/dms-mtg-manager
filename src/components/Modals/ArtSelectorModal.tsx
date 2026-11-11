@@ -72,8 +72,16 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   const [dfcFaces, setDfcFaces] = useState<CardFace[] | null>(card?.cardFaces || null);
   const [resolvingFaces, setResolvingFaces] = useState<boolean>(false);
 
+  // Local immediate thumbnail override for instant real-time header preview
+  const [faceThumbnails, setFaceThumbnails] = useState<{ front?: string; back?: string }>({});
+
   const isCardDfc = useMemo(() => {
-    return Boolean((dfcFaces && dfcFaces.length >= 2) || isDoubleFacedCard(card));
+    return Boolean(
+      (dfcFaces && dfcFaces.length >= 2) ||
+        isDoubleFacedCard(card) ||
+        (card?.cardFaces && card.cardFaces.length >= 2) ||
+        (card?.name && card.name.includes(' // '))
+    );
   }, [dfcFaces, card]);
 
   const frontFaceName = useMemo(() => {
@@ -108,24 +116,26 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   const currentFaceName = activeFace === 'back' ? (backFaceName || `${card?.name || ''} (Verso)`) : frontFaceName;
 
   const currentFrontThumbnail = useMemo(() => {
+    if (faceThumbnails.front) return faceThumbnails.front;
     if (!card) return '';
     return (
-      card.cardFaces?.[0]?.imageUrlSmall ||
       card.cardFaces?.[0]?.imageUrl ||
-      dfcFaces?.[0]?.imageUrlSmall ||
+      card.cardFaces?.[0]?.imageUrlSmall ||
       dfcFaces?.[0]?.imageUrl ||
-      card.imageUrlSmall ||
-      card.imageUrl
+      dfcFaces?.[0]?.imageUrlSmall ||
+      card.imageUrl ||
+      card.imageUrlSmall
     );
-  }, [card, dfcFaces]);
+  }, [card, dfcFaces, faceThumbnails.front]);
 
   const currentBackThumbnail = useMemo(() => {
+    if (faceThumbnails.back) return faceThumbnails.back;
     if (!card) return '';
-    if (card.cardFaces?.[1]?.imageUrlSmall || card.cardFaces?.[1]?.imageUrl) {
-      return card.cardFaces[1].imageUrlSmall || card.cardFaces[1].imageUrl;
+    if (card.cardFaces?.[1]?.imageUrl || card.cardFaces?.[1]?.imageUrlSmall) {
+      return card.cardFaces[1].imageUrl || card.cardFaces[1].imageUrlSmall;
     }
-    if (dfcFaces?.[1]?.imageUrlSmall || dfcFaces?.[1]?.imageUrl) {
-      return dfcFaces[1].imageUrlSmall || dfcFaces[1].imageUrl;
+    if (dfcFaces?.[1]?.imageUrl || dfcFaces?.[1]?.imageUrlSmall) {
+      return dfcFaces[1].imageUrl || dfcFaces[1].imageUrlSmall;
     }
     if (
       card.setCode &&
@@ -136,13 +146,14 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     ) {
       return `https://api.scryfall.com/cards/${card.setCode.toLowerCase()}/${encodeURIComponent(card.collectorNumber)}?format=image&version=small&face=back`;
     }
-    return card.imageUrlSmall || card.imageUrl;
-  }, [card, dfcFaces]);
+    return card.imageUrl || card.imageUrlSmall;
+  }, [card, dfcFaces, faceThumbnails.back]);
 
   // Sync face resolution when card or modal opens
   useEffect(() => {
     if (isOpen && card) {
       setActiveFace(initialFace || 'front');
+      setFaceThumbnails({});
       if (card.cardFaces && card.cardFaces.length >= 2) {
         setDfcFaces(card.cardFaces);
       } else if (isDoubleFacedCard(card) || card.name.includes(' // ') || MELD_PAIRS_MAP[card.name.toLowerCase().trim()]) {
@@ -387,6 +398,124 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     return list;
   }, [mpcPrints, mpcFilterText, mpcSortBy]);
 
+  // Consolidated selection handler that immediately updates local thumbnails + dfcFaces and notifies parent
+  const handleSelectCardArt = (
+    selectedPrint: CardPrint,
+    face: 'front' | 'back' = activeFace,
+    customFeedback?: string
+  ) => {
+    setHoveredPreview(null);
+    setActivePrintId(selectedPrint.id);
+
+    const isBack = face === 'back';
+    const newImg: string =
+      (isBack
+        ? selectedPrint.cardFaces?.[1]?.imageUrl ||
+          (selectedPrint.setCode &&
+          selectedPrint.collectorNumber &&
+          selectedPrint.collectorNumber !== '★' &&
+          selectedPrint.setCode !== 'MPC' &&
+          selectedPrint.setCode !== 'CUSTOM'
+            ? `https://api.scryfall.com/cards/${selectedPrint.setCode.toLowerCase()}/${encodeURIComponent(selectedPrint.collectorNumber)}?format=image&version=normal&face=back`
+            : selectedPrint.imageUrl)
+        : selectedPrint.cardFaces?.[0]?.imageUrl || selectedPrint.imageUrl) || '';
+
+    const newImgLarge: string =
+      (isBack
+        ? selectedPrint.cardFaces?.[1]?.imageUrlLarge ||
+          (selectedPrint.setCode &&
+          selectedPrint.collectorNumber &&
+          selectedPrint.collectorNumber !== '★' &&
+          selectedPrint.setCode !== 'MPC' &&
+          selectedPrint.setCode !== 'CUSTOM'
+            ? `https://api.scryfall.com/cards/${selectedPrint.setCode.toLowerCase()}/${encodeURIComponent(selectedPrint.collectorNumber)}?format=image&version=large&face=back`
+            : selectedPrint.imageUrlLarge || newImg)
+        : selectedPrint.cardFaces?.[0]?.imageUrlLarge || selectedPrint.imageUrlLarge || newImg) || newImg;
+
+    const resolvedFaceName = isBack
+      ? selectedPrint.cardFaces?.[1]?.name || backFaceName || `${card?.name || ''} (Verso)`
+      : selectedPrint.cardFaces?.[0]?.name || frontFaceName;
+
+    const resolvedArtist = isBack
+      ? selectedPrint.cardFaces?.[1]?.artist || selectedPrint.artist
+      : selectedPrint.cardFaces?.[0]?.artist || selectedPrint.artist;
+
+    const defaultFront = currentFrontThumbnail || card?.imageUrl || '';
+    const defaultBack = currentBackThumbnail || '';
+
+    // Immediately update local faceThumbnails and dfcFaces for instant zero-latency UI update
+    if (isBack) {
+      setFaceThumbnails((prev) => ({ ...prev, back: newImg }));
+      setDfcFaces((prev: CardFace[] | null): CardFace[] => {
+        const base: CardFace[] =
+          prev && prev.length >= 2
+            ? prev
+            : [
+                {
+                  name: frontFaceName,
+                  imageUrl: defaultFront,
+                  imageUrlSmall: defaultFront,
+                  artist: card?.artist,
+                },
+                {
+                  name: backFaceName || `${card?.name || ''} (Verso)`,
+                  imageUrl: defaultBack,
+                  imageUrlSmall: defaultBack,
+                },
+              ];
+        return [
+          base[0],
+          {
+            ...base[1],
+            name: resolvedFaceName,
+            imageUrl: newImg,
+            imageUrlLarge: newImgLarge,
+            imageUrlSmall: newImg,
+            artist: resolvedArtist || base[1]?.artist,
+          },
+        ];
+      });
+    } else {
+      setFaceThumbnails((prev) => ({ ...prev, front: newImg }));
+      setDfcFaces((prev: CardFace[] | null): CardFace[] => {
+        const base: CardFace[] =
+          prev && prev.length >= 2
+            ? prev
+            : [
+                {
+                  name: frontFaceName,
+                  imageUrl: defaultFront,
+                  imageUrlSmall: defaultFront,
+                  artist: card?.artist,
+                },
+                {
+                  name: backFaceName || `${card?.name || ''} (Verso)`,
+                  imageUrl: defaultBack,
+                  imageUrlSmall: defaultBack,
+                },
+              ];
+        return [
+          {
+            ...base[0],
+            name: resolvedFaceName,
+            imageUrl: newImg,
+            imageUrlLarge: newImgLarge,
+            imageUrlSmall: newImg,
+            artist: resolvedArtist || base[0]?.artist,
+          },
+          base[1],
+        ];
+      });
+    }
+
+    onSelectPrint(selectedPrint, face);
+    setSelectedFeedback(
+      customFeedback ||
+        `Arte da ${isBack ? 'face posterior (Verso)' : 'frente'} selecionada (${selectedPrint.setName})`
+    );
+    setTimeout(() => setSelectedFeedback(null), 2200);
+  };
+
   // Handle manual Drive ID submission in MPC tab
   const handleApplyDriveId = () => {
     if (!card || !mpcDriveInput.trim()) return;
@@ -396,10 +525,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
       return;
     }
     setMpcError(null);
-    setActivePrintId(print.id);
-    onSelectPrint(print, activeFace);
-    setSelectedFeedback('Arte do Google Drive selecionada!');
-    setTimeout(() => setSelectedFeedback(null), 2200);
+    handleSelectCardArt(print, activeFace, 'Arte do Google Drive selecionada!');
   };
 
   // Handle uploading an MPCFill XML to extract alters for this card
@@ -473,10 +599,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   const handleConfirmCustomArt = () => {
     if (!card || !customImageUrl) return;
     const print = createPrintFromCustomImage(currentFaceName, customImageUrl, customTitle, customArtist);
-    setActivePrintId(print.id);
-    onSelectPrint(print, activeFace);
-    setSelectedFeedback(`Arte personalizada selecionada para o ${activeFace === 'back' ? 'Verso' : 'Frente'}!`);
-    setTimeout(() => setSelectedFeedback(null), 2200);
+    handleSelectCardArt(print, activeFace, `Arte personalizada selecionada para o ${activeFace === 'back' ? 'Verso' : 'Frente'}!`);
   };
 
   if (!isOpen || !card) return null;
@@ -712,6 +835,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               >
                 <div style={{ width: '40px', height: '56px', borderRadius: '5px', overflow: 'hidden', background: '#05070b', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>
                   <img
+                    key={currentFrontThumbnail}
                     src={currentFrontThumbnail}
                     alt={frontFaceName}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -777,6 +901,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               >
                 <div style={{ width: '40px', height: '56px', borderRadius: '5px', overflow: 'hidden', background: '#05070b', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>
                   <img
+                    key={currentBackThumbnail}
                     src={currentBackThumbnail}
                     alt={backFaceName || 'Verso'}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -1033,20 +1158,18 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     const isSelected =
                       activeFace === 'front'
                         ? p.id === activePrintId ||
+                          p.imageUrl === currentFrontThumbnail ||
                           p.imageUrl === (card.cardFaces?.[0]?.imageUrl || card.imageUrl)
-                        : (p.cardFaces?.[1]?.imageUrl && p.cardFaces[1].imageUrl === card.cardFaces?.[1]?.imageUrl) ||
-                          p.id === activePrintId;
+                        : p.id === activePrintId ||
+                          (Boolean(p.cardFaces?.[1]?.imageUrl) &&
+                            (p.cardFaces![1].imageUrl === currentBackThumbnail ||
+                              p.cardFaces![1].imageUrl === card.cardFaces?.[1]?.imageUrl)) ||
+                          printImg === currentBackThumbnail;
 
                     return (
                       <div
                         key={p.id}
-                        onClick={() => {
-                          setHoveredPreview(null);
-                          setActivePrintId(p.id);
-                          onSelectPrint(p, activeFace);
-                          setSelectedFeedback(`Arte oficial da ${activeFace === 'back' ? 'face posterior (Verso)' : 'frente'} selecionada (${p.setName})`);
-                          setTimeout(() => setSelectedFeedback(null), 2200);
-                        }}
+                        onClick={() => handleSelectCardArt(p, activeFace)}
                         onMouseEnter={(e) => {
                           setPreviewMousePos({ x: e.clientX, y: e.clientY });
                           setHoveredPreview({
@@ -1447,8 +1570,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     const isSelected =
                       activeFace === 'back'
                         ? p.id === activePrintId ||
+                          p.imageUrl === currentBackThumbnail ||
                           (Boolean(card.cardFaces?.[1]?.imageUrl) && card.cardFaces?.[1]?.imageUrl === p.imageUrl)
                         : p.id === activePrintId ||
+                          p.imageUrl === currentFrontThumbnail ||
                           ((card.cardFaces?.[0]?.imageUrl || card.imageUrl) === p.imageUrl);
                     const dpiVal = p.dpi || parseInt(p.collectorNumber, 10) || 0;
 
@@ -1478,13 +1603,13 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     return (
                       <div
                         key={p.id}
-                        onClick={() => {
-                          setHoveredPreview(null);
-                          setActivePrintId(p.id);
-                          onSelectPrint(p, activeFace);
-                          setSelectedFeedback(`Alter MPCFill selecionado para o ${activeFace === 'back' ? 'Verso' : 'Frente'} (${p.setName})`);
-                          setTimeout(() => setSelectedFeedback(null), 2200);
-                        }}
+                        onClick={() =>
+                          handleSelectCardArt(
+                            p,
+                            activeFace,
+                            `Alter MPCFill selecionado para o ${activeFace === 'back' ? 'Verso' : 'Frente'} (${p.setName})`
+                          )
+                        }
                         onMouseEnter={(e) => {
                           setPreviewMousePos({ x: e.clientX, y: e.clientY });
                           setHoveredPreview({

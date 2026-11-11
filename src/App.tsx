@@ -611,7 +611,13 @@ export function App() {
   const handleSelectArtPrint = (selectedPrint: CardPrint, targetFace: 'front' | 'back' = 'front') => {
     if (!artSelectorCard) return;
 
-    const isDfc = isDoubleFacedCard(artSelectorCard);
+    const isDfc =
+      targetFace === 'back' ||
+      isDoubleFacedCard(artSelectorCard) ||
+      Boolean(artSelectorCard.cardFaces && artSelectorCard.cardFaces.length >= 2) ||
+      artSelectorCard.name.includes(' // ') ||
+      Boolean(selectedPrint.cardFaces && selectedPrint.cardFaces.length >= 2);
+
     let newCardData: Card;
 
     if (isDfc) {
@@ -640,12 +646,14 @@ export function App() {
                 typeLine: artSelectorCard.typeLine,
                 imageUrl: artSelectorCard.imageUrl,
                 imageUrlLarge: artSelectorCard.imageUrlLarge || artSelectorCard.imageUrl,
+                imageUrlSmall: artSelectorCard.imageUrlSmall || artSelectorCard.imageUrl,
               },
               {
                 name: backName,
                 typeLine: artSelectorCard.typeLine,
                 imageUrl: defaultBackImg,
                 imageUrlLarge: defaultBackImg,
+                imageUrlSmall: defaultBackImg,
               },
             ];
 
@@ -683,6 +691,7 @@ export function App() {
             name: resolvedBackName,
             imageUrl: backImg,
             imageUrlLarge: backImgLarge,
+            imageUrlSmall: selectedPrint.cardFaces?.[1]?.imageUrlSmall || backImg,
             imageUrlArtCrop: selectedPrint.cardFaces?.[1]?.imageUrlArtCrop || selectedPrint.imageUrlArtCrop || backImg,
             artist: backArtist,
           },
@@ -729,6 +738,7 @@ export function App() {
             name: resolvedFrontName,
             imageUrl: frontImg,
             imageUrlLarge: frontImgLarge,
+            imageUrlSmall: selectedPrint.cardFaces?.[0]?.imageUrlSmall || frontImg,
             imageUrlArtCrop: selectedPrint.cardFaces?.[0]?.imageUrlArtCrop || selectedPrint.imageUrlArtCrop || frontImg,
             artist: frontArtist,
           },
@@ -745,6 +755,7 @@ export function App() {
           collectorNumber: selectedPrint.collectorNumber,
           imageUrl: frontImg,
           imageUrlLarge: frontImgLarge,
+          imageUrlSmall: selectedPrint.cardFaces?.[0]?.imageUrlSmall || frontImg,
           imageUrlArtCrop: selectedPrint.cardFaces?.[0]?.imageUrlArtCrop || selectedPrint.imageUrlArtCrop || frontImg,
           priceUsd: selectedPrint.priceUsd ?? artSelectorCard.priceUsd,
           cardFaces: updatedFaces,

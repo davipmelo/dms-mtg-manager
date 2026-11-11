@@ -82,6 +82,7 @@ export interface Card {
   layout?: string;
   meldResultName?: string;
   meldResultUri?: string;
+  artist?: string;
 }
 
 export interface CollectionItem {
@@ -152,6 +153,7 @@ export interface TokenCard {
   layout?: string;
   meldResultName?: string;
   meldResultUri?: string;
+  artist?: string;
 }
 
 export interface ProxyItem {
