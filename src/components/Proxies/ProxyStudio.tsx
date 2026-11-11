@@ -90,6 +90,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
   // Card finish & metadata
   const [cardBleedBg, setCardBleedBg] = useState<'black' | 'white'>('black');
   const [showSheetMetadata, setShowSheetMetadata] = useState<boolean>(true);
+  const [cropMpcBleed, setCropMpcBleed] = useState<boolean>(true);
 
   // UI state
   const [isAdvancedControlsOpen, setIsAdvancedControlsOpen] = useState<boolean>(true);
@@ -175,6 +176,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
         showCornerMarks,
         cardBleedBg,
         showSheetMetadata,
+        cropMpcBleed,
       };
 
       const blob = await generateProxiesPdf(pages, pdfOptions, (prog) => {
@@ -823,6 +825,17 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                   <span>Exibir rodapé de identificação (Folha X de Y) na margem externa</span>
                 </label>
 
+                {/* Crop MPC Bleed Toggle */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#cbd5e1', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={cropMpcBleed}
+                    onChange={(e) => setCropMpcBleed(e.target.checked)}
+                    style={{ accentColor: '#ffbb00' }}
+                  />
+                  <span>Ajustar sangria de artes MPCFill (Bordas padrão MTG)</span>
+                </label>
+
                 {/* Printing Tip */}
                 <div
                   style={{
@@ -913,6 +926,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                     setCode={item.card.setCode}
                     collectorNumber={item.card.collectorNumber}
                     face={item.card.faceLabel === 'verso' ? 'back' : 'front'}
+                    cropMpcBleed={cropMpcBleed}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 </div>
@@ -1242,6 +1256,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                         collectorNumber={c.card.collectorNumber}
                         preferLarge
                         face={c.card.faceLabel === 'verso' ? 'back' : 'front'}
+                        cropMpcBleed={cropMpcBleed}
                         loading="eager"
                         style={{
                           width: '100%',

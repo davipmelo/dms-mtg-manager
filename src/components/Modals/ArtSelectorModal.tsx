@@ -8,6 +8,7 @@ import {
   createPrintFromCustomImage,
   extractAltersFromXmlForCard,
   extractGoogleDriveId,
+  isMpcCardImage,
 } from '../../services/mpcFillService';
 import { compressImageFile } from '../../services/imageUtils';
 import { CardImage } from '../Common/CardImage';
@@ -846,6 +847,12 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 src={currentPreviewData.url}
                 alt={currentPreviewData.name}
                 crossOrigin="anonymous"
+                className={
+                  currentPreviewData.setCode === 'MPC' ||
+                  isMpcCardImage(currentPreviewData.setCode, currentPreviewData.url)
+                    ? 'is-mpc-bleed-crop'
+                    : ''
+                }
                 onError={(e) => {
                   const target = e.currentTarget;
                   if (card.imageUrl && target.src !== card.imageUrl) {
@@ -1570,7 +1577,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                           transition: 'all 0.15s ease',
                         }}
                       >
-                        <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b' }}>
+                        <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b', overflow: 'hidden' }}>
                           <CardImage
                             name={printFaceName}
                             imageUrl={printImg}
@@ -2012,12 +2019,13 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                           background: '#0a0d14',
                         }}
                       >
-                        <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b' }}>
+                        <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b', overflow: 'hidden' }}>
                           <img
                             src={p.imageUrl}
                             alt={p.setName}
                             crossOrigin="anonymous"
                             loading="lazy"
+                            className="is-mpc-bleed-crop"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
 

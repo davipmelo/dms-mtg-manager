@@ -375,6 +375,17 @@ dialog.custom-modal[open] {
   transform: scale(1.03);
 }
 
+/* MPCFill Bleed Margin Correction (crops 1/8" print bleed so cards match standard MTG border width) */
+.card-image.is-mpc-bleed-crop,
+img.is-mpc-bleed-crop {
+  transform: scale(1.085);
+  transform-origin: center center;
+}
+
+.card-item-container:hover .card-image.is-mpc-bleed-crop {
+  transform: scale(1.118);
+}
+
 /* Commander Subtle Golden Border & Delicate Glow */
 .card-item-container.is-commander {
   border: 1.5px solid rgba(255, 187, 0, 0.75) !important;

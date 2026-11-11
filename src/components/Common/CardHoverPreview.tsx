@@ -1,4 +1,5 @@
 import React from 'react';
+import { isMpcCardImage } from '../../services/mpcFillService';
 
 export interface CardHoverPreviewData {
   url: string;
@@ -26,6 +27,8 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ preview, mou
     )
   );
   const top = Math.max(16, Math.min(window.innerHeight - 580, mousePos.y - 210));
+
+  const isMpc = isMpcCardImage(undefined, preview.url);
 
   return (
     <div
@@ -55,12 +58,14 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ preview, mou
           aspectRatio: '5/7',
           background: '#000',
           maxHeight: 'calc(100vh - 90px)',
+          overflow: 'hidden',
         }}
       >
         <img
           src={preview.url}
           alt={preview.title}
           crossOrigin="anonymous"
+          className={isMpc ? 'is-mpc-bleed-crop' : ''}
           style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
         />
       </div>

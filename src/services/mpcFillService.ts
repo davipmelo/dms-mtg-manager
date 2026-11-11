@@ -141,6 +141,28 @@ export interface BuildProxyOptions {
 }
 
 /**
+ * Detects whether an image URL or card belongs to MPCFill (which contains an extra 1/8" print bleed).
+ */
+export function isMpcCardImage(
+  setCode?: string,
+  imageUrl?: string,
+  imageUrlLarge?: string,
+  cardId?: string
+): boolean {
+  if (setCode === 'MPC') return true;
+  if (cardId && (cardId.startsWith('mpc-') || cardId.includes('-mpc-'))) return true;
+  const checkUrl = (url?: string) =>
+    Boolean(
+      url &&
+        (url.includes('lh3.googleusercontent.com') ||
+          url.includes('drive.google.com') ||
+          url.includes('mpcfill') ||
+          url.includes('/api-mpcfill'))
+    );
+  return checkUrl(imageUrl) || checkUrl(imageUrlLarge);
+}
+
+/**
  * Transforms an MPCFill order into ready-to-print ProxyItems.
  * Supports:
  * - Double-sided cards (front face immediately followed by matching back face)

@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { Card, TokenCard, ProxyItem } from '../types';
+import { isMpcCardImage } from './mpcFillService';
 
 export interface ProxyPdfOptions {
   showCutLines: boolean;
@@ -14,6 +15,7 @@ export interface ProxyPdfOptions {
   showCornerMarks: boolean;
   cardBleedBg: 'black' | 'white';
   showSheetMetadata: boolean;
+  cropMpcBleed?: boolean;
 }
 
 export const DEFAULT_PROXY_PDF_OPTIONS: ProxyPdfOptions = {
@@ -29,6 +31,7 @@ export const DEFAULT_PROXY_PDF_OPTIONS: ProxyPdfOptions = {
   showCornerMarks: true,
   cardBleedBg: 'black',
   showSheetMetadata: true,
+  cropMpcBleed: true,
 };
 
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -218,7 +221,22 @@ export async function generateProxiesPdf(
       }
 
       if (img) {
-        ctx.drawImage(img, cardX, cardY, wPx, hPx);
+        const shouldCropBleed =
+          options.cropMpcBleed !== false &&
+          isMpcCardImage(card.setCode, card.imageUrl, card.imageUrlLarge, card.id);
+
+        if (shouldCropBleed) {
+          // MPCFill uses 1/8" (3.175mm) bleed on standard 63mm x 88mm card:
+          // Bleed width ratio: 3.175 / (63 + 2*3.175) ≈ 0.0458
+          // Bleed height ratio: 3.175 / (88 + 2*3.175) ≈ 0.0336
+          const cropX = img.width * 0.0458;
+          const cropY = img.height * 0.0336;
+          const srcW = img.width - 2 * cropX;
+          const srcH = img.height - 2 * cropY;
+          ctx.drawImage(img, cropX, cropY, srcW, srcH, cardX, cardY, wPx, hPx);
+        } else {
+          ctx.drawImage(img, cardX, cardY, wPx, hPx);
+        }
       } else {
         // Fallback placeholder card
         ctx.fillStyle = '#1e293b';

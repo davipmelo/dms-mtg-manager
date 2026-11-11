@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { isMpcCardImage } from '../../services/mpcFillService';
 
 interface CardImageProps {
   name: string;
@@ -11,6 +12,7 @@ interface CardImageProps {
   style?: React.CSSProperties;
   loading?: 'lazy' | 'eager';
   face?: 'front' | 'back';
+  cropMpcBleed?: boolean;
 }
 
 /**
@@ -33,6 +35,7 @@ export const CardImage: React.FC<CardImageProps> = ({
   style,
   loading = 'lazy',
   face = 'front',
+  cropMpcBleed = true,
 }) => {
   const version = preferLarge ? 'large' : 'normal';
 
@@ -136,11 +139,15 @@ export const CardImage: React.FC<CardImageProps> = ({
     );
   }
 
+  const currentSrc = candidates[attemptIndex];
+  const isMpc = cropMpcBleed && isMpcCardImage(setCode, currentSrc, imageUrlLarge);
+  const combinedClassName = [className, isMpc ? 'is-mpc-bleed-crop' : ''].filter(Boolean).join(' ');
+
   return (
     <img
-      src={candidates[attemptIndex]}
+      src={currentSrc}
       alt={name}
-      className={className}
+      className={combinedClassName}
       style={style}
       loading={loading}
       crossOrigin="anonymous"

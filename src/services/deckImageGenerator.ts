@@ -1,5 +1,6 @@
 import { Deck, Card, DeckCard } from '../types';
 import { jsPDF } from 'jspdf';
+import { isMpcCardImage } from './mpcFillService';
 
 export interface DeckImageProgress {
   loaded: number;
@@ -624,7 +625,16 @@ export async function generateDeckPoster(
     ctx.clip();
 
     if (img) {
-      ctx.drawImage(img, x, y, cardWidth, cardHeight);
+      const isMpc = isMpcCardImage(item.card.setCode, item.card.imageUrl, item.card.imageUrlLarge, item.card.id);
+      if (isMpc) {
+        const cropX = img.width * 0.0458;
+        const cropY = img.height * 0.0336;
+        const srcW = img.width - 2 * cropX;
+        const srcH = img.height - 2 * cropY;
+        ctx.drawImage(img, cropX, cropY, srcW, srcH, x, y, cardWidth, cardHeight);
+      } else {
+        ctx.drawImage(img, x, y, cardWidth, cardHeight);
+      }
     } else {
       // Fallback
       ctx.fillStyle = isLight ? '#cbd5e1' : '#1e293b';
