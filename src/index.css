@@ -598,6 +598,22 @@ img.is-mpc-bleed-crop {
   z-index: 2;
 }
 
+/* Card Image Loading Shimmer & Skeleton */
+@keyframes card-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.card-image-skeleton {
+  background: linear-gradient(90deg, #0e121a 0%, #1c2436 45%, #243048 50%, #1c2436 55%, #0e121a 100%);
+  background-size: 200% 100%;
+  animation: card-shimmer 1.8s ease-in-out infinite;
+}
+
 /* Crop marks (marcas de enquadramento) with customizable color and thickness */
 .crop-corner {
   position: absolute;

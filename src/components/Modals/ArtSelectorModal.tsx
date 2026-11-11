@@ -925,7 +925,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 key={currentPreviewData.url}
                 src={currentPreviewData.url}
                 alt={currentPreviewData.name}
-                crossOrigin="anonymous"
+                referrerPolicy="no-referrer"
+                decoding="async"
                 className={
                   currentPreviewData.setCode === 'MPC' ||
                   isMpcCardImage(currentPreviewData.setCode, currentPreviewData.url)
@@ -1304,6 +1305,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     key={currentFrontThumbnail}
                     src={currentFrontThumbnail}
                     alt={frontFaceName}
+                    referrerPolicy="no-referrer"
+                    decoding="async"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 </div>
@@ -1370,6 +1373,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     key={currentBackThumbnail}
                     src={currentBackThumbnail}
                     alt={backFaceName || 'Verso'}
+                    referrerPolicy="no-referrer"
+                    decoding="async"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 </div>
@@ -1666,6 +1671,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                             setCode={p.setCode}
                             collectorNumber={p.collectorNumber}
                             face={activeFace}
+                            loading="eager"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
                           {isSelected && (
@@ -2101,12 +2107,13 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                         }}
                       >
                         <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b', overflow: 'hidden' }}>
-                          <img
-                            src={p.imageUrl}
-                            alt={p.setName}
-                            crossOrigin="anonymous"
-                            loading="lazy"
-                            className="is-mpc-bleed-crop"
+                          <CardImage
+                            name={p.setName}
+                            imageUrl={p.imageUrl}
+                            imageUrlLarge={p.imageUrlLarge || p.imageUrl}
+                            setCode="MPC"
+                            cropMpcBleed
+                            loading="eager"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
 
@@ -2407,6 +2414,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     <img
                       src={customImageUrl}
                       alt={customTitle || currentFaceName}
+                      referrerPolicy="no-referrer"
+                      decoding="async"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   ) : (

@@ -16,13 +16,26 @@ interface CardImageProps {
 }
 
 /**
+ * Normalizes Google User Content / MPCFill Drive URLs into fast-loading web thumbnail URLs.
+ * E.g. https://lh3.googleusercontent.com/d/{id} -> https://lh3.googleusercontent.com/d/{id}=w600
+ */
+function getMpcThumbnailUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  if (url.includes('lh3.googleusercontent.com/d/') && !url.includes('=')) {
+    return `${url}=w600`;
+  }
+  return undefined;
+}
+
+/**
  * Resilient MTG Card Image component.
  * Automatically recovers if a cached/stored URL is stale or missing by falling back to:
- * 1) Primary image URL (normal or large)
- * 2) Alternate image URL (normal <-> large)
- * 3) Scryfall direct image endpoint by setCode + collectorNumber
- * 4) Scryfall direct image endpoint by card name (fuzzy)
- * 5) Sleek inline SVG card placeholder (when offline)
+ * 1) Fast optimized web thumbnail (for MPCFill/Google Drive)
+ * 2) Primary image URL (normal or large)
+ * 3) Alternate image URL (normal <-> large)
+ * 4) Scryfall direct image endpoint by setCode + collectorNumber
+ * 5) Scryfall direct image endpoint by card name (fuzzy)
+ * 6) Sleek inline MTG card placeholder
  */
 export const CardImage: React.FC<CardImageProps> = ({
   name,
@@ -33,7 +46,7 @@ export const CardImage: React.FC<CardImageProps> = ({
   preferLarge = false,
   className = '',
   style,
-  loading = 'lazy',
+  loading = 'eager', // Eager by default so images inside modals and scroll containers never get stuck in idle lazy state!
   face = 'front',
   cropMpcBleed = true,
 }) => {
@@ -53,8 +66,24 @@ export const CardImage: React.FC<CardImageProps> = ({
             src.startsWith('blob:'))
       );
 
-    if (isValidSrc(primary)) list.push(primary!);
-    if (isValidSrc(secondary) && secondary !== primary) list.push(secondary!);
+    // If it is a Google Drive MPCFill image, prioritize the fast web thumbnail (120KB instead of 20MB)
+    const mpcThumbPrimary = getMpcThumbnailUrl(primary);
+    if (mpcThumbPrimary) {
+      list.push(mpcThumbPrimary);
+    }
+
+    if (isValidSrc(primary) && !list.includes(primary!)) {
+      list.push(primary!);
+    }
+
+    const mpcThumbSecondary = getMpcThumbnailUrl(secondary);
+    if (mpcThumbSecondary && !list.includes(mpcThumbSecondary)) {
+      list.push(mpcThumbSecondary);
+    }
+
+    if (isValidSrc(secondary) && !list.includes(secondary!)) {
+      list.push(secondary!);
+    }
 
     const isCustomOrAlter = setCode === 'CUSTOM' || setCode === 'MPC';
 
@@ -85,10 +114,12 @@ export const CardImage: React.FC<CardImageProps> = ({
 
   const [attemptIndex, setAttemptIndex] = useState(0);
   const [allFailed, setAllFailed] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     setAttemptIndex(0);
     setAllFailed(false);
+    setIsLoaded(false);
   }, [candidates]);
 
   if (allFailed || candidates.length === 0) {
@@ -98,24 +129,25 @@ export const CardImage: React.FC<CardImageProps> = ({
         style={{
           width: '100%',
           height: '100%',
-          background: '#17171c',
+          background: '#131722',
           border: '1px solid rgba(255, 187, 0, 0.35)',
-          borderRadius: '8px',
+          borderRadius: '6px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '14px',
+          padding: '12px',
           textAlign: 'center',
-          gap: '8px',
+          gap: '6px',
           color: '#f4f4f6',
+          boxSizing: 'border-box',
           ...style,
         }}
       >
         <div
           style={{
-            width: '36px',
-            height: '36px',
+            width: '32px',
+            height: '32px',
             borderRadius: '50%',
             background: 'rgba(255, 187, 0, 0.15)',
             border: '1px solid rgba(255, 187, 0, 0.45)',
@@ -123,15 +155,15 @@ export const CardImage: React.FC<CardImageProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 800,
-            fontSize: '0.85rem',
+            fontSize: '0.75rem',
             color: '#ffbb00',
           }}
         >
           MTG
         </div>
-        <div style={{ fontWeight: 700, fontSize: '0.85rem', lineHeight: 1.3 }}>{name}</div>
+        <div style={{ fontWeight: 700, fontSize: '0.78rem', lineHeight: 1.25 }}>{name}</div>
         {setCode && (
-          <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+          <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
             {setCode.toUpperCase()} {collectorNumber ? `#${collectorNumber}` : ''}
           </div>
         )}
@@ -144,21 +176,51 @@ export const CardImage: React.FC<CardImageProps> = ({
   const combinedClassName = [className, isMpc ? 'is-mpc-bleed-crop' : ''].filter(Boolean).join(' ');
 
   return (
-    <img
-      src={currentSrc}
-      alt={name}
-      className={combinedClassName}
-      style={style}
-      loading={loading}
-      crossOrigin="anonymous"
-      onError={() => {
-        if (attemptIndex + 1 < candidates.length) {
-          setAttemptIndex((prev) => prev + 1);
-        } else {
-          setAllFailed(true);
-        }
+    <div
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        background: '#0d1117',
       }}
-    />
+    >
+      {/* Visual Shimmer Loading Skeleton while the image is loading */}
+      {!isLoaded && (
+        <div
+          className="card-image-skeleton"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 1,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
+      <img
+        src={currentSrc}
+        alt={name}
+        className={combinedClassName}
+        style={{
+          ...style,
+          opacity: isLoaded ? 1 : 0,
+          transition: 'opacity 0.2s ease-in-out',
+        }}
+        loading={loading}
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onLoad={() => setIsLoaded(true)}
+        onError={() => {
+          setIsLoaded(false);
+          if (attemptIndex + 1 < candidates.length) {
+            setAttemptIndex((prev) => prev + 1);
+          } else {
+            setAllFailed(true);
+          }
+        }}
+      />
+    </div>
   );
 };
 

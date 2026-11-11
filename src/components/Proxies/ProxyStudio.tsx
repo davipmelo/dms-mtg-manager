@@ -1560,11 +1560,11 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
                         }}
                       >
-                        <img
-                          src={card.imageUrl}
-                          alt={card.name}
-                          crossOrigin="anonymous"
-                          loading="lazy"
+                        <CardImage
+                          name={card.name}
+                          imageUrl={card.imageUrl}
+                          setCode="MPC"
+                          cropMpcBleed
                           style={{
                             width: '100%',
                             height: '100%',

@@ -64,7 +64,8 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ preview, mou
         <img
           src={preview.url}
           alt={preview.title}
-          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
+          decoding="async"
           className={isMpc ? 'is-mpc-bleed-crop' : ''}
           style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
         />
