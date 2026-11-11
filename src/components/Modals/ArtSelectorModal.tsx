@@ -483,7 +483,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     fetchMpcAlters(targetName, mpcMinDpi, initialCardType, card.typeLine);
   }, [isOpen, activeFace, card?.name, currentFaceName, isCardToken, fetchMpcAlters, mpcMinDpi, resolvingFaces]);
 
-  // Keyboard navigation for previous/next card (Left/Right arrows when not typing)
+  // Keyboard navigation for previous/next card (Left/Right arrows or A/D keys when not typing)
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -492,12 +492,19 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
         activeElement &&
         (activeElement.tagName === 'INPUT' ||
           activeElement.tagName === 'TEXTAREA' ||
-          activeElement.tagName === 'SELECT');
+          activeElement.tagName === 'SELECT' ||
+          (activeElement as HTMLElement).isContentEditable);
       if (isInput) return;
 
-      if (e.key === 'ArrowLeft' && hasPrev && onNavigatePrev) {
+      // Ignore if modifier keys are pressed (e.g. Ctrl+A, Cmd+A, Alt+D, etc.)
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      const key = e.key.toLowerCase();
+      if ((e.key === 'ArrowLeft' || key === 'a') && hasPrev && onNavigatePrev) {
+        e.preventDefault();
         onNavigatePrev();
-      } else if (e.key === 'ArrowRight' && hasNext && onNavigateNext) {
+      } else if ((e.key === 'ArrowRight' || key === 'd') && hasNext && onNavigateNext) {
+        e.preventDefault();
         onNavigateNext();
       }
     };
@@ -1131,7 +1138,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   style={{ padding: '4px', opacity: hasPrev ? 1 : 0.3 }}
                   disabled={!hasPrev}
                   onClick={onNavigatePrev}
-                  title="Carta Anterior (Seta Esquerda do Teclado)"
+                  title="Carta Anterior (Seta Esquerda ou Tecla A)"
                 >
                   <ChevronLeft size={18} />
                 </button>
@@ -1156,7 +1163,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   style={{ padding: '4px', opacity: hasNext ? 1 : 0.3 }}
                   disabled={!hasNext}
                   onClick={onNavigateNext}
-                  title="Próxima Carta (Seta Direita do Teclado)"
+                  title="Próxima Carta (Seta Direita ou Tecla D)"
                 >
                   <ChevronRight size={18} />
                 </button>
