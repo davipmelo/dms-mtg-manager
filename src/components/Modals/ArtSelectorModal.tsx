@@ -784,10 +784,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
       >
         {/* Left Side: Current Card Preview (Persistent comparison) */}
         {currentPreviewData && (
-          <div
-            className="art-selector-current-preview"
-            onMouseEnter={() => setHoveredPreview(null)}
-          >
+          <div className="art-selector-current-preview">
             {/* Header */}
             <div
               style={{
@@ -850,8 +847,50 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               onClick={() => {
                 if (isCardDfc) {
                   setActiveFace(activeFace === 'front' ? 'back' : 'front');
+                  setHoveredPreview(null);
                 }
               }}
+              onMouseEnter={(e) => {
+                setPreviewMousePos({ x: e.clientX, y: e.clientY });
+
+                let largeUrl = currentPreviewData.url;
+                if (card?.imageUrlLarge && (!isCardDfc || activeFace === 'front')) {
+                  largeUrl = card.imageUrlLarge;
+                } else if (largeUrl.includes('/normal/')) {
+                  largeUrl = largeUrl.replace('/normal/', '/large/');
+                }
+
+                const setPart =
+                  currentPreviewData.setCode &&
+                  currentPreviewData.setCode !== 'MPC' &&
+                  currentPreviewData.setCode !== 'CUSTOM'
+                    ? ` (${currentPreviewData.setCode.toUpperCase()}${
+                        currentPreviewData.collectorNumber
+                          ? ` #${currentPreviewData.collectorNumber}`
+                          : ''
+                      })`
+                    : currentPreviewData.setCode === 'MPC'
+                    ? ' (MPCFill)'
+                    : '';
+
+                const artistPart = currentPreviewData.artist
+                  ? ` • Arte por ${currentPreviewData.artist}`
+                  : '';
+                const facePart = currentPreviewData.faceLabel
+                  ? ` • [${currentPreviewData.faceLabel}]`
+                  : '';
+                const setLabel =
+                  currentPreviewData.setName ||
+                  (currentPreviewData.setCode === 'MPC' ? 'MPCFill Alter' : '');
+
+                setHoveredPreview({
+                  url: largeUrl,
+                  title: `${currentPreviewData.name}${setPart}`,
+                  subtitle: `${setLabel}${artistPart}${facePart}`.trim(),
+                });
+              }}
+              onMouseMove={(e) => setPreviewMousePos({ x: e.clientX, y: e.clientY })}
+              onMouseLeave={() => setHoveredPreview(null)}
               style={{
                 position: 'relative',
                 width: '100%',
@@ -861,9 +900,14 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 background: '#05070b',
                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.75)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                cursor: isCardDfc ? 'pointer' : 'default',
+                cursor: isCardDfc ? 'pointer' : 'zoom-in',
+                transition: 'all 0.15s ease',
               }}
-              title={isCardDfc ? 'Clique para virar a carta' : currentPreviewData.name}
+              title={
+                isCardDfc
+                  ? 'Clique para virar a carta (passe o mouse para ampliar a arte)'
+                  : 'Passe o mouse para ampliar a arte'
+              }
             >
               <img
                 key={currentPreviewData.url}
@@ -887,6 +931,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   height: '100%',
                   objectFit: 'contain',
                   display: 'block',
+                  pointerEvents: 'none',
                 }}
               />
               {isCardDfc && (
@@ -906,6 +951,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
+                    pointerEvents: 'none',
                   }}
                 >
                   <RotateCw size={10} className="text-amber-400" />
