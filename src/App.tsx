@@ -615,97 +615,140 @@ export function App() {
     let newCardData: Card;
 
     if (isDfc) {
-      const baseFaces = artSelectorCard.cardFaces && artSelectorCard.cardFaces.length >= 2
-        ? [...artSelectorCard.cardFaces]
-        : [
-            {
-              name: artSelectorCard.name.split(' // ')[0].trim(),
-              typeLine: artSelectorCard.typeLine,
-              imageUrl: artSelectorCard.imageUrl,
-              imageUrlLarge: artSelectorCard.imageUrlLarge || artSelectorCard.imageUrl,
-            },
-            {
-              name: artSelectorCard.name.includes(' // ')
-                ? artSelectorCard.name.split(' // ')[1].trim()
-                : `${artSelectorCard.name} (Verso)`,
-              typeLine: artSelectorCard.typeLine,
-              imageUrl: artSelectorCard.imageUrl,
-              imageUrlLarge: artSelectorCard.imageUrlLarge || artSelectorCard.imageUrl,
-            },
-          ];
+      const frontName =
+        artSelectorCard.cardFaces?.[0]?.name ||
+        (artSelectorCard.name.includes(' // ') ? artSelectorCard.name.split(' // ')[0].trim() : artSelectorCard.name);
+      const backName =
+        artSelectorCard.cardFaces?.[1]?.name ||
+        (artSelectorCard.name.includes(' // ') ? artSelectorCard.name.split(' // ')[1].trim() : `${artSelectorCard.name} (Verso)`);
+
+      const defaultBackImg =
+        artSelectorCard.setCode &&
+        artSelectorCard.collectorNumber &&
+        artSelectorCard.collectorNumber !== '★' &&
+        artSelectorCard.setCode !== 'MPC' &&
+        artSelectorCard.setCode !== 'CUSTOM'
+          ? `https://api.scryfall.com/cards/${artSelectorCard.setCode.toLowerCase()}/${encodeURIComponent(artSelectorCard.collectorNumber)}?format=image&version=normal&face=back`
+          : artSelectorCard.imageUrl;
+
+      const baseFaces =
+        artSelectorCard.cardFaces && artSelectorCard.cardFaces.length >= 2
+          ? [...artSelectorCard.cardFaces]
+          : [
+              {
+                name: frontName,
+                typeLine: artSelectorCard.typeLine,
+                imageUrl: artSelectorCard.imageUrl,
+                imageUrlLarge: artSelectorCard.imageUrlLarge || artSelectorCard.imageUrl,
+              },
+              {
+                name: backName,
+                typeLine: artSelectorCard.typeLine,
+                imageUrl: defaultBackImg,
+                imageUrlLarge: defaultBackImg,
+              },
+            ];
 
       if (targetFace === 'back') {
-        if (selectedPrint.cardFaces && selectedPrint.cardFaces.length >= 2) {
-          // Official DFC print: update both faces
-          newCardData = {
-            ...artSelectorCard,
-            id: selectedPrint.id,
-            oracleId: selectedPrint.oracleId || artSelectorCard.oracleId,
-            printsSearchUri: selectedPrint.printsSearchUri || artSelectorCard.printsSearchUri,
-            setCode: selectedPrint.setCode,
-            setName: selectedPrint.setName,
-            collectorNumber: selectedPrint.collectorNumber,
-            imageUrl: selectedPrint.imageUrl,
-            imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
-            imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl || artSelectorCard.imageUrlArtCrop,
-            priceUsd: selectedPrint.priceUsd ?? artSelectorCard.priceUsd,
-            cardFaces: selectedPrint.cardFaces,
-          };
-        } else {
-          // Custom / MPCFill alter specifically for the back face
-          const updatedFaces = [
-            baseFaces[0],
-            {
-              ...baseFaces[1],
-              imageUrl: selectedPrint.imageUrl,
-              imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
-              imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl,
-              artist: selectedPrint.artist || baseFaces[1]?.artist,
-            },
-          ];
+        const backImg =
+          selectedPrint.cardFaces?.[1]?.imageUrl ||
+          (selectedPrint.setCode &&
+          selectedPrint.collectorNumber &&
+          selectedPrint.collectorNumber !== '★' &&
+          selectedPrint.setCode !== 'MPC' &&
+          selectedPrint.setCode !== 'CUSTOM'
+            ? `https://api.scryfall.com/cards/${selectedPrint.setCode.toLowerCase()}/${encodeURIComponent(selectedPrint.collectorNumber)}?format=image&version=normal&face=back`
+            : selectedPrint.imageUrl);
 
-          newCardData = {
-            ...artSelectorCard,
-            cardFaces: updatedFaces,
-          };
-        }
+        const backImgLarge =
+          selectedPrint.cardFaces?.[1]?.imageUrlLarge ||
+          (selectedPrint.setCode &&
+          selectedPrint.collectorNumber &&
+          selectedPrint.collectorNumber !== '★' &&
+          selectedPrint.setCode !== 'MPC' &&
+          selectedPrint.setCode !== 'CUSTOM'
+            ? `https://api.scryfall.com/cards/${selectedPrint.setCode.toLowerCase()}/${encodeURIComponent(selectedPrint.collectorNumber)}?format=image&version=large&face=back`
+            : selectedPrint.imageUrlLarge || backImg);
+
+        const backArtist =
+          selectedPrint.cardFaces?.[1]?.artist || selectedPrint.artist || baseFaces[1]?.artist;
+
+        const resolvedBackName =
+          selectedPrint.cardFaces?.[1]?.name || baseFaces[1]?.name || backName;
+
+        const updatedFaces = [
+          baseFaces[0],
+          {
+            ...baseFaces[1],
+            name: resolvedBackName,
+            imageUrl: backImg,
+            imageUrlLarge: backImgLarge,
+            imageUrlArtCrop: selectedPrint.cardFaces?.[1]?.imageUrlArtCrop || selectedPrint.imageUrlArtCrop || backImg,
+            artist: backArtist,
+          },
+        ];
+
+        newCardData = {
+          ...artSelectorCard,
+          cardFaces: updatedFaces,
+        };
       } else {
         // Changing the front face
-        if (selectedPrint.cardFaces && selectedPrint.cardFaces.length >= 2) {
-          newCardData = {
-            ...artSelectorCard,
-            id: selectedPrint.id,
-            oracleId: selectedPrint.oracleId || artSelectorCard.oracleId,
-            printsSearchUri: selectedPrint.printsSearchUri || artSelectorCard.printsSearchUri,
-            setCode: selectedPrint.setCode,
-            setName: selectedPrint.setName,
-            collectorNumber: selectedPrint.collectorNumber,
-            imageUrl: selectedPrint.imageUrl,
-            imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
-            imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl || artSelectorCard.imageUrlArtCrop,
-            priceUsd: selectedPrint.priceUsd ?? artSelectorCard.priceUsd,
-            cardFaces: selectedPrint.cardFaces,
-          };
-        } else {
-          const updatedFaces = [
-            {
-              ...baseFaces[0],
-              imageUrl: selectedPrint.imageUrl,
-              imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
-              imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl,
-              artist: selectedPrint.artist || baseFaces[0]?.artist,
-            },
-            baseFaces[1],
-          ];
+        const frontImg =
+          selectedPrint.cardFaces?.[0]?.imageUrl || selectedPrint.imageUrl;
+        const frontImgLarge =
+          selectedPrint.cardFaces?.[0]?.imageUrlLarge || selectedPrint.imageUrlLarge || frontImg;
+        const frontArtist =
+          selectedPrint.cardFaces?.[0]?.artist || selectedPrint.artist || baseFaces[0]?.artist;
+        const resolvedFrontName =
+          selectedPrint.cardFaces?.[0]?.name || baseFaces[0]?.name || frontName;
 
-          newCardData = {
-            ...artSelectorCard,
-            imageUrl: selectedPrint.imageUrl,
-            imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
-            imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl || artSelectorCard.imageUrlArtCrop,
-            cardFaces: updatedFaces,
-          };
+        // Check if back face had a custom/MPCFill alter:
+        const hasCustomBack =
+          baseFaces[1]?.imageUrl &&
+          (baseFaces[1].imageUrl.includes('googleusercontent') ||
+            baseFaces[1].imageUrl.startsWith('data:') ||
+            baseFaces[1].imageUrl.startsWith('blob:') ||
+            baseFaces[1].imageUrl.includes('mpc'));
+
+        let updatedBackFace = baseFaces[1];
+        // If selecting an official print with cardFaces and user didn't have a custom back face alter, sync back face to this print:
+        if (
+          !hasCustomBack &&
+          selectedPrint.cardFaces &&
+          selectedPrint.cardFaces.length >= 2 &&
+          selectedPrint.setCode !== 'MPC' &&
+          selectedPrint.setCode !== 'CUSTOM'
+        ) {
+          updatedBackFace = selectedPrint.cardFaces[1];
         }
+
+        const updatedFaces = [
+          {
+            ...baseFaces[0],
+            name: resolvedFrontName,
+            imageUrl: frontImg,
+            imageUrlLarge: frontImgLarge,
+            imageUrlArtCrop: selectedPrint.cardFaces?.[0]?.imageUrlArtCrop || selectedPrint.imageUrlArtCrop || frontImg,
+            artist: frontArtist,
+          },
+          updatedBackFace,
+        ];
+
+        newCardData = {
+          ...artSelectorCard,
+          id: selectedPrint.id || artSelectorCard.id,
+          oracleId: selectedPrint.oracleId || artSelectorCard.oracleId,
+          printsSearchUri: selectedPrint.printsSearchUri || artSelectorCard.printsSearchUri,
+          setCode: selectedPrint.setCode,
+          setName: selectedPrint.setName,
+          collectorNumber: selectedPrint.collectorNumber,
+          imageUrl: frontImg,
+          imageUrlLarge: frontImgLarge,
+          imageUrlArtCrop: selectedPrint.cardFaces?.[0]?.imageUrlArtCrop || selectedPrint.imageUrlArtCrop || frontImg,
+          priceUsd: selectedPrint.priceUsd ?? artSelectorCard.priceUsd,
+          cardFaces: updatedFaces,
+        };
       }
     } else {
       newCardData = {

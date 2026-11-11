@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { Card, CardPrint, isDoubleFacedCard } from '../../types';
-import { getCardPrints, resolveCardFaces } from '../../services/scryfall';
+import { Card, CardPrint, isDoubleFacedCard, CardFace } from '../../types';
+import { getCardPrints, resolveCardFaces, MELD_PAIRS_MAP } from '../../services/scryfall';
 import {
   searchMpcFillAlters,
   MpcCardPrint,
@@ -69,18 +69,28 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
   // Active face state for double-faced cards ('front' vs 'back')
   const [activeFace, setActiveFace] = useState<'front' | 'back'>(initialFace);
+  const [dfcFaces, setDfcFaces] = useState<CardFace[] | null>(card?.cardFaces || null);
+  const [resolvingFaces, setResolvingFaces] = useState<boolean>(false);
 
-  const isCardDfc = useMemo(() => isDoubleFacedCard(card), [card]);
+  const isCardDfc = useMemo(() => {
+    return Boolean((dfcFaces && dfcFaces.length >= 2) || isDoubleFacedCard(card));
+  }, [dfcFaces, card]);
 
   const frontFaceName = useMemo(() => {
     if (!card) return '';
-    let name = card.cardFaces?.[0]?.name || card.name;
-    if (name.includes('//')) name = name.split('//')[0];
-    return name.trim();
-  }, [card]);
+    if (dfcFaces?.[0]?.name) return dfcFaces[0].name.trim();
+    if (card.cardFaces?.[0]?.name) return card.cardFaces[0].name.trim();
+    if (card.name.includes('//')) return card.name.split('//')[0].trim();
+    return card.name.trim();
+  }, [card, dfcFaces]);
 
   const backFaceName = useMemo(() => {
     if (!card) return '';
+    if (dfcFaces?.[1]?.name) {
+      let bName = dfcFaces[1].name;
+      if (bName.includes('//')) bName = bName.split('//')[1] || bName;
+      return bName.trim();
+    }
     if (card.cardFaces?.[1]?.name) {
       let bName = card.cardFaces[1].name;
       if (bName.includes('//')) bName = bName.split('//')[1] || bName;
@@ -89,20 +99,67 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     if (card.name.includes('//')) {
       return card.name.split('//')[1].trim();
     }
-    return `${card.name} (Verso)`;
-  }, [card]);
+    if (card.meldResultName) return card.meldResultName.trim();
+    const normalized = card.name.toLowerCase().trim();
+    if (MELD_PAIRS_MAP[normalized]) return MELD_PAIRS_MAP[normalized];
+    return '';
+  }, [card, dfcFaces]);
 
-  const currentFaceName = activeFace === 'back' ? backFaceName : frontFaceName;
+  const currentFaceName = activeFace === 'back' ? (backFaceName || `${card?.name || ''} (Verso)`) : frontFaceName;
 
-  // Sync initial face when card or modal opens
+  const currentFrontThumbnail = useMemo(() => {
+    if (!card) return '';
+    return (
+      card.cardFaces?.[0]?.imageUrlSmall ||
+      card.cardFaces?.[0]?.imageUrl ||
+      dfcFaces?.[0]?.imageUrlSmall ||
+      dfcFaces?.[0]?.imageUrl ||
+      card.imageUrlSmall ||
+      card.imageUrl
+    );
+  }, [card, dfcFaces]);
+
+  const currentBackThumbnail = useMemo(() => {
+    if (!card) return '';
+    if (card.cardFaces?.[1]?.imageUrlSmall || card.cardFaces?.[1]?.imageUrl) {
+      return card.cardFaces[1].imageUrlSmall || card.cardFaces[1].imageUrl;
+    }
+    if (dfcFaces?.[1]?.imageUrlSmall || dfcFaces?.[1]?.imageUrl) {
+      return dfcFaces[1].imageUrlSmall || dfcFaces[1].imageUrl;
+    }
+    if (
+      card.setCode &&
+      card.collectorNumber &&
+      card.collectorNumber !== '★' &&
+      card.setCode !== 'MPC' &&
+      card.setCode !== 'CUSTOM'
+    ) {
+      return `https://api.scryfall.com/cards/${card.setCode.toLowerCase()}/${encodeURIComponent(card.collectorNumber)}?format=image&version=small&face=back`;
+    }
+    return card.imageUrlSmall || card.imageUrl;
+  }, [card, dfcFaces]);
+
+  // Sync face resolution when card or modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && card) {
       setActiveFace(initialFace || 'front');
-      if (card && isCardDfc && (!card.cardFaces || card.cardFaces.length < 2)) {
-        resolveCardFaces(card).catch(() => {});
+      if (card.cardFaces && card.cardFaces.length >= 2) {
+        setDfcFaces(card.cardFaces);
+      } else if (isDoubleFacedCard(card) || card.name.includes(' // ') || MELD_PAIRS_MAP[card.name.toLowerCase().trim()]) {
+        setResolvingFaces(true);
+        resolveCardFaces(card)
+          .then((faces) => {
+            if (faces && faces.length >= 2) {
+              setDfcFaces(faces);
+            }
+          })
+          .catch(() => {})
+          .finally(() => setResolvingFaces(false));
+      } else {
+        setDfcFaces(null);
       }
     }
-  }, [isOpen, initialFace, card?.id, isCardDfc]);
+  }, [isOpen, initialFace, card?.id, card?.name]);
 
   // Official Prints State (Scryfall)
   const [officialPrints, setOfficialPrints] = useState<CardPrint[]>([]);
@@ -253,12 +310,19 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
       lastMpcTargetRef.current = '';
       return;
     }
-    const targetName = activeFace === 'back' ? backFaceName : frontFaceName;
-    if (lastMpcTargetRef.current === `${card.name}-${targetName}`) return;
-    lastMpcTargetRef.current = `${card.name}-${targetName}`;
+    // If waiting for DFC faces to resolve and back face is active, wait until resolved!
+    if (activeFace === 'back' && !backFaceName && resolvingFaces) {
+      return;
+    }
+    const targetName = activeFace === 'back' ? (backFaceName || `${card.name} (Verso)`) : frontFaceName;
+    if (!targetName) return;
+
+    const cacheKey = `${card.name}-${activeFace}-${targetName}`;
+    if (lastMpcTargetRef.current === cacheKey) return;
+    lastMpcTargetRef.current = cacheKey;
     const initialCardType: 'CARD' | 'TOKEN' = isCardToken ? 'TOKEN' : 'CARD';
     fetchMpcAlters(targetName, mpcMinDpi, initialCardType, card.typeLine);
-  }, [isOpen, activeFace, card?.name, backFaceName, frontFaceName, isCardToken, fetchMpcAlters, mpcMinDpi]);
+  }, [isOpen, activeFace, card?.name, backFaceName, frontFaceName, isCardToken, fetchMpcAlters, mpcMinDpi, resolvingFaces]);
 
   // Keyboard navigation for previous/next card (Left/Right arrows when not typing)
   useEffect(() => {
@@ -411,7 +475,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     const print = createPrintFromCustomImage(currentFaceName, customImageUrl, customTitle, customArtist);
     setActivePrintId(print.id);
     onSelectPrint(print, activeFace);
-    setSelectedFeedback('Arte personalizada selecionada!');
+    setSelectedFeedback(`Arte personalizada selecionada para o ${activeFace === 'back' ? 'Verso' : 'Frente'}!`);
     setTimeout(() => setSelectedFeedback(null), 2200);
   };
 
@@ -494,54 +558,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
-                  Trocar Arte — {activeFace === 'back' ? backFaceName : frontFaceName}
+                  Trocar Arte — {card.name}
                 </h2>
-                {isCardDfc && (
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      padding: '2px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-medium)',
-                      marginLeft: '4px',
-                    }}
-                  >
-                    <button
-                      type="button"
-                      className={`btn btn-xs ${activeFace === 'front' ? 'btn-primary' : 'btn-ghost'}`}
-                      style={{
-                        fontSize: '0.74rem',
-                        padding: '2px 8px',
-                        borderRadius: '6px',
-                        fontWeight: activeFace === 'front' ? 700 : 500,
-                      }}
-                      onClick={() => setActiveFace('front')}
-                      title={`Ver e trocar arte da Frente (${frontFaceName})`}
-                    >
-                      Frente
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-xs ${activeFace === 'back' ? 'btn-primary' : 'btn-ghost'}`}
-                      style={{
-                        fontSize: '0.74rem',
-                        padding: '2px 8px',
-                        borderRadius: '6px',
-                        fontWeight: activeFace === 'back' ? 700 : 500,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                      onClick={() => setActiveFace('back')}
-                      title={`Ver e trocar arte do Verso (${backFaceName})`}
-                    >
-                      <RotateCw size={11} />
-                      Verso
-                    </button>
-                  </div>
-                )}
                 {selectedFeedback && (
                   <span
                     style={{
@@ -563,7 +581,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               </div>
               <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '2px 0 0' }}>
                 {isCardDfc
-                  ? `Carta dupla face: alterando arte do ${activeFace === 'back' ? 'VERSO' : 'FRENTE'} (${currentFaceName}).`
+                  ? `Carta dupla face: escolha a face abaixo para ver e trocar artes separadamente.`
                   : 'Clique em uma arte para selecioná-la. Use as setas para trocar a arte das outras cartas.'}
               </p>
             </div>
@@ -635,6 +653,158 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* DFC Dual-Face Visual Switcher */}
+        {isCardDfc && (
+          <div
+            style={{
+              padding: '12px 24px',
+              background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(10, 15, 26, 0.95))',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Layers size={14} className="text-amber-400" />
+                Carta Dupla Face: Clique em uma das faces para selecionar e buscar artes para ela:
+              </span>
+              <span
+                style={{
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  color: activeFace === 'back' ? '#fbbf24' : '#818cf8',
+                  background: activeFace === 'back' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(99, 102, 241, 0.15)',
+                  border: `1px solid ${activeFace === 'back' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(99, 102, 241, 0.35)'}`,
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                }}
+              >
+                {activeFace === 'back' ? `Alterando VERSO (${backFaceName || 'Verso'})` : `Alterando FRENTE (${frontFaceName})`}
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr auto 1fr',
+                gap: '12px',
+                alignItems: 'center',
+              }}
+            >
+              {/* Frente Face Selector Box */}
+              <div
+                onClick={() => setActiveFace('front')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  background: activeFace === 'front' ? 'rgba(99, 102, 241, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                  border: activeFace === 'front' ? '2px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.1)',
+                  cursor: 'pointer',
+                  boxShadow: activeFace === 'front' ? '0 0 16px rgba(99, 102, 241, 0.3)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <div style={{ width: '40px', height: '56px', borderRadius: '5px', overflow: 'hidden', background: '#05070b', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>
+                  <img
+                    src={currentFrontThumbnail}
+                    alt={frontFaceName}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: activeFace === 'front' ? '#a5b4fc' : '#94a3b8' }}>
+                      FRENTE
+                    </span>
+                    {activeFace === 'front' ? (
+                      <span style={{ fontSize: '0.62rem', background: '#6366f1', color: '#fff', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                        Ativa para troca
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.62rem', color: '#64748b' }}>
+                        Clique para selecionar
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                    {frontFaceName}
+                  </div>
+                </div>
+              </div>
+
+              {/* Center Switch Icon */}
+              <button
+                type="button"
+                className="btn btn-ghost btn-icon"
+                onClick={() => setActiveFace(activeFace === 'front' ? 'back' : 'front')}
+                style={{
+                  borderRadius: '50%',
+                  width: '38px',
+                  height: '38px',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ffbb00',
+                }}
+                title="Alternar entre Frente e Verso"
+              >
+                <RotateCw size={17} style={{ transform: activeFace === 'back' ? 'rotate(180deg)' : 'none', transition: 'transform 0.25s ease' }} />
+              </button>
+
+              {/* Verso Face Selector Box */}
+              <div
+                onClick={() => setActiveFace('back')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  background: activeFace === 'back' ? 'rgba(245, 158, 11, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                  border: activeFace === 'back' ? '2px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.1)',
+                  cursor: 'pointer',
+                  boxShadow: activeFace === 'back' ? '0 0 16px rgba(245, 158, 11, 0.3)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <div style={{ width: '40px', height: '56px', borderRadius: '5px', overflow: 'hidden', background: '#05070b', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>
+                  <img
+                    src={currentBackThumbnail}
+                    alt={backFaceName || 'Verso'}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: activeFace === 'back' ? '#fcd34d' : '#94a3b8' }}>
+                      VERSO
+                    </span>
+                    {activeFace === 'back' ? (
+                      <span style={{ fontSize: '0.62rem', background: '#f59e0b', color: '#000', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                        Ativa para troca
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.62rem', color: '#64748b' }}>
+                        Clique para selecionar
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                    {resolvingFaces && !backFaceName ? 'Identificando verso...' : (backFaceName || `${card.name} (Verso)`)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Navigation Tabs (3 Abas solicitadas) */}
         <div
@@ -833,23 +1003,39 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   }}
                 >
                   {filteredOfficialPrints.map((p) => {
-                    const isSelected = p.id === activePrintId;
                     const printImg =
                       activeFace === 'back'
-                        ? p.cardFaces?.[1]?.imageUrl || p.imageUrl
+                        ? p.cardFaces?.[1]?.imageUrl ||
+                          (p.setCode && p.collectorNumber && p.collectorNumber !== '★' && p.setCode !== 'MPC' && p.setCode !== 'CUSTOM'
+                            ? `https://api.scryfall.com/cards/${p.setCode.toLowerCase()}/${encodeURIComponent(p.collectorNumber)}?format=image&version=normal&face=back`
+                            : p.imageUrl)
                         : p.imageUrl;
+
                     const printImgLarge =
                       activeFace === 'back'
-                        ? p.cardFaces?.[1]?.imageUrlLarge || p.cardFaces?.[1]?.imageUrl || p.imageUrlLarge || p.imageUrl
+                        ? p.cardFaces?.[1]?.imageUrlLarge ||
+                          p.cardFaces?.[1]?.imageUrl ||
+                          (p.setCode && p.collectorNumber && p.collectorNumber !== '★' && p.setCode !== 'MPC' && p.setCode !== 'CUSTOM'
+                            ? `https://api.scryfall.com/cards/${p.setCode.toLowerCase()}/${encodeURIComponent(p.collectorNumber)}?format=image&version=large&face=back`
+                            : p.imageUrlLarge || p.imageUrl)
                         : p.imageUrlLarge || p.imageUrl;
+
                     const printArtist =
                       activeFace === 'back'
                         ? p.cardFaces?.[1]?.artist || p.artist
-                        : p.artist;
+                        : p.cardFaces?.[0]?.artist || p.artist;
+
                     const printFaceName =
                       activeFace === 'back'
-                        ? p.cardFaces?.[1]?.name || backFaceName
+                        ? p.cardFaces?.[1]?.name || backFaceName || `${card.name} (Verso)`
                         : p.cardFaces?.[0]?.name || frontFaceName;
+
+                    const isSelected =
+                      activeFace === 'front'
+                        ? p.id === activePrintId ||
+                          p.imageUrl === (card.cardFaces?.[0]?.imageUrl || card.imageUrl)
+                        : (p.cardFaces?.[1]?.imageUrl && p.cardFaces[1].imageUrl === card.cardFaces?.[1]?.imageUrl) ||
+                          p.id === activePrintId;
 
                     return (
                       <div
@@ -858,7 +1044,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                           setHoveredPreview(null);
                           setActivePrintId(p.id);
                           onSelectPrint(p, activeFace);
-                          setSelectedFeedback(`Arte oficial selecionada (${p.setName})`);
+                          setSelectedFeedback(`Arte oficial da ${activeFace === 'back' ? 'face posterior (Verso)' : 'frente'} selecionada (${p.setName})`);
                           setTimeout(() => setSelectedFeedback(null), 2200);
                         }}
                         onMouseEnter={(e) => {
@@ -1258,7 +1444,12 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   }}
                 >
                   {filteredMpcPrints.map((p) => {
-                    const isSelected = p.id === activePrintId || card.imageUrl === p.imageUrl;
+                    const isSelected =
+                      activeFace === 'back'
+                        ? p.id === activePrintId ||
+                          (Boolean(card.cardFaces?.[1]?.imageUrl) && card.cardFaces?.[1]?.imageUrl === p.imageUrl)
+                        : p.id === activePrintId ||
+                          ((card.cardFaces?.[0]?.imageUrl || card.imageUrl) === p.imageUrl);
                     const dpiVal = p.dpi || parseInt(p.collectorNumber, 10) || 0;
 
                     // Color code for DPI badge
@@ -1291,7 +1482,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                           setHoveredPreview(null);
                           setActivePrintId(p.id);
                           onSelectPrint(p, activeFace);
-                          setSelectedFeedback(`Arte da comunidade MPCFill selecionada (${p.setName})`);
+                          setSelectedFeedback(`Alter MPCFill selecionado para o ${activeFace === 'back' ? 'Verso' : 'Frente'} (${p.setName})`);
                           setTimeout(() => setSelectedFeedback(null), 2200);
                         }}
                         onMouseEnter={(e) => {
@@ -1453,6 +1644,28 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             >
               {/* Left Column: Upload options */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {isCardDfc && (
+                  <div
+                    style={{
+                      background: activeFace === 'back' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(99, 102, 241, 0.12)',
+                      border: `1px solid ${activeFace === 'back' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(99, 102, 241, 0.35)'}`,
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      color: activeFace === 'back' ? '#fbbf24' : '#a5b4fc',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Sparkles size={16} />
+                    <span>
+                      Importando arte para a face:{' '}
+                      <strong>{activeFace === 'back' ? `VERSO (${backFaceName || 'Verso'})` : `FRENTE (${frontFaceName})`}</strong>
+                    </span>
+                  </div>
+                )}
+
                 {/* File Dropzone */}
                 <div>
                   <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc', marginBottom: '6px', display: 'block' }}>

@@ -280,24 +280,45 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
         }
       : null;
 
-  const handleSelectUtilityPrint = (selectedPrint: CardPrint) => {
+  const handleSelectUtilityPrint = (selectedPrint: CardPrint, targetFace: 'front' | 'back' = 'front') => {
     if (artTargetIndex === null) return;
     setItems((prev) =>
-      prev.map((item, idx) =>
-        idx === artTargetIndex
-          ? {
-              ...item,
-              id: selectedPrint.id,
-              oracleId: selectedPrint.oracleId || item.oracleId,
-              printsSearchUri: selectedPrint.printsSearchUri || item.printsSearchUri,
-              setCode: selectedPrint.setCode,
-              setName: selectedPrint.setName,
-              collectorNumber: selectedPrint.collectorNumber,
+      prev.map((item, idx) => {
+        if (idx !== artTargetIndex) return item;
+        const isDfc = Boolean((item.cardFaces && item.cardFaces.length >= 2) || item.name.includes(' // '));
+        if (isDfc && targetFace === 'back') {
+          const baseFaces = item.cardFaces || [
+            { name: item.name.split(' // ')[0].trim(), imageUrl: item.imageUrl },
+            { name: item.name.includes(' // ') ? item.name.split(' // ')[1].trim() : `${item.name} (Verso)`, imageUrl: item.imageUrl },
+          ];
+          const updatedFaces = [
+            baseFaces[0],
+            {
+              ...baseFaces[1],
               imageUrl: selectedPrint.imageUrl,
               imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
-            }
-          : item
-      )
+              artist: selectedPrint.artist,
+            },
+          ];
+          return {
+            ...item,
+            cardFaces: updatedFaces,
+          };
+        } else {
+          return {
+            ...item,
+            id: selectedPrint.id,
+            oracleId: selectedPrint.oracleId || item.oracleId,
+            printsSearchUri: selectedPrint.printsSearchUri || item.printsSearchUri,
+            setCode: selectedPrint.setCode,
+            setName: selectedPrint.setName,
+            collectorNumber: selectedPrint.collectorNumber,
+            imageUrl: selectedPrint.imageUrl,
+            imageUrlLarge: selectedPrint.imageUrlLarge || selectedPrint.imageUrl,
+            cardFaces: selectedPrint.cardFaces || item.cardFaces,
+          };
+        }
+      })
     );
   };
 

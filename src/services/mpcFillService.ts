@@ -491,6 +491,9 @@ export async function searchMpcFillAlters(
     const targetCardType = options?.cardType || 'CARD';
 
     let cleanQuery = cardName.trim();
+    // Clean "(Verso)", "(Frente)", "(Back)", "(Front)" suffixes from queries
+    cleanQuery = cleanQuery.replace(/\s*\((verso|frente|back|front)\)/gi, '').trim();
+
     // If a double-faced full name "Front // Back" is passed, take the front face
     if (cleanQuery.includes('//')) {
       cleanQuery = cleanQuery.split('//')[0].trim();

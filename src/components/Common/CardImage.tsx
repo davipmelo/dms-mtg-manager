@@ -67,8 +67,9 @@ export const CardImage: React.FC<CardImageProps> = ({
 
       if (name) {
         let targetFaceName = name.trim();
-        if (name.includes('//')) {
-          targetFaceName = face === 'back' ? name.split('//')[1].trim() : name.split('//')[0].trim();
+        targetFaceName = targetFaceName.replace(/\s*\((verso|frente|back|front)\)/gi, '').trim();
+        if (targetFaceName.includes('//')) {
+          targetFaceName = face === 'back' ? targetFaceName.split('//')[1].trim() : targetFaceName.split('//')[0].trim();
         }
         list.push(
           `https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(targetFaceName)}&format=image&version=${version}${faceParam}`

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Deck, DeckFormat, Card, CardPrint } from '../../types';
+import { Deck, DeckFormat, Card, CardPrint, isDoubleFacedCard } from '../../types';
 import {
   searchAutocomplete,
   getCardByName,
@@ -196,35 +196,73 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
     await handleExecutePartnerLookup(cardName);
   };
 
-  const handleSelectPrintForCommanderOrPartner = (print: CardPrint) => {
+  const handleSelectPrintForCommanderOrPartner = (print: CardPrint, targetFace: 'front' | 'back' = 'front') => {
     if (artSelectorTarget === 'commander' && selectedCommander) {
-      setSelectedCommander({
-        ...selectedCommander,
-        id: print.id,
-        oracleId: print.oracleId || selectedCommander.oracleId,
-        printsSearchUri: print.printsSearchUri || selectedCommander.printsSearchUri,
-        setCode: print.setCode,
-        setName: print.setName,
-        collectorNumber: print.collectorNumber,
-        imageUrl: print.imageUrl,
-        imageUrlLarge: print.imageUrlLarge || print.imageUrl,
-        imageUrlArtCrop: print.imageUrlArtCrop || print.imageUrl || selectedCommander.imageUrlArtCrop,
-      });
+      const isDfc = isDoubleFacedCard(selectedCommander);
+      if (isDfc && targetFace === 'back') {
+        const baseFaces = selectedCommander.cardFaces || [];
+        const updatedFaces = [
+          baseFaces[0] || { name: selectedCommander.name, imageUrl: selectedCommander.imageUrl },
+          {
+            ...(baseFaces[1] || {}),
+            imageUrl: print.imageUrl,
+            imageUrlLarge: print.imageUrlLarge || print.imageUrl,
+            artist: print.artist,
+          },
+        ];
+        setSelectedCommander({
+          ...selectedCommander,
+          cardFaces: updatedFaces,
+        });
+      } else {
+        setSelectedCommander({
+          ...selectedCommander,
+          id: print.id,
+          oracleId: print.oracleId || selectedCommander.oracleId,
+          printsSearchUri: print.printsSearchUri || selectedCommander.printsSearchUri,
+          setCode: print.setCode,
+          setName: print.setName,
+          collectorNumber: print.collectorNumber,
+          imageUrl: print.imageUrl,
+          imageUrlLarge: print.imageUrlLarge || print.imageUrl,
+          imageUrlArtCrop: print.imageUrlArtCrop || print.imageUrl || selectedCommander.imageUrlArtCrop,
+          cardFaces: print.cardFaces || selectedCommander.cardFaces,
+        });
+      }
       setCommanderQuery(`${selectedCommander.name} (${print.setCode}) ${print.collectorNumber}`);
       setCommanderWarning(null);
     } else if (artSelectorTarget === 'partner' && selectedPartner) {
-      setSelectedPartner({
-        ...selectedPartner,
-        id: print.id,
-        oracleId: print.oracleId || selectedPartner.oracleId,
-        printsSearchUri: print.printsSearchUri || selectedPartner.printsSearchUri,
-        setCode: print.setCode,
-        setName: print.setName,
-        collectorNumber: print.collectorNumber,
-        imageUrl: print.imageUrl,
-        imageUrlLarge: print.imageUrlLarge || print.imageUrl,
-        imageUrlArtCrop: print.imageUrlArtCrop || print.imageUrl || selectedPartner.imageUrlArtCrop,
-      });
+      const isDfc = isDoubleFacedCard(selectedPartner);
+      if (isDfc && targetFace === 'back') {
+        const baseFaces = selectedPartner.cardFaces || [];
+        const updatedFaces = [
+          baseFaces[0] || { name: selectedPartner.name, imageUrl: selectedPartner.imageUrl },
+          {
+            ...(baseFaces[1] || {}),
+            imageUrl: print.imageUrl,
+            imageUrlLarge: print.imageUrlLarge || print.imageUrl,
+            artist: print.artist,
+          },
+        ];
+        setSelectedPartner({
+          ...selectedPartner,
+          cardFaces: updatedFaces,
+        });
+      } else {
+        setSelectedPartner({
+          ...selectedPartner,
+          id: print.id,
+          oracleId: print.oracleId || selectedPartner.oracleId,
+          printsSearchUri: print.printsSearchUri || selectedPartner.printsSearchUri,
+          setCode: print.setCode,
+          setName: print.setName,
+          collectorNumber: print.collectorNumber,
+          imageUrl: print.imageUrl,
+          imageUrlLarge: print.imageUrlLarge || print.imageUrl,
+          imageUrlArtCrop: print.imageUrlArtCrop || print.imageUrl || selectedPartner.imageUrlArtCrop,
+          cardFaces: print.cardFaces || selectedPartner.cardFaces,
+        });
+      }
       setPartnerQuery(`${selectedPartner.name} (${print.setCode}) ${print.collectorNumber}`);
       setPartnerWarning(null);
     }

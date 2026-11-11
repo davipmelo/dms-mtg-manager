@@ -145,7 +145,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   const handleToggleFlip = async (cardKey: string, card: Card) => {
     if (!card.cardFaces || card.cardFaces.length < 2) {
-      await resolveCardFaces(card);
+      const faces = await resolveCardFaces(card);
+      if (faces && faces.length >= 2 && onUpdateDeck) {
+        const nextCards = deck.cards.map((c) =>
+          c.card.id === card.id ? { ...c, card: { ...c.card, cardFaces: faces } } : c
+        );
+        onUpdateDeck({ ...deck, cards: nextCards });
+      }
     }
     setFlippedCardKeys((prev) => {
       const next = new Set(prev);

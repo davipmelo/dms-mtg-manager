@@ -21,9 +21,22 @@ export function parseScryfallCard(raw: any): Card {
   // Extract distinct card faces if this is a true double-faced card (Transform, MDFC, Battle, etc.)
   let cardFaces: CardFace[] | undefined = undefined;
   if (Array.isArray(raw.card_faces) && raw.card_faces.length > 1) {
-    const parsedFaces = raw.card_faces.map((f: any) => {
+    const parsedFaces = raw.card_faces.map((f: any, idx: number) => {
       const fUris = f.image_uris || {};
-      const fNorm = fUris.normal || fUris.large || fUris.small || '';
+      let fNorm = fUris.normal || fUris.large || fUris.small || '';
+      let fLarge = fUris.large || fUris.png || fNorm;
+      let fSmall = fUris.small || fNorm;
+      let fArtCrop = fUris.art_crop || fNorm;
+
+      // Resilient fallback if face image_uris is missing on multi-faced prints
+      if (!fNorm && raw.set && raw.collector_number) {
+        const faceParam = idx === 1 ? '&face=back' : '';
+        fNorm = `https://api.scryfall.com/cards/${raw.set.toLowerCase()}/${encodeURIComponent(raw.collector_number)}?format=image&version=normal${faceParam}`;
+        fLarge = `https://api.scryfall.com/cards/${raw.set.toLowerCase()}/${encodeURIComponent(raw.collector_number)}?format=image&version=large${faceParam}`;
+        fSmall = `https://api.scryfall.com/cards/${raw.set.toLowerCase()}/${encodeURIComponent(raw.collector_number)}?format=image&version=small${faceParam}`;
+        fArtCrop = fNorm;
+      }
+
       return {
         name: f.name || '',
         manaCost: f.mana_cost || '',
@@ -33,9 +46,9 @@ export function parseScryfallCard(raw: any): Card {
         power: f.power,
         toughness: f.toughness,
         imageUrl: fNorm,
-        imageUrlLarge: fUris.large || fUris.png || fNorm,
-        imageUrlSmall: fUris.small || fNorm,
-        imageUrlArtCrop: fUris.art_crop || fNorm,
+        imageUrlLarge: fLarge,
+        imageUrlSmall: fSmall,
+        imageUrlArtCrop: fArtCrop,
         artist: f.artist,
       };
     });
@@ -588,7 +601,12 @@ export async function resolveCardFaces(card: Card | TokenCard): Promise<CardFace
   // 3. Query Scryfall to resolve potential DFC (transform, modal_dfc, battle, meld, reversible)
   try {
     let resolved: Card | null = null;
-    if (card.setCode && card.collectorNumber) {
+    const isAlter =
+      card.setCode === 'MPC' ||
+      card.setCode === 'CUSTOM' ||
+      card.collectorNumber === '★';
+
+    if (card.setCode && card.collectorNumber && !isAlter) {
       resolved = await getCardBySetAndNumber(card.setCode, card.collectorNumber);
     }
     if (!resolved) {

@@ -208,7 +208,7 @@ export function isDoubleFacedCard(card?: Card | TokenCard | null): boolean {
   if (card.layout && ['split', 'adventure', 'flip'].includes(card.layout)) {
     return false;
   }
-  if (card.name && card.name.includes(' // ') && !card.layout) {
+  if (card.name && card.name.includes(' // ')) {
     return true;
   }
   if ('meldResultName' in card && Boolean(card.meldResultName)) {
@@ -220,12 +220,20 @@ export function isDoubleFacedCard(card?: Card | TokenCard | null): boolean {
 /**
  * Safely compares two cards to determine if they represent the exact same print/art version.
  * Prevents MPCFill alters or custom arts with generic set codes/numbers from erroneously matching
- * cards with different names.
+ * cards with different names. Also distinguishes double-faced cards that have different back face arts.
  */
 export function isSameCardPrint(a?: Card | null, b?: Card | null): boolean {
   if (!a || !b) return false;
   if (a.name.toLowerCase().trim() !== b.name.toLowerCase().trim()) return false;
   if (a.id === b.id) return true;
+
+  // Check back faces if either card has resolved faces
+  const aBackImg = a.cardFaces?.[1]?.imageUrl;
+  const bBackImg = b.cardFaces?.[1]?.imageUrl;
+  if (aBackImg && bBackImg && aBackImg !== bBackImg) {
+    return false;
+  }
+
   const isAlterOrCustom =
     a.setCode === 'MPC' ||
     a.setCode === 'CUSTOM' ||
