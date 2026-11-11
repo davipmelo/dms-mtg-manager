@@ -5,6 +5,7 @@ import {
   DeckCard,
   ProxyItem,
   Card,
+  CardFace,
   CardPrint,
   CardCategory,
   DeckFormat,
@@ -15,6 +16,7 @@ import {
   CloudUserData,
   isDoubleFacedCard,
   isSameCardPrint,
+  isCardNameMatch,
 } from './types';
 import {
   getStoredCollection,
@@ -608,38 +610,56 @@ export function App() {
   };
 
   // Art Selection (Collection, Decks, and Proxy Queue)
-  const handleSelectArtPrint = (selectedPrint: CardPrint, targetFace: 'front' | 'back' = 'front') => {
+  const handleSelectArtPrint = (
+    selectedPrint: CardPrint,
+    targetFace: 'front' | 'back' = 'front',
+    resolvedFaces?: CardFace[] | null
+  ) => {
     if (!artSelectorCard) return;
+
+    const knownFaces =
+      artSelectorCard.cardFaces && artSelectorCard.cardFaces.length >= 2
+        ? artSelectorCard.cardFaces
+        : resolvedFaces && resolvedFaces.length >= 2
+        ? resolvedFaces
+        : selectedPrint.cardFaces && selectedPrint.cardFaces.length >= 2
+        ? selectedPrint.cardFaces
+        : null;
 
     const isDfc =
       targetFace === 'back' ||
+      Boolean(knownFaces && knownFaces.length >= 2) ||
       isDoubleFacedCard(artSelectorCard) ||
-      Boolean(artSelectorCard.cardFaces && artSelectorCard.cardFaces.length >= 2) ||
       artSelectorCard.name.includes(' // ') ||
+      artSelectorCard.name.includes('//') ||
       Boolean(selectedPrint.cardFaces && selectedPrint.cardFaces.length >= 2);
 
     let newCardData: Card;
 
     if (isDfc) {
       const frontName =
+        knownFaces?.[0]?.name ||
         artSelectorCard.cardFaces?.[0]?.name ||
-        (artSelectorCard.name.includes(' // ') ? artSelectorCard.name.split(' // ')[0].trim() : artSelectorCard.name);
+        (artSelectorCard.name.includes('//') ? artSelectorCard.name.split('//')[0].trim() : artSelectorCard.name);
+
       const backName =
+        knownFaces?.[1]?.name ||
         artSelectorCard.cardFaces?.[1]?.name ||
-        (artSelectorCard.name.includes(' // ') ? artSelectorCard.name.split(' // ')[1].trim() : `${artSelectorCard.name} (Verso)`);
+        (artSelectorCard.name.includes('//') ? artSelectorCard.name.split('//')[1].trim() : `${artSelectorCard.name} (Verso)`);
 
       const defaultBackImg =
-        artSelectorCard.setCode &&
+        knownFaces?.[1]?.imageUrl ||
+        (artSelectorCard.setCode &&
         artSelectorCard.collectorNumber &&
         artSelectorCard.collectorNumber !== '★' &&
         artSelectorCard.setCode !== 'MPC' &&
         artSelectorCard.setCode !== 'CUSTOM'
           ? `https://api.scryfall.com/cards/${artSelectorCard.setCode.toLowerCase()}/${encodeURIComponent(artSelectorCard.collectorNumber)}?format=image&version=normal&face=back`
-          : artSelectorCard.imageUrl;
+          : artSelectorCard.imageUrl);
 
-      const baseFaces =
-        artSelectorCard.cardFaces && artSelectorCard.cardFaces.length >= 2
-          ? [...artSelectorCard.cardFaces]
+      const baseFaces: CardFace[] =
+        knownFaces && knownFaces.length >= 2
+          ? [...knownFaces]
           : [
               {
                 name: frontName,
@@ -656,6 +676,11 @@ export function App() {
                 imageUrlSmall: defaultBackImg,
               },
             ];
+
+      const resolvedDfcFullName =
+        frontName && backName && !frontName.includes('//') && !backName.includes('//')
+          ? `${frontName} // ${backName}`
+          : artSelectorCard.name;
 
       if (targetFace === 'back') {
         const backImg =
@@ -684,7 +709,7 @@ export function App() {
         const resolvedBackName =
           selectedPrint.cardFaces?.[1]?.name || baseFaces[1]?.name || backName;
 
-        const updatedFaces = [
+        const updatedFaces: CardFace[] = [
           baseFaces[0],
           {
             ...baseFaces[1],
@@ -699,6 +724,10 @@ export function App() {
 
         newCardData = {
           ...artSelectorCard,
+          name: resolvedDfcFullName,
+          layout: artSelectorCard.layout && ['transform', 'modal_dfc', 'battle', 'meld'].includes(artSelectorCard.layout)
+            ? artSelectorCard.layout
+            : 'modal_dfc',
           cardFaces: updatedFaces,
         };
       } else {
@@ -732,7 +761,7 @@ export function App() {
           updatedBackFace = selectedPrint.cardFaces[1];
         }
 
-        const updatedFaces = [
+        const updatedFaces: CardFace[] = [
           {
             ...baseFaces[0],
             name: resolvedFrontName,
@@ -748,6 +777,10 @@ export function App() {
         newCardData = {
           ...artSelectorCard,
           id: selectedPrint.id || artSelectorCard.id,
+          name: resolvedDfcFullName,
+          layout: artSelectorCard.layout && ['transform', 'modal_dfc', 'battle', 'meld'].includes(artSelectorCard.layout)
+            ? artSelectorCard.layout
+            : 'modal_dfc',
           oracleId: selectedPrint.oracleId || artSelectorCard.oracleId,
           printsSearchUri: selectedPrint.printsSearchUri || artSelectorCard.printsSearchUri,
           setCode: selectedPrint.setCode,
@@ -848,7 +881,7 @@ export function App() {
     if (activeDeckId) {
       const activeDeck = decks.find((d) => d.id === activeDeckId);
       if (activeDeck) {
-        const targetCardName = (artSelectorContext.targetCardName || artSelectorCard.name).toLowerCase();
+        const targetCardName = artSelectorContext.targetCardName || artSelectorCard.name;
         let targetIndex = -1;
 
         // 1. Strongest match: exact instanceId (guarantees targeting the exact card copy!)
@@ -858,28 +891,51 @@ export function App() {
           );
         }
 
-        // 2. Exact cardId match
-        if (targetIndex === -1 && artSelectorContext.targetCardId) {
+        // 2. Exact cardId match (checking both context ID, currently open ID, and newly updated ID)
+        if (targetIndex === -1 && (artSelectorContext.targetCardId || artSelectorCard.id)) {
           targetIndex = activeDeck.cards.findIndex(
-            (c) => c.card.id === artSelectorContext.targetCardId
+            (c) =>
+              c.card.id === artSelectorContext.targetCardId ||
+              c.card.id === artSelectorCard.id ||
+              c.card.id === newCardData.id
           );
         }
 
-        // 3. Deck card index IF and ONLY IF the card at that index has the matching name
+        // 3. Deck card index IF within range and the card name matches flexibly
         if (
           targetIndex === -1 &&
           typeof artSelectorContext.deckCardIndex === 'number' &&
           artSelectorContext.deckCardIndex >= 0 &&
-          activeDeck.cards[artSelectorContext.deckCardIndex]?.card.name.toLowerCase() === targetCardName
+          artSelectorContext.deckCardIndex < activeDeck.cards.length
         ) {
-          targetIndex = artSelectorContext.deckCardIndex;
+          const candidateCard = activeDeck.cards[artSelectorContext.deckCardIndex]?.card;
+          if (
+            candidateCard &&
+            (isCardNameMatch(candidateCard.name, targetCardName) ||
+              isCardNameMatch(candidateCard.name, artSelectorCard.name) ||
+              candidateCard.id === artSelectorCard.id)
+          ) {
+            targetIndex = artSelectorContext.deckCardIndex;
+          }
         }
 
-        // 4. Fallback: match by card name
+        // 4. Fallback: match by card name (flexible MTG name match for single and double-faced cards)
         if (targetIndex === -1) {
           targetIndex = activeDeck.cards.findIndex(
-            (c) => c.card.name.toLowerCase() === targetCardName
+            (c) =>
+              isCardNameMatch(c.card.name, targetCardName) ||
+              isCardNameMatch(c.card.name, artSelectorCard.name)
           );
+        }
+
+        // 5. Ultimate Fallback: if deckCardIndex was valid, use it!
+        if (
+          targetIndex === -1 &&
+          typeof artSelectorContext.deckCardIndex === 'number' &&
+          artSelectorContext.deckCardIndex >= 0 &&
+          artSelectorContext.deckCardIndex < activeDeck.cards.length
+        ) {
+          targetIndex = artSelectorContext.deckCardIndex;
         }
 
         // Find or create matching collection entry for this new art (grouping identical arts)
@@ -914,18 +970,27 @@ export function App() {
             card: newCardData,
             collectionItemId: newColId,
           };
+
+          // Update context so subsequent face selections during the same modal session continue to track this card smoothly
+          setArtSelectorContext((prev) => ({
+            ...prev,
+            deckCardIndex: targetIndex,
+            targetCardId: newCardData.id,
+            targetCardName: newCardData.name,
+            targetInstanceId: targetEntry.instanceId || prev.targetInstanceId,
+          }));
         }
 
         const isDirectCommander =
           Boolean(activeDeck.commanderCard && (
             activeDeck.commanderCard.id === artSelectorCard.id ||
-            activeDeck.commanderCard.name.toLowerCase() === targetCardName
+            isCardNameMatch(activeDeck.commanderCard.name, targetCardName)
           )) || artSelectorContext.targetCategory === 'commander';
 
         const isDirectPartner =
           Boolean(activeDeck.partnerCard && (
             activeDeck.partnerCard.id === artSelectorCard.id ||
-            activeDeck.partnerCard.name.toLowerCase() === targetCardName
+            isCardNameMatch(activeDeck.partnerCard.name, targetCardName)
           )) || artSelectorContext.targetCategory === 'partner';
 
         const shouldUpdateCommander = isEntryCommander || isDirectCommander;
@@ -1186,8 +1251,9 @@ export function App() {
       if (dc.collectionItemId && colMap.has(dc.collectionItemId)) {
         const colCard = colMap.get(dc.collectionItemId)!;
         // Safeguard: ONLY sync from collection if card names match!
-        if (colCard.name.toLowerCase() === dc.card.name.toLowerCase()) {
-          return { ...dc, card: colCard };
+        if (isCardNameMatch(colCard.name, dc.card.name)) {
+          const mergedFaces = dc.card.cardFaces || colCard.cardFaces;
+          return { ...dc, card: { ...colCard, cardFaces: mergedFaces } };
         }
       }
       return dc;

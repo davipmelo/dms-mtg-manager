@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Deck, DeckCard, ViewMode, Card, CollectionItem, CardCategory, isDoubleFacedCard, isSameCardPrint } from '../../types';
+import { Deck, DeckCard, ViewMode, Card, CollectionItem, CardCategory, isDoubleFacedCard, isSameCardPrint, isCardNameMatch } from '../../types';
 import { resolveCardFaces } from '../../services/scryfall';
 import { normalizeDeck } from '../../services/storage';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
@@ -143,12 +143,76 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   // Flip state for double-faced cards in visual grid
   const [flippedCardKeys, setFlippedCardKeys] = useState<Set<string>>(new Set());
 
+  // Auto-upgrade legacy double-faced cards in older decks that lack cardFaces
+  useEffect(() => {
+    if (!deck || !onUpdateDeck) return;
+    const cardsNeedingResolution = deck.cards.filter((c) => {
+      if (c.card.cardFaces && c.card.cardFaces.length >= 2) return false;
+      return (
+        isDoubleFacedCard(c.card) ||
+        c.card.name.includes('//') ||
+        c.card.name.includes(' / ')
+      );
+    });
+
+    if (cardsNeedingResolution.length === 0) return;
+
+    let cancelled = false;
+    Promise.all(
+      cardsNeedingResolution.map(async (c) => {
+        const faces = await resolveCardFaces(c.card);
+        return { cardId: c.card.id, instanceId: c.instanceId, name: c.card.name, faces };
+      })
+    ).then((resolved) => {
+      if (cancelled) return;
+      let hasUpdates = false;
+      const nextCards = deck.cards.map((dc) => {
+        const match = resolved.find(
+          (r) =>
+            (r.instanceId && dc.instanceId && r.instanceId === dc.instanceId) ||
+            r.cardId === dc.card.id ||
+            isCardNameMatch(r.name, dc.card.name)
+        );
+        if (match && match.faces && match.faces.length >= 2) {
+          hasUpdates = true;
+          const fullDfcName =
+            match.faces[0].name && match.faces[1].name
+              ? `${match.faces[0].name.trim()} // ${match.faces[1].name.trim()}`
+              : dc.card.name;
+
+          return {
+            ...dc,
+            card: {
+              ...dc.card,
+              name: fullDfcName,
+              cardFaces: match.faces,
+              layout: dc.card.layout && ['transform', 'modal_dfc', 'battle', 'meld'].includes(dc.card.layout)
+                ? dc.card.layout
+                : 'modal_dfc',
+            },
+          };
+        }
+        return dc;
+      });
+
+      if (hasUpdates) {
+        onUpdateDeck({ ...deck, cards: nextCards });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deck?.id]);
+
   const handleToggleFlip = async (cardKey: string, card: Card) => {
     if (!card.cardFaces || card.cardFaces.length < 2) {
       const faces = await resolveCardFaces(card);
       if (faces && faces.length >= 2 && onUpdateDeck) {
         const nextCards = deck.cards.map((c) =>
-          c.card.id === card.id ? { ...c, card: { ...c.card, cardFaces: faces } } : c
+          c.card.id === card.id || c.instanceId === cardKey || isCardNameMatch(c.card.name, card.name)
+            ? { ...c, card: { ...c.card, cardFaces: faces } }
+            : c
         );
         onUpdateDeck({ ...deck, cards: nextCards });
       }
@@ -335,7 +399,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       // 4. Match by card name and category
       idx = deck.cards.findIndex(
         (item) =>
-          item.card.name.toLowerCase() === c.card.name.toLowerCase() &&
+          isCardNameMatch(item.card.name, c.card.name) &&
           item.category === c.category
       );
       if (idx !== -1) return idx;
@@ -346,7 +410,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
       // 6. Match by card name anywhere in deck
       idx = deck.cards.findIndex(
-        (item) => item.card.name.toLowerCase() === c.card.name.toLowerCase()
+        (item) => isCardNameMatch(item.card.name, c.card.name)
       );
       if (idx !== -1) return idx;
 
@@ -960,7 +1024,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             const inUseQty = linked?.inUseQuantity ?? c.quantity;
 
             const isDfc = isDoubleFacedCard(c.card);
-            const isFlipped = isDfc && flippedCardKeys.has(c.card.id);
+            const cardFlipKey = c.instanceId || c.card.id;
+            const isFlipped = isDfc && (flippedCardKeys.has(cardFlipKey) || flippedCardKeys.has(c.card.id));
 
             const frontName =
               c.card.cardFaces?.[0]?.name ||
@@ -1066,7 +1131,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       onClick={(e) => {
                         e.stopPropagation();
                         setHoveredPreview(null);
-                        handleToggleFlip(c.card.id, c.card);
+                        handleToggleFlip(cardFlipKey, c.card);
                       }}
                       title={isFlipped ? 'Virar para Frente' : 'Virar para o Verso'}
                     >

@@ -580,21 +580,13 @@ export async function resolveCardFaces(card: Card | TokenCard): Promise<CardFace
     }
   }
 
-  // 2. If already marked as single-faced in cache and doesn't contain ' // ', skip network
-  if (singleFacedCache.has(normalizedName) && !card.name.includes(' // ')) {
-    return null;
-  }
-
-  // If card has a known single-faced layout and no meld/split indicators, skip network
+  // 2. If already marked as single-faced in cache and doesn't contain dual face slashes, skip network
   if (
-    card.layout &&
-    !['transform', 'modal_dfc', 'meld', 'battle', 'reversible_card', 'double_faced_token', 'flip', 'split'].includes(
-      card.layout
-    ) &&
+    singleFacedCache.has(normalizedName) &&
     !card.name.includes(' // ') &&
-    !MELD_PAIRS_MAP[normalizedName]
+    !card.name.includes(' / ') &&
+    !card.name.includes('//')
   ) {
-    singleFacedCache.add(normalizedName);
     return null;
   }
 
@@ -610,7 +602,13 @@ export async function resolveCardFaces(card: Card | TokenCard): Promise<CardFace
       resolved = await getCardBySetAndNumber(card.setCode, card.collectorNumber);
     }
     if (!resolved) {
-      const queryName = card.name.includes(' // ') ? card.name.split(' // ')[0].trim() : card.name;
+      const queryName = card.name.includes(' // ')
+        ? card.name.split(' // ')[0].trim()
+        : card.name.includes(' / ')
+        ? card.name.split(' / ')[0].trim()
+        : card.name.includes('//')
+        ? card.name.split('//')[0].trim()
+        : card.name;
       resolved = await getCardByName(queryName);
     }
 
@@ -618,6 +616,10 @@ export async function resolveCardFaces(card: Card | TokenCard): Promise<CardFace
       // Check standard DFC / MDFC / Battles / Reversible
       if (resolved.cardFaces && resolved.cardFaces.length > 1) {
         card.cardFaces = resolved.cardFaces;
+        if (resolved.layout) card.layout = resolved.layout;
+        if (resolved.name && (resolved.name.includes(' // ') || resolved.name.includes(' / ') || resolved.name.includes('//'))) {
+          card.name = resolved.name;
+        }
         return resolved.cardFaces;
       }
 
@@ -642,6 +644,7 @@ export async function resolveCardFaces(card: Card | TokenCard): Promise<CardFace
             },
           ];
           card.cardFaces = faces;
+          if (resolved.layout) card.layout = resolved.layout;
           return faces;
         }
       }

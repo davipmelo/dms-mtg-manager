@@ -43,7 +43,11 @@ interface ArtSelectorModalProps {
   card: Card | null;
   isOpen: boolean;
   onClose: () => void;
-  onSelectPrint: (selectedPrint: CardPrint, targetFace?: 'front' | 'back') => void;
+  onSelectPrint: (
+    selectedPrint: CardPrint,
+    targetFace?: 'front' | 'back',
+    resolvedFaces?: CardFace[] | null
+  ) => void;
   onNavigatePrev?: () => void;
   onNavigateNext?: () => void;
   hasPrev?: boolean;
@@ -273,18 +277,21 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
       setFaceLargeImages({});
       if (card.cardFaces && card.cardFaces.length >= 2) {
         setDfcFaces(card.cardFaces);
-      } else if (isDoubleFacedCard(card) || card.name.includes(' // ') || MELD_PAIRS_MAP[card.name.toLowerCase().trim()]) {
+      } else {
+        // Automatically attempt to resolve faces for double-faced cards, MDFCs, meld, or legacy cards
         setResolvingFaces(true);
         resolveCardFaces(card)
           .then((faces) => {
             if (faces && faces.length >= 2) {
               setDfcFaces(faces);
+            } else {
+              setDfcFaces(null);
             }
           })
-          .catch(() => {})
+          .catch(() => {
+            setDfcFaces(null);
+          })
           .finally(() => setResolvingFaces(false));
-      } else {
-        setDfcFaces(null);
       }
     }
   }, [isOpen, initialFace, card?.id, card?.name]);
@@ -420,7 +427,14 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     setLoadingOfficial(true);
     getCardPrints(card)
       .then((data) => {
-        if (!cancelled) setOfficialPrints(data);
+        if (!cancelled) {
+          setOfficialPrints(data);
+          // If this card is double-faced, ensure dfcFaces is populated from the official prints
+          const dfcPrint = data.find((p) => p.cardFaces && p.cardFaces.length >= 2);
+          if (dfcPrint && dfcPrint.cardFaces) {
+            setDfcFaces((prev) => (prev && prev.length >= 2 ? prev : dfcPrint.cardFaces!));
+          }
+        }
       })
       .finally(() => {
         if (!cancelled) setLoadingOfficial(false);
@@ -561,27 +575,29 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     const defaultBack = currentBackThumbnail || '';
 
     // Immediately update local faceThumbnails, faceLargeImages and dfcFaces for instant zero-latency UI update
-    if (isBack) {
-      setFaceThumbnails((prev) => ({ ...prev, back: newImg }));
-      setFaceLargeImages((prev) => ({ ...prev, back: newImgLarge }));
-      setDfcFaces((prev: CardFace[] | null): CardFace[] => {
-        const base: CardFace[] =
-          prev && prev.length >= 2
-            ? prev
-            : [
-                {
-                  name: frontFaceName,
-                  imageUrl: defaultFront,
-                  imageUrlSmall: defaultFront,
-                  artist: card?.artist,
-                },
-                {
-                  name: backFaceName || `${card?.name || ''} (Verso)`,
-                  imageUrl: defaultBack,
-                  imageUrlSmall: defaultBack,
-                },
-              ];
-        return [
+    let updatedFacesForCallback: CardFace[] | null = dfcFaces;
+    if (isCardDfc) {
+      const base: CardFace[] =
+        dfcFaces && dfcFaces.length >= 2
+          ? dfcFaces
+          : [
+              {
+                name: frontFaceName,
+                imageUrl: defaultFront,
+                imageUrlSmall: defaultFront,
+                artist: card?.artist,
+              },
+              {
+                name: backFaceName || `${card?.name || ''} (Verso)`,
+                imageUrl: defaultBack,
+                imageUrlSmall: defaultBack,
+              },
+            ];
+
+      if (isBack) {
+        setFaceThumbnails((prev) => ({ ...prev, back: newImg }));
+        setFaceLargeImages((prev) => ({ ...prev, back: newImgLarge }));
+        updatedFacesForCallback = [
           base[0],
           {
             ...base[1],
@@ -592,28 +608,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             artist: resolvedArtist || base[1]?.artist,
           },
         ];
-      });
-    } else {
-      setFaceThumbnails((prev) => ({ ...prev, front: newImg }));
-      setFaceLargeImages((prev) => ({ ...prev, front: newImgLarge }));
-      setDfcFaces((prev: CardFace[] | null): CardFace[] => {
-        const base: CardFace[] =
-          prev && prev.length >= 2
-            ? prev
-            : [
-                {
-                  name: frontFaceName,
-                  imageUrl: defaultFront,
-                  imageUrlSmall: defaultFront,
-                  artist: card?.artist,
-                },
-                {
-                  name: backFaceName || `${card?.name || ''} (Verso)`,
-                  imageUrl: defaultBack,
-                  imageUrlSmall: defaultBack,
-                },
-              ];
-        return [
+      } else {
+        setFaceThumbnails((prev) => ({ ...prev, front: newImg }));
+        setFaceLargeImages((prev) => ({ ...prev, front: newImgLarge }));
+        updatedFacesForCallback = [
           {
             ...base[0],
             name: resolvedFaceName,
@@ -624,10 +622,11 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           },
           base[1],
         ];
-      });
+      }
+      setDfcFaces(updatedFacesForCallback);
     }
 
-    onSelectPrint(selectedPrint, face);
+    onSelectPrint(selectedPrint, face, updatedFacesForCallback);
     setSelectedFeedback(
       customFeedback ||
         `Arte da ${isBack ? 'face posterior (Verso)' : 'frente'} selecionada (${selectedPrint.setName})`

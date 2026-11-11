@@ -210,12 +210,41 @@ export function isDoubleFacedCard(card?: Card | TokenCard | null): boolean {
   if (card.layout && ['split', 'adventure', 'flip'].includes(card.layout)) {
     return false;
   }
-  if (card.name && card.name.includes(' // ')) {
+  if (card.name && (card.name.includes(' // ') || card.name.includes('//') || card.name.includes(' / '))) {
     return true;
   }
   if ('meldResultName' in card && Boolean(card.meldResultName)) {
     return true;
   }
+  return false;
+}
+
+/**
+ * Flexible card name matching for Magic: The Gathering cards.
+ * Handles split / transform / modal_dfc cards where one system stores "Front // Back"
+ * and another stores just "Front" or uses different slash spacing.
+ */
+export function isCardNameMatch(nameA?: string, nameB?: string): boolean {
+  if (!nameA || !nameB) return false;
+  const a = nameA.toLowerCase().trim();
+  const b = nameB.toLowerCase().trim();
+  if (a === b) return true;
+
+  const aClean = a.replace(/\s*\/\/\s*/g, ' // ');
+  const bClean = b.replace(/\s*\/\/\s*/g, ' // ');
+  if (aClean === bClean) return true;
+
+  const aFront = a.split('//')[0].trim();
+  const bFront = b.split('//')[0].trim();
+  if (aFront && bFront && aFront === bFront) return true;
+
+  const aBack = a.includes('//') ? a.split('//')[1].trim() : '';
+  const bBack = b.includes('//') ? b.split('//')[1].trim() : '';
+  if (aBack && bBack && aBack === bBack) return true;
+
+  // Check if one is exactly the front face of the other
+  if (aFront === b || bFront === a) return true;
+
   return false;
 }
 
@@ -226,7 +255,7 @@ export function isDoubleFacedCard(card?: Card | TokenCard | null): boolean {
  */
 export function isSameCardPrint(a?: Card | null, b?: Card | null): boolean {
   if (!a || !b) return false;
-  if (a.name.toLowerCase().trim() !== b.name.toLowerCase().trim()) return false;
+  if (!isCardNameMatch(a.name, b.name)) return false;
   if (a.id === b.id) return true;
 
   // Check back faces if either card has resolved faces
