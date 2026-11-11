@@ -13,7 +13,7 @@ export interface ProxyPdfOptions {
   cropMarksLength: number; // in mm
   showMarginTicks: boolean;
   showCornerMarks: boolean;
-  cardBleedBg: 'black' | 'white';
+  cardBleedBg: 'black' | 'white' | 'none';
   showSheetMetadata: boolean;
   cropMpcBleed?: boolean;
 }
@@ -184,9 +184,11 @@ export async function generateProxiesPdf(
       const wPx = Math.round(cardWPx);
       const hPx = Math.round(cardHPx);
 
-      // Card Background (Black or White bleed fill)
-      ctx.fillStyle = options.cardBleedBg === 'white' ? '#ffffff' : '#000000';
-      ctx.fillRect(cardX, cardY, wPx, hPx);
+      // Card Background (Black or White bleed fill behind card)
+      if (options.cardBleedBg !== 'none') {
+        ctx.fillStyle = options.cardBleedBg === 'white' ? '#ffffff' : '#000000';
+        ctx.fillRect(cardX, cardY, wPx, hPx);
+      }
 
       // Attempt to load image
       const isCustomOrAlter = card.setCode === 'CUSTOM' || card.setCode === 'MPC';
@@ -244,6 +246,47 @@ export async function generateProxiesPdf(
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 36px sans-serif';
         ctx.fillText(card.name, cardX + 20, cardY + 60, wPx - 40);
+      }
+
+      // Draw Card Corner Bleeds (Quinas pretas/brancas por cima da arte com a curvatura original da carta de Magic)
+      if (options.cardBleedBg && options.cardBleedBg !== 'none') {
+        ctx.save();
+        ctx.fillStyle = options.cardBleedBg === 'white' ? '#ffffff' : '#000000';
+        const rPx = 3.0 * SCALE; // Raio oficial de 3mm do canto de cartas de Magic
+
+        // 1. Canto Superior Esquerdo (Top-Left)
+        ctx.beginPath();
+        ctx.moveTo(cardX, cardY);
+        ctx.lineTo(cardX + rPx, cardY);
+        ctx.arc(cardX + rPx, cardY + rPx, rPx, -Math.PI / 2, Math.PI, true);
+        ctx.closePath();
+        ctx.fill();
+
+        // 2. Canto Superior Direito (Top-Right)
+        ctx.beginPath();
+        ctx.moveTo(cardX + wPx, cardY);
+        ctx.lineTo(cardX + wPx - rPx, cardY);
+        ctx.arc(cardX + wPx - rPx, cardY + rPx, rPx, -Math.PI / 2, 0, false);
+        ctx.closePath();
+        ctx.fill();
+
+        // 3. Canto Inferior Direito (Bottom-Right)
+        ctx.beginPath();
+        ctx.moveTo(cardX + wPx, cardY + hPx);
+        ctx.lineTo(cardX + wPx, cardY + hPx - rPx);
+        ctx.arc(cardX + wPx - rPx, cardY + hPx - rPx, rPx, 0, Math.PI / 2, false);
+        ctx.closePath();
+        ctx.fill();
+
+        // 4. Canto Inferior Esquerdo (Bottom-Left)
+        ctx.beginPath();
+        ctx.moveTo(cardX, cardY + hPx);
+        ctx.lineTo(cardX, cardY + hPx - rPx);
+        ctx.arc(cardX + rPx, cardY + hPx - rPx, rPx, Math.PI, Math.PI / 2, true);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
       }
 
       // Draw Cut Lines (Outer border)

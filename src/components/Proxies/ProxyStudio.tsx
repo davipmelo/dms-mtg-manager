@@ -88,7 +88,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
   const [showCornerMarks, setShowCornerMarks] = useState<boolean>(true);
 
   // Card finish & metadata
-  const [cardBleedBg, setCardBleedBg] = useState<'black' | 'white'>('black');
+  const [cardBleedBg, setCardBleedBg] = useState<'black' | 'white' | 'none'>('black');
   const [showSheetMetadata, setShowSheetMetadata] = useState<boolean>(true);
   const [cropMpcBleed, setCropMpcBleed] = useState<boolean>(true);
 
@@ -798,7 +798,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       className={`btn btn-sm ${cardBleedBg === 'black' ? 'btn-primary' : 'btn-secondary'}`}
                       onClick={() => setCardBleedBg('black')}
                       style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-                      title="Preenchimento preto em volta dos cantos arredondados (padrão MTG)"
+                      title="Quinas pretas por cima da arte com curvatura no raio original da carta de Magic"
                     >
                       Preto (MTG)
                     </button>
@@ -807,9 +807,18 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       className={`btn btn-sm ${cardBleedBg === 'white' ? 'btn-primary' : 'btn-secondary'}`}
                       onClick={() => setCardBleedBg('white')}
                       style={{ fontSize: '0.7rem', padding: '2px 8px' }}
-                      title="Preenchimento branco para economia de toner/tinta"
+                      title="Quinas brancas para economia de tinta/toner"
                     >
                       Branco (Econômico)
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${cardBleedBg === 'none' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setCardBleedBg('none')}
+                      style={{ fontSize: '0.7rem', padding: '2px 8px' }}
+                      title="Sem sangria nos cantos"
+                    >
+                      Desativada
                     </button>
                   </div>
                 </div>
@@ -1076,7 +1085,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                   '--cut-line-style': cutLinesStyle,
                   '--crop-mark-color': cropMarksColor,
                   '--crop-mark-width': `${cropMarksThickness}mm`,
-                  '--card-bleed-bg': cardBleedBg === 'white' ? '#ffffff' : '#000000',
+                  '--card-bleed-bg': cardBleedBg === 'none' ? 'transparent' : (cardBleedBg === 'white' ? '#ffffff' : '#000000'),
                 } as React.CSSProperties}
               >
                 {/* Crop marks overlay: Sheet Margin Ruler Ticks & Exact-Thickness Card Junction Crosses */}
@@ -1264,6 +1273,28 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                           objectFit: isPlanar ? 'contain' : 'cover',
                         }}
                       />
+
+                      {/* Quinas de sangria sobrepostas por cima da arte com a curvatura no raio original da carta de Magic (3mm) */}
+                      {cardBleedBg !== 'none' && !isPlanar && (
+                        <svg
+                          viewBox="0 0 63 88"
+                          shapeRendering="geometricPrecision"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '63mm',
+                            height: '88mm',
+                            pointerEvents: 'none',
+                            zIndex: 5,
+                          }}
+                        >
+                          <path
+                            d="M 0 0 L 3 0 A 3 3 0 0 0 0 3 Z M 63 0 L 60 0 A 3 3 0 0 1 63 3 Z M 63 88 L 63 85 A 3 3 0 0 1 60 88 Z M 0 88 L 0 85 A 3 3 0 0 0 3 88 Z"
+                            fill={cardBleedBg === 'white' ? '#ffffff' : '#000000'}
+                          />
+                        </svg>
+                      )}
                     </div>
                   );
                 })}
