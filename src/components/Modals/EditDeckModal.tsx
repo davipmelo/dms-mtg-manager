@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Deck, DeckFormat, DeckCard, Card, CollectionItem, DeckTag } from '../../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { Deck, DeckFormat, DeckCard, Card, CollectionItem, DeckTag, isCardNameMatch } from '../../types';
 import { parseCardList } from '../../services/importer';
 import { getCardByName, getCardBySetAndNumber, getCardBySetAndName } from '../../services/scryfall';
 import { useModalOverlay } from '../../hooks/useModalOverlay';
@@ -40,6 +40,9 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
   const [commanderInput, setCommanderInput] = useState('');
   const [commanderCard, setCommanderCard] = useState<Card | undefined>(deck.commanderCard);
 
+  // Track initial card list text to prevent destructive card re-fetching when only metadata is edited
+  const initialCardListTextRef = useRef<string>('');
+
   // Initialize form when opening
   useEffect(() => {
     if (isOpen) {
@@ -55,10 +58,16 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
       );
       setErrorMessage('');
 
-      // Build initial plain text card list from deck.cards, aggregating identical printings
-      const cardCounts = new Map<string, { count: number; name: string; setCode?: string; collectorNumber?: string }>();
+      // Build initial plain text card list from deck.cards
+      // Differentiate cards with distinct arts/images so that different basic lands are never collapsed into one line
+      const cardCounts = new Map<
+        string,
+        { count: number; name: string; setCode?: string; collectorNumber?: string }
+      >();
+
       deck.cards.forEach((dc) => {
-        const key = `${dc.card.name}|${(dc.card.setCode || '').toLowerCase()}|${dc.card.collectorNumber || ''}`;
+        const artIdentifier = dc.card.imageUrl || dc.card.id || '';
+        const key = `${dc.card.name}|${(dc.card.setCode || '').toLowerCase()}|${dc.card.collectorNumber || ''}|${artIdentifier}`;
         const existing = cardCounts.get(key);
         if (existing) {
           existing.count += dc.quantity || 1;
@@ -81,6 +90,8 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
 
       const initialText = lines.join('\n');
       setCardListText(initialText);
+      initialCardListTextRef.current = initialText;
+
       const parsed = parseCardList(initialText);
       setDetectedCount(parsed.reduce((sum, p) => sum + p.quantity, 0));
     }
@@ -128,9 +139,66 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
       return;
     }
 
+    const isCardListModified = cardListText.trim() !== initialCardListTextRef.current.trim();
+
+    // FAST PATH: When the user only changed description, name, format, tags, or commander (and did NOT edit the card list)
+    // NEVER re-parse, NEVER fetch from Scryfall, and NEVER replace existing card arts or basic lands!
+    if (!isCardListModified) {
+      let updatedDeckCards = [...deck.cards];
+
+      // If commander was modified via the commander input
+      if (commanderCard && (!deck.commanderCard || commanderCard.id !== deck.commanderCard.id)) {
+        updatedDeckCards = updatedDeckCards.map((dc) => {
+          if (
+            dc.category === 'commander' &&
+            dc.card.id !== commanderCard.id &&
+            !isCardNameMatch(dc.card.name, commanderCard.name)
+          ) {
+            return { ...dc, category: 'main' as const };
+          }
+          return dc;
+        });
+
+        const existingCmdIndex = updatedDeckCards.findIndex(
+          (dc) => dc.card.id === commanderCard.id || isCardNameMatch(dc.card.name, commanderCard.name)
+        );
+
+        if (existingCmdIndex >= 0) {
+          updatedDeckCards[existingCmdIndex] = {
+            ...updatedDeckCards[existingCmdIndex],
+            category: 'commander',
+            card: commanderCard,
+          };
+        } else {
+          updatedDeckCards.unshift({
+            card: commanderCard,
+            quantity: 1,
+            category: 'commander',
+            instanceId: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          });
+        }
+      }
+
+      const updatedDeck: Deck = {
+        ...deck,
+        name: deckName.trim(),
+        format: deckFormat,
+        description: description.trim() || undefined,
+        commanderCard: commanderCard || deck.commanderCard,
+        cards: updatedDeckCards,
+        tags: selectedTags,
+        updatedAt: new Date().toISOString(),
+      };
+
+      onSaveDeck(updatedDeck);
+      onClose();
+      return;
+    }
+
+    // SLOW PATH: The user actually edited the card list text
     setIsProcessing(true);
     setErrorMessage('');
-    setProgressText('Processando lista de cartas...');
+    setProgressText('Processando alterações da lista...');
 
     try {
       const parsedLines = parseCardList(cardListText);
@@ -140,46 +208,116 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
         return;
       }
 
-      // Map to keep track of existing cards in current deck to avoid unnecessary network fetches
-      const existingCardsMap = new Map<string, Card>();
-      deck.cards.forEach((dc) => {
-        const keyExact = `${dc.card.name.toLowerCase()}-${dc.card.setCode.toLowerCase()}-${dc.card.collectorNumber}`;
-        existingCardsMap.set(keyExact, dc.card);
-        existingCardsMap.set(dc.card.name.toLowerCase(), dc.card);
-      });
+      // Mutable pool of existing cards from the deck to preserve arts, custom MPCFill alters, foils, and instances
+      const pool: { item: DeckCard; used: boolean }[] = deck.cards.map((dc) => ({
+        item: dc,
+        used: false,
+      }));
 
       let updatedDeckCards: DeckCard[] = [];
 
       for (let i = 0; i < parsedLines.length; i++) {
         const item = parsedLines[i];
-        setProgressText(`Sincronizando carta (${i + 1}/${parsedLines.length}): ${item.name}...`);
+        const qty = Math.max(1, item.quantity || 1);
 
-        const exactKey = `${item.name.toLowerCase()}-${(item.setCode || '').toLowerCase()}-${item.collectorNumber || ''}`;
-        let matchedCard: Card | null = existingCardsMap.get(exactKey) || null;
+        for (let q = 0; q < qty; q++) {
+          // Priority 1: Match unused card in pool with exact Name + SetCode + CollectorNumber
+          let matchedIndex = pool.findIndex(
+            (p) =>
+              !p.used &&
+              isCardNameMatch(p.item.card.name, item.name) &&
+              (item.setCode
+                ? (p.item.card.setCode || '').toLowerCase() === item.setCode.toLowerCase()
+                : true) &&
+              (item.collectorNumber
+                ? String(p.item.card.collectorNumber || '').toLowerCase() ===
+                  String(item.collectorNumber).toLowerCase()
+                : true)
+          );
 
-        // If not exact match by set/number, but setCode/collectorNumber was requested, fetch from Scryfall
-        if (!matchedCard && item.setCode && item.collectorNumber) {
-          matchedCard = await getCardBySetAndNumber(item.setCode, item.collectorNumber);
-        } else if (!matchedCard && item.setCode) {
-          matchedCard = await getCardBySetAndName(item.setCode, item.name);
-        }
+          // Priority 2: Match unused card in pool with Name + SetCode
+          if (matchedIndex === -1 && item.setCode) {
+            const targetSet = item.setCode.toLowerCase();
+            matchedIndex = pool.findIndex(
+              (p) =>
+                !p.used &&
+                isCardNameMatch(p.item.card.name, item.name) &&
+                (p.item.card.setCode || '').toLowerCase() === targetSet
+            );
+          }
 
-        // If still not matched, check existing by name or fetch from Scryfall
-        if (!matchedCard) {
-          matchedCard = existingCardsMap.get(item.name.toLowerCase()) || null;
-        }
-        if (!matchedCard) {
-          matchedCard = await getCardByName(item.name);
-        }
+          // Priority 3: Match unused card in pool with Name (preserves different arts for repeated cards/basic lands in sequence!)
+          if (matchedIndex === -1) {
+            matchedIndex = pool.findIndex(
+              (p) => !p.used && isCardNameMatch(p.item.card.name, item.name)
+            );
+          }
 
-        if (matchedCard) {
-          const qty = Math.max(1, item.quantity || 1);
-          for (let q = 0; q < qty; q++) {
+          if (matchedIndex !== -1) {
+            const foundPoolItem = pool[matchedIndex];
+            foundPoolItem.used = true;
             updatedDeckCards.push({
-              card: { ...matchedCard },
+              ...foundPoolItem.item,
+              quantity: 1,
+              category: item.category || foundPoolItem.item.category || 'main',
+              isFoil: item.isFoil ?? foundPoolItem.item.isFoil ?? false,
+              instanceId:
+                foundPoolItem.item.instanceId ||
+                `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            });
+            continue;
+          }
+
+          // Priority 4: If card was NOT in the existing deck, check the user's collection
+          let collectionCard: Card | null = null;
+          if (_collection && _collection.length > 0) {
+            const colItem =
+              _collection.find(
+                (ci) =>
+                  isCardNameMatch(ci.card.name, item.name) &&
+                  (item.setCode
+                    ? (ci.card.setCode || '').toLowerCase() === item.setCode.toLowerCase()
+                    : true) &&
+                  (item.collectorNumber
+                    ? String(ci.card.collectorNumber || '').toLowerCase() ===
+                      String(item.collectorNumber).toLowerCase()
+                    : true)
+              ) || _collection.find((ci) => isCardNameMatch(ci.card.name, item.name));
+
+            if (colItem) {
+              collectionCard = colItem.card;
+            }
+          }
+
+          if (collectionCard) {
+            updatedDeckCards.push({
+              card: { ...collectionCard },
               quantity: 1,
               category: item.category || 'main',
-              isFoil: item.isFoil || matchedCard.isFoil,
+              isFoil: item.isFoil || collectionCard.isFoil || false,
+              instanceId: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            });
+            continue;
+          }
+
+          // Priority 5: ONLY for genuinely new cards not found in deck or collection, fetch from Scryfall
+          setProgressText(`Buscando nova carta (${item.name})...`);
+          let fetchedCard: Card | null = null;
+          if (item.setCode && item.collectorNumber) {
+            fetchedCard = await getCardBySetAndNumber(item.setCode, item.collectorNumber);
+          } else if (item.setCode) {
+            fetchedCard = await getCardBySetAndName(item.setCode, item.name);
+          }
+          if (!fetchedCard) {
+            fetchedCard = await getCardByName(item.name);
+          }
+
+          if (fetchedCard) {
+            updatedDeckCards.push({
+              card: { ...fetchedCard },
+              quantity: 1,
+              category: item.category || 'main',
+              isFoil: item.isFoil || fetchedCard.isFoil || false,
               instanceId: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             });
           }
@@ -192,7 +330,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
           if (
             dc.category === 'commander' &&
             dc.card.id !== commanderCard.id &&
-            dc.card.name.toLowerCase() !== commanderCard.name.toLowerCase()
+            !isCardNameMatch(dc.card.name, commanderCard.name)
           ) {
             return { ...dc, category: 'main' as const };
           }
@@ -203,7 +341,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
           !updatedDeckCards.some(
             (dc) =>
               dc.card.id === commanderCard.id ||
-              dc.card.name.toLowerCase() === commanderCard.name.toLowerCase()
+              isCardNameMatch(dc.card.name, commanderCard.name)
           )
         ) {
           updatedDeckCards.unshift({
@@ -220,7 +358,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
         name: deckName.trim(),
         format: deckFormat,
         description: description.trim() || undefined,
-        commanderCard: commanderCard,
+        commanderCard: commanderCard || deck.commanderCard,
         cards: updatedDeckCards,
         tags: selectedTags,
         updatedAt: new Date().toISOString(),
