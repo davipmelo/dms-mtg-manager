@@ -865,3 +865,45 @@ dialog.custom-modal[open] {
     print-color-adjust: exact !important;
   }
 }
+
+/* ==========================================================================
+   Art Selector Modal — Side-by-Side Current Art Comparison
+   ========================================================================== */
+.art-selector-modal-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  max-width: 100%;
+  max-height: 94vh;
+}
+
+.art-selector-current-preview {
+  width: 280px;
+  flex-shrink: 0;
+  background-color: #0c0f17;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), 0 0 25px rgba(99, 102, 241, 0.12);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-self: center;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modal-enter 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (max-width: 1120px) {
+  .art-selector-current-preview {
+    display: none !important;
+  }
+  .art-selector-modal-wrapper {
+    gap: 0;
+  }
+  .art-selector-modal-wrapper .glass-panel {
+    max-width: 96vw !important;
+  }
+}
+

@@ -15,6 +15,8 @@ import { CardHoverPreview } from '../Common/CardHoverPreview';
 import {
   X,
   Check,
+  CheckCircle2,
+  Eye,
   Loader2,
   Image as ImageIcon,
   Search,
@@ -72,8 +74,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   const [dfcFaces, setDfcFaces] = useState<CardFace[] | null>(card?.cardFaces || null);
   const [resolvingFaces, setResolvingFaces] = useState<boolean>(false);
 
-  // Local immediate thumbnail override for instant real-time header preview
+  // Local immediate thumbnail and large image overrides for instant real-time header and comparison preview
   const [faceThumbnails, setFaceThumbnails] = useState<{ front?: string; back?: string }>({});
+  const [faceLargeImages, setFaceLargeImages] = useState<{ front?: string; back?: string }>({});
 
   const isCardDfc = useMemo(() => {
     return Boolean(
@@ -149,11 +152,125 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     return card.imageUrl || card.imageUrlSmall;
   }, [card, dfcFaces, faceThumbnails.back]);
 
+  // Current Card Comparison Preview Data (persistent preview on the left side)
+  const currentPreviewData = useMemo(() => {
+    if (!card) return null;
+
+    if (isCardDfc) {
+      if (activeFace === 'back') {
+        let url =
+          faceLargeImages.back ||
+          faceThumbnails.back ||
+          card.cardFaces?.[1]?.imageUrlLarge ||
+          card.cardFaces?.[1]?.imageUrl ||
+          dfcFaces?.[1]?.imageUrlLarge ||
+          dfcFaces?.[1]?.imageUrl ||
+          currentBackThumbnail;
+
+        if (
+          !url &&
+          card.setCode &&
+          card.collectorNumber &&
+          card.collectorNumber !== '★' &&
+          card.setCode !== 'MPC' &&
+          card.setCode !== 'CUSTOM'
+        ) {
+          url = `https://api.scryfall.com/cards/${card.setCode.toLowerCase()}/${encodeURIComponent(card.collectorNumber)}?format=image&version=large&face=back`;
+        }
+
+        const faceName =
+          card.cardFaces?.[1]?.name ||
+          dfcFaces?.[1]?.name ||
+          backFaceName ||
+          `${card.name} (Verso)`;
+
+        const artist =
+          card.cardFaces?.[1]?.artist ||
+          dfcFaces?.[1]?.artist ||
+          card.artist;
+
+        return {
+          url: url || card.imageUrlLarge || card.imageUrl,
+          name: faceName,
+          faceLabel: 'Verso',
+          artist,
+          setCode: card.setCode,
+          setName: card.setName,
+          collectorNumber: card.collectorNumber,
+          isDfc: true,
+        };
+      } else {
+        const url =
+          faceLargeImages.front ||
+          faceThumbnails.front ||
+          card.cardFaces?.[0]?.imageUrlLarge ||
+          card.cardFaces?.[0]?.imageUrl ||
+          dfcFaces?.[0]?.imageUrlLarge ||
+          dfcFaces?.[0]?.imageUrl ||
+          currentFrontThumbnail ||
+          card.imageUrlLarge ||
+          card.imageUrl;
+
+        const faceName =
+          card.cardFaces?.[0]?.name ||
+          dfcFaces?.[0]?.name ||
+          frontFaceName ||
+          card.name;
+
+        const artist =
+          card.cardFaces?.[0]?.artist ||
+          dfcFaces?.[0]?.artist ||
+          card.artist;
+
+        return {
+          url: url || card.imageUrlLarge || card.imageUrl,
+          name: faceName,
+          faceLabel: 'Frente',
+          artist,
+          setCode: card.setCode,
+          setName: card.setName,
+          collectorNumber: card.collectorNumber,
+          isDfc: true,
+        };
+      }
+    }
+
+    // Single-faced card
+    const url =
+      faceLargeImages.front ||
+      faceThumbnails.front ||
+      card.imageUrlLarge ||
+      card.imageUrl;
+
+    return {
+      url,
+      name: card.name,
+      faceLabel: undefined,
+      artist: card.artist,
+      setCode: card.setCode,
+      setName: card.setName,
+      collectorNumber: card.collectorNumber,
+      isDfc: false,
+    };
+  }, [
+    card,
+    isCardDfc,
+    activeFace,
+    faceLargeImages,
+    faceThumbnails,
+    dfcFaces,
+    frontFaceName,
+    backFaceName,
+    currentFrontThumbnail,
+    currentBackThumbnail,
+  ]);
+
   // Sync face resolution when card or modal opens
   useEffect(() => {
     if (isOpen && card) {
       setActiveFace(initialFace || 'front');
       setFaceThumbnails({});
+      setFaceLargeImages({});
       if (card.cardFaces && card.cardFaces.length >= 2) {
         setDfcFaces(card.cardFaces);
       } else if (isDoubleFacedCard(card) || card.name.includes(' // ') || MELD_PAIRS_MAP[card.name.toLowerCase().trim()]) {
@@ -443,9 +560,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     const defaultFront = currentFrontThumbnail || card?.imageUrl || '';
     const defaultBack = currentBackThumbnail || '';
 
-    // Immediately update local faceThumbnails and dfcFaces for instant zero-latency UI update
+    // Immediately update local faceThumbnails, faceLargeImages and dfcFaces for instant zero-latency UI update
     if (isBack) {
       setFaceThumbnails((prev) => ({ ...prev, back: newImg }));
+      setFaceLargeImages((prev) => ({ ...prev, back: newImgLarge }));
       setDfcFaces((prev: CardFace[] | null): CardFace[] => {
         const base: CardFace[] =
           prev && prev.length >= 2
@@ -477,6 +595,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
       });
     } else {
       setFaceThumbnails((prev) => ({ ...prev, front: newImg }));
+      setFaceLargeImages((prev) => ({ ...prev, front: newImgLarge }));
       setDfcFaces((prev: CardFace[] | null): CardFace[] => {
         const base: CardFace[] =
           prev && prev.length >= 2
@@ -632,21 +751,281 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
       }}
     >
       <div
-        className="glass-panel"
-        style={{
-          width: '980px',
-          maxWidth: '96vw',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: '#0c0f17',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.15)',
-          borderRadius: '16px',
-          overflow: 'hidden',
-          overscrollBehavior: 'contain',
+        className="art-selector-modal-wrapper"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setHoveredPreview(null);
+            onClose();
+          }
         }}
       >
+        {/* Left Side: Current Card Preview (Persistent comparison) */}
+        {currentPreviewData && (
+          <div
+            className="art-selector-current-preview"
+            onMouseEnter={() => setHoveredPreview(null)}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingBottom: '8px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CheckCircle2 size={15} className="text-emerald-400" />
+                <span
+                  style={{
+                    fontSize: '0.74rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    color: '#e2e8f0',
+                  }}
+                >
+                  Arte Atual Selecionada
+                </span>
+              </div>
+
+              {isCardDfc && (
+                <button
+                  type="button"
+                  onClick={() => setActiveFace(activeFace === 'front' ? 'back' : 'front')}
+                  className="btn btn-ghost btn-xs"
+                  style={{
+                    fontSize: '0.68rem',
+                    padding: '2px 7px',
+                    color: activeFace === 'back' ? '#fbbf24' : '#818cf8',
+                    background:
+                      activeFace === 'back'
+                        ? 'rgba(245, 158, 11, 0.15)'
+                        : 'rgba(99, 102, 241, 0.15)',
+                    border: `1px solid ${
+                      activeFace === 'back'
+                        ? 'rgba(245, 158, 11, 0.3)'
+                        : 'rgba(99, 102, 241, 0.3)'
+                    }`,
+                    borderRadius: '5px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                  }}
+                  title="Alternar entre Frente e Verso"
+                >
+                  <RotateCw size={11} />
+                  {activeFace === 'back' ? 'Ver Frente' : 'Ver Verso'}
+                </button>
+              )}
+            </div>
+
+            {/* Card Image Display */}
+            <div
+              onClick={() => {
+                if (isCardDfc) {
+                  setActiveFace(activeFace === 'front' ? 'back' : 'front');
+                }
+              }}
+              style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '5/7',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                background: '#05070b',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.75)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                cursor: isCardDfc ? 'pointer' : 'default',
+              }}
+              title={isCardDfc ? 'Clique para virar a carta' : currentPreviewData.name}
+            >
+              <img
+                key={currentPreviewData.url}
+                src={currentPreviewData.url}
+                alt={currentPreviewData.name}
+                crossOrigin="anonymous"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (card.imageUrl && target.src !== card.imageUrl) {
+                    target.src = card.imageUrl;
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  display: 'block',
+                }}
+              />
+              {isCardDfc && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    right: '8px',
+                    background: 'rgba(0, 0, 0, 0.75)',
+                    backdropFilter: 'blur(4px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    padding: '3px 7px',
+                    fontSize: '0.66rem',
+                    fontWeight: 700,
+                    color: '#f8fafc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <RotateCw size={10} className="text-amber-400" />
+                  {currentPreviewData.faceLabel}
+                </div>
+              )}
+            </div>
+
+            {/* Card Details & Metadata */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.07)',
+                borderRadius: '8px',
+                padding: '8px 10px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.86rem',
+                  fontWeight: 700,
+                  color: '#f8fafc',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+                title={currentPreviewData.name}
+              >
+                {currentPreviewData.name}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                {currentPreviewData.setCode === 'MPC' ? (
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      background: 'rgba(245, 158, 11, 0.2)',
+                      border: '1px solid rgba(245, 158, 11, 0.4)',
+                      color: '#fbbf24',
+                    }}
+                  >
+                    MPCFill Alter
+                  </span>
+                ) : currentPreviewData.setCode === 'CUSTOM' ? (
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      background: 'rgba(16, 185, 129, 0.2)',
+                      border: '1px solid rgba(16, 185, 129, 0.4)',
+                      color: '#34d399',
+                    }}
+                  >
+                    Arte Própria
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      background: 'rgba(99, 102, 241, 0.2)',
+                      border: '1px solid rgba(99, 102, 241, 0.4)',
+                      color: '#a5b4fc',
+                    }}
+                  >
+                    {currentPreviewData.setCode?.toUpperCase()} #{currentPreviewData.collectorNumber}
+                  </span>
+                )}
+
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    color: '#94a3b8',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '140px',
+                  }}
+                  title={currentPreviewData.setName}
+                >
+                  {currentPreviewData.setName}
+                </span>
+              </div>
+
+              {currentPreviewData.artist && (
+                <div
+                  style={{
+                    fontSize: '0.7rem',
+                    color: '#64748b',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                  title={currentPreviewData.artist}
+                >
+                  Arte: {currentPreviewData.artist}
+                </div>
+              )}
+            </div>
+
+            {/* Helpful comparison hint */}
+            <div
+              style={{
+                marginTop: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 9px',
+                borderRadius: '7px',
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                fontSize: '0.7rem',
+                color: '#94a3b8',
+                lineHeight: 1.3,
+              }}
+            >
+              <Eye size={13} className="text-amber-400" style={{ flexShrink: 0 }} />
+              <span>Passe o mouse nas opções da grade para comparar lado a lado com esta.</span>
+            </div>
+          </div>
+        )}
+
+        {/* Main Modal Panel */}
+        <div
+          className="glass-panel"
+          style={{
+            width: '980px',
+            maxWidth: 'calc(96vw - 310px)',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: '#0c0f17',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.15)',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            overscrollBehavior: 'contain',
+          }}
+        >
         {/* Header */}
         <div
           style={{
@@ -1982,22 +2361,23 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             </div>
           </div>
         )}
-
-        {/* Floating Zoom Hover Preview Tooltip */}
-        <CardHoverPreview
-          preview={
-            hoveredPreview
-              ? {
-                  url: hoveredPreview.url,
-                  title: hoveredPreview.title,
-                  subtitle: hoveredPreview.subtitle,
-                  badge: hoveredPreview.dpi ? `${hoveredPreview.dpi} DPI` : undefined,
-                }
-              : null
-          }
-          mousePos={previewMousePos}
-        />
+        </div>
       </div>
+
+      {/* Floating Zoom Hover Preview Tooltip */}
+      <CardHoverPreview
+        preview={
+          hoveredPreview
+            ? {
+                url: hoveredPreview.url,
+                title: hoveredPreview.title,
+                subtitle: hoveredPreview.subtitle,
+                badge: hoveredPreview.dpi ? `${hoveredPreview.dpi} DPI` : undefined,
+              }
+            : null
+        }
+        mousePos={previewMousePos}
+      />
     </div>
   );
 };
