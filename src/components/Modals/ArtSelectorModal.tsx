@@ -286,32 +286,44 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     currentBackThumbnail,
   ]);
 
-  // Sync face resolution when card or modal opens
+  const activeModalCardKeyRef = useRef<string>('');
+
+  // Sync face resolution when card or modal opens (or when navigating to another card in the deck/collection)
   useEffect(() => {
-    if (isOpen && card) {
-      setActiveFace(initialFace || 'front');
-      setFaceThumbnails({});
-      setFaceLargeImages({});
-      if (card.cardFaces && card.cardFaces.length >= 2) {
-        setDfcFaces(card.cardFaces);
-      } else {
-        // Automatically attempt to resolve faces for double-faced cards, MDFCs, meld, or legacy cards
-        setResolvingFaces(true);
-        resolveCardFaces(card)
-          .then((faces) => {
-            if (faces && faces.length >= 2) {
-              setDfcFaces(faces);
-            } else {
-              setDfcFaces(null);
-            }
-          })
-          .catch(() => {
-            setDfcFaces(null);
-          })
-          .finally(() => setResolvingFaces(false));
-      }
+    if (!isOpen || !card) {
+      activeModalCardKeyRef.current = '';
+      return;
     }
-  }, [isOpen, initialFace, card?.id, card?.name]);
+
+    const currentCardKey = `${card.name}|${cardIndexLabel || ''}`;
+    // If the same card is already loaded, do NOT reset active face or clear local thumbnails!
+    if (activeModalCardKeyRef.current === currentCardKey) {
+      return;
+    }
+    activeModalCardKeyRef.current = currentCardKey;
+
+    setActiveFace(initialFace || 'front');
+    setFaceThumbnails({});
+    setFaceLargeImages({});
+    if (card.cardFaces && card.cardFaces.length >= 2) {
+      setDfcFaces(card.cardFaces);
+    } else {
+      // Automatically attempt to resolve faces for double-faced cards, MDFCs, meld, or legacy cards
+      setResolvingFaces(true);
+      resolveCardFaces(card)
+        .then((faces) => {
+          if (faces && faces.length >= 2) {
+            setDfcFaces(faces);
+          } else {
+            setDfcFaces(null);
+          }
+        })
+        .catch(() => {
+          setDfcFaces(null);
+        })
+        .finally(() => setResolvingFaces(false));
+    }
+  }, [isOpen, initialFace, card?.name, cardIndexLabel]);
 
   // Official Prints State (Scryfall)
   const [officialPrints, setOfficialPrints] = useState<CardPrint[]>([]);

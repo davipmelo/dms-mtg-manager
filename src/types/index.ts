@@ -194,9 +194,12 @@ export interface CloudUserData {
   app: 'dms-mtg-manager' | 'proliferate';
   schemaVersion: number;
   updatedAt: string;
+  clientSessionId?: string;
   collection: CollectionItem[];
   decks: Deck[];
   proxies: ProxyItem[];
+  deckTags?: DeckTag[];
+  settings?: Record<string, any>;
 }
 
 /**

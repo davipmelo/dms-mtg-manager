@@ -35,6 +35,7 @@ import {
   subscribeToAuth,
   saveUserCloudData,
   loadUserCloudData,
+  subscribeToUserCloudData,
   logoutUser,
 } from './services/firebase';
 import { getCardByName, resolveCardFaces } from './services/scryfall';
@@ -132,7 +133,13 @@ export function App() {
   decksRef.current = decks;
   const proxiesRef = useRef(proxies);
   proxiesRef.current = proxies;
+  const deckTagsRef = useRef(deckTags);
+  deckTagsRef.current = deckTags;
 
+  const clientSessionId = useRef<string>(
+    'session-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9)
+  );
+  const lastCloudUpdatedAtRef = useRef<number>(0);
   const isCloudLoadingRef = useRef(false);
   const isFirstRender = useRef(true);
   const syncTimeoutRef = useRef<any>(null);
@@ -174,10 +181,17 @@ export function App() {
     saveProxies(updated);
   };
 
-  // Auth state listener and initial sync
+  // Auth state listener and real-time cloud sync
   useEffect(() => {
-    const unsubscribe = subscribeToAuth(async (user) => {
+    let cloudUnsubscribe: (() => void) | null = null;
+
+    const unsubscribeAuth = subscribeToAuth(async (user) => {
       setCurrentUser(user);
+
+      if (cloudUnsubscribe) {
+        cloudUnsubscribe();
+        cloudUnsubscribe = null;
+      }
 
       if (!user) {
         setSyncStatus('idle');
@@ -191,39 +205,150 @@ export function App() {
 
         if (!cloudData) {
           // New account or no data on cloud yet:
-          // Back up current local cards/decks to cloud
+          // Back up current local cards/decks/tags to cloud
           const curCol = rawCollectionRef.current;
           const curDks = decksRef.current;
           const curPrx = proxiesRef.current;
+          const curTags = deckTagsRef.current;
 
-          if (curCol.length > 0 || curDks.length > 0 || curPrx.length > 0) {
+          if (curCol.length > 0 || curDks.length > 0 || curPrx.length > 0 || curTags.length > 0) {
             await saveUserCloudData(user.uid, {
               collection: curCol,
               decks: curDks,
               proxies: curPrx,
+              deckTags: curTags,
+              clientSessionId: clientSessionId.current,
             });
           }
           setSyncStatus('synced');
           setLastSyncedAt(new Date());
+          lastCloudUpdatedAtRef.current = Date.now();
           return;
         }
 
         // When user is logged in: Cloud is the single source of truth!
+        lastCloudUpdatedAtRef.current = new Date(cloudData.updatedAt || Date.now()).getTime();
         updateCollectionState(cloudData.collection || []);
         updateDecksState((cloudData.decks || []).map(normalizeDeck));
         updateProxiesState(cloudData.proxies || []);
+        if (cloudData.deckTags && cloudData.deckTags.length > 0) {
+          updateDeckTagsState(cloudData.deckTags);
+        }
         setSyncStatus('synced');
         setLastSyncedAt(new Date(cloudData.updatedAt || Date.now()));
       } catch (err) {
         console.error('Erro ao verificar dados na nuvem:', err);
         setSyncStatus('offline');
       } finally {
-        isCloudLoadingRef.current = false;
+        setTimeout(() => {
+          isCloudLoadingRef.current = false;
+        }, 500);
       }
+
+      // Start listening to real-time cloud updates from other devices / tabs!
+      cloudUnsubscribe = subscribeToUserCloudData(
+        user.uid,
+        (cloudData) => {
+          if (!cloudData) return;
+
+          // If update came from this exact tab/session, don't overwrite state to prevent reset/flicker
+          if (cloudData.clientSessionId && cloudData.clientSessionId === clientSessionId.current) {
+            setSyncStatus('synced');
+            setLastSyncedAt(new Date(cloudData.updatedAt || Date.now()));
+            return;
+          }
+
+          // Arrived from another computer or tab!
+          const incomingTime = new Date(cloudData.updatedAt || 0).getTime();
+          if (incomingTime <= lastCloudUpdatedAtRef.current) {
+            return;
+          }
+          lastCloudUpdatedAtRef.current = incomingTime;
+
+          isCloudLoadingRef.current = true;
+          if (Array.isArray(cloudData.collection)) {
+            updateCollectionState(cloudData.collection);
+          }
+          if (Array.isArray(cloudData.decks)) {
+            updateDecksState(cloudData.decks.map(normalizeDeck));
+          }
+          if (Array.isArray(cloudData.proxies)) {
+            updateProxiesState(cloudData.proxies);
+          }
+          if (Array.isArray(cloudData.deckTags)) {
+            updateDeckTagsState(cloudData.deckTags);
+          }
+          setSyncStatus('synced');
+          setLastSyncedAt(new Date(cloudData.updatedAt || Date.now()));
+
+          setTimeout(() => {
+            isCloudLoadingRef.current = false;
+          }, 800);
+        },
+        (err) => {
+          console.warn('Erro na escuta da nuvem:', err);
+        }
+      );
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (cloudUnsubscribe) {
+        cloudUnsubscribe();
+      }
+    };
   }, []);
+
+  // When window receives focus or comes online, verify if another device updated the cloud
+  useEffect(() => {
+    const checkCloudOnFocus = async () => {
+      if (!currentUser || isCloudLoadingRef.current) return;
+      try {
+        const cloudData = await loadUserCloudData(currentUser.uid);
+        if (!cloudData) return;
+        const cloudTime = new Date(cloudData.updatedAt || 0).getTime();
+        if (cloudTime > lastCloudUpdatedAtRef.current) {
+          lastCloudUpdatedAtRef.current = cloudTime;
+          isCloudLoadingRef.current = true;
+          if (Array.isArray(cloudData.collection)) {
+            updateCollectionState(cloudData.collection);
+          }
+          if (Array.isArray(cloudData.decks)) {
+            updateDecksState(cloudData.decks.map(normalizeDeck));
+          }
+          if (Array.isArray(cloudData.proxies)) {
+            updateProxiesState(cloudData.proxies);
+          }
+          if (Array.isArray(cloudData.deckTags)) {
+            updateDeckTagsState(cloudData.deckTags);
+          }
+          setSyncStatus('synced');
+          setLastSyncedAt(new Date(cloudData.updatedAt || Date.now()));
+          setTimeout(() => {
+            isCloudLoadingRef.current = false;
+          }, 800);
+        }
+      } catch (err) {
+        console.warn('Erro ao verificar nuvem ao focar janela:', err);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkCloudOnFocus();
+      }
+    };
+
+    window.addEventListener('focus', checkCloudOnFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', checkCloudOnFocus);
+
+    return () => {
+      window.removeEventListener('focus', checkCloudOnFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', checkCloudOnFocus);
+    };
+  }, [currentUser]);
 
   // Auto-sync changes to Cloud Firestore
   useEffect(() => {
@@ -245,9 +370,12 @@ export function App() {
           collection: rawCollection,
           decks,
           proxies,
+          deckTags,
+          clientSessionId: clientSessionId.current,
         });
         setSyncStatus('synced');
         setLastSyncedAt(new Date());
+        lastCloudUpdatedAtRef.current = Date.now();
       } catch (err) {
         console.error('Falha no auto-sync:', err);
         setSyncStatus('offline');
@@ -257,7 +385,7 @@ export function App() {
     return () => {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     };
-  }, [rawCollection, decks, proxies, currentUser]);
+  }, [rawCollection, decks, proxies, deckTags, currentUser]);
 
   // Manual Sync & Logout Handlers
   const handleForceSync = async () => {
@@ -268,9 +396,12 @@ export function App() {
         collection: rawCollectionRef.current,
         decks: decksRef.current,
         proxies: proxiesRef.current,
+        deckTags: deckTagsRef.current,
+        clientSessionId: clientSessionId.current,
       });
       setSyncStatus('synced');
       setLastSyncedAt(new Date());
+      lastCloudUpdatedAtRef.current = Date.now();
     } catch (err) {
       setSyncStatus('offline');
       throw err;
@@ -826,23 +957,20 @@ export function App() {
     setArtSelectorCard(newCardData);
 
     if (artSelectorContext.collectionItemId) {
-      // 1. Update collection
+      // 1. Update collection item
+      const targetColId = artSelectorContext.collectionItemId;
       const nextCol = rawCollection.map((i) =>
-        i.id === artSelectorContext.collectionItemId ? { ...i, card: newCardData } : i
+        i.id === targetColId ? { ...i, card: newCardData } : i
       );
       updateCollectionState(nextCol);
 
-      // 2. Real link between collection card and all decks!
-      // Requirement 2: "se eu mudo uma arte de uma carta na coleção e essa carta está dentro de algum deck, quando eu entrar na lista do deck ela deve estar com a arte nova lá também."
-      const targetColId = artSelectorContext.collectionItemId;
-      const oldCardId = artSelectorCard.id;
-
+      // 2. Real link between collection card and decks referencing that specific collection item
       const nextDecks = decks.map((d) => {
         let deckUpdated = false;
         const nextCards = d.cards.map((dc) => {
-          if (dc.collectionItemId === targetColId || dc.card.id === oldCardId) {
+          if (dc.collectionItemId === targetColId) {
             deckUpdated = true;
-            return { ...dc, card: newCardData, collectionItemId: targetColId };
+            return { ...dc, card: newCardData };
           }
           return dc;
         });
@@ -851,10 +979,9 @@ export function App() {
         let coverImageUrl = d.coverImageUrl;
         if (
           commanderCard &&
-          (commanderCard.id === oldCardId ||
-            nextCards.some(
-              (c) => c.category === 'commander' && c.card.id === newCardData.id
-            ))
+          nextCards.some(
+            (c) => c.category === 'commander' && c.collectionItemId === targetColId
+          )
         ) {
           commanderCard = newCardData;
           coverImageUrl = newCardData.imageUrlArtCrop || newCardData.imageUrl;
@@ -862,7 +989,12 @@ export function App() {
         }
 
         let partnerCard = d.partnerCard;
-        if (partnerCard && partnerCard.id === oldCardId) {
+        if (
+          partnerCard &&
+          nextCards.some(
+            (c) => c.category === 'partner' && c.collectionItemId === targetColId
+          )
+        ) {
           partnerCard = newCardData;
           deckUpdated = true;
         }
@@ -881,17 +1013,15 @@ export function App() {
       });
 
       updateDecksState(nextDecks);
-    }
-
-    if (artSelectorContext.proxyItemId) {
+    } else if (artSelectorContext.proxyItemId) {
+      // Update proxy item
       updateProxiesState(
         proxies.map((p) =>
           p.id === artSelectorContext.proxyItemId ? { ...p, card: newCardData } : p
         )
       );
-    }
-
-    if (activeDeckId) {
+    } else if (activeDeckId) {
+      // Update targeted card inside active deck list
       const activeDeck = decks.find((d) => d.id === activeDeckId);
       if (activeDeck) {
         const targetCardName = artSelectorContext.targetCardName || artSelectorCard.name;
@@ -951,27 +1081,6 @@ export function App() {
           targetIndex = artSelectorContext.deckCardIndex;
         }
 
-        // Find or create matching collection entry for this new art (grouping identical arts)
-        const matchedCol = rawCollection.find((c) =>
-          isSameCardPrint(c.card, newCardData)
-        );
-
-        let newColId: string;
-        if (matchedCol) {
-          newColId = matchedCol.id;
-        } else {
-          newColId = `col-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-          updateCollectionState([
-            ...rawCollection,
-            {
-              id: newColId,
-              card: newCardData,
-              quantity: 1,
-              dateAdded: new Date().toISOString(),
-            },
-          ]);
-        }
-
         const nextCards = [...activeDeck.cards];
         const targetEntry = targetIndex >= 0 ? nextCards[targetIndex] : undefined;
         const isEntryCommander = targetEntry?.category === 'commander';
@@ -981,7 +1090,8 @@ export function App() {
           nextCards[targetIndex] = {
             ...targetEntry,
             card: newCardData,
-            collectionItemId: newColId,
+            // Detach collectionItemId so this card's art is independent and never overridden by collection
+            collectionItemId: undefined,
           };
 
           // Update context so subsequent face selections during the same modal session continue to track this card smoothly

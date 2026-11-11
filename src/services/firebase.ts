@@ -15,9 +15,10 @@ import {
   doc,
   getDoc,
   setDoc,
+  onSnapshot,
   Firestore,
 } from 'firebase/firestore';
-import { UserProfile, CloudUserData, CollectionItem, Deck, ProxyItem, Card } from '../types';
+import { UserProfile, CloudUserData, CollectionItem, Deck, ProxyItem, Card, DeckTag } from '../types';
 import { compressDataUrlIfNeeded } from './imageUtils';
 
 export interface FirebaseConfig {
@@ -343,27 +344,79 @@ export function subscribeToAuth(callback: AuthCallback): () => void {
 }
 
 /* =================================================================================
-   CLOUD SYNC API (Firestore per-user sync)
+   CLOUD SYNC API (Firestore per-user sync & Real-time Cross-Device Sync)
    ================================================================================= */
+
+export function cleanCardForCloud<T extends Card>(card: T): T {
+  if (!card) return card;
+  const clean: any = {
+    id: card.id,
+    name: card.name,
+    cmc: card.cmc ?? 0,
+    typeLine: card.typeLine || '',
+    colors: card.colors || [],
+    colorIdentity: card.colorIdentity || [],
+    rarity: card.rarity || 'common',
+    setName: card.setName || '',
+    setCode: card.setCode || '',
+    collectorNumber: card.collectorNumber || '',
+    imageUrl: card.imageUrl || '',
+  };
+
+  if (card.oracleId) clean.oracleId = card.oracleId;
+  if (card.manaCost) clean.manaCost = card.manaCost;
+  if (card.oracleText) clean.oracleText = card.oracleText;
+  if (card.power !== undefined) clean.power = card.power;
+  if (card.toughness !== undefined) clean.toughness = card.toughness;
+  if (card.imageUrlLarge) clean.imageUrlLarge = card.imageUrlLarge;
+  if (card.imageUrlSmall) clean.imageUrlSmall = card.imageUrlSmall;
+  if (card.imageUrlArtCrop) clean.imageUrlArtCrop = card.imageUrlArtCrop;
+  if (card.priceUsd !== undefined) clean.priceUsd = card.priceUsd;
+  if (card.isFoil) clean.isFoil = card.isFoil;
+  if (card.layout) clean.layout = card.layout;
+  if (card.artist) clean.artist = card.artist;
+  if (card.faceLabel) clean.faceLabel = card.faceLabel;
+  if (card.meldResultName) clean.meldResultName = card.meldResultName;
+
+  if (card.cardFaces && card.cardFaces.length > 0) {
+    clean.cardFaces = card.cardFaces.map((f) => ({
+      name: f.name,
+      manaCost: f.manaCost,
+      typeLine: f.typeLine,
+      oracleText: f.oracleText,
+      colors: f.colors,
+      power: f.power,
+      toughness: f.toughness,
+      imageUrl: f.imageUrl || '',
+      imageUrlLarge: f.imageUrlLarge,
+      imageUrlSmall: f.imageUrlSmall,
+      imageUrlArtCrop: f.imageUrlArtCrop,
+      artist: f.artist,
+    }));
+  }
+
+  return clean as T;
+}
 
 async function optimizeCardImages<T extends Card>(card: T): Promise<T> {
   if (!card) return card;
+  const cleaned = cleanCardForCloud(card);
   const isImageLarge = (url?: string) => Boolean(url && url.startsWith('data:image/') && url.length > 150000);
-  if (!isImageLarge(card.imageUrl) && !isImageLarge(card.imageUrlLarge) && !isImageLarge(card.imageUrlArtCrop)) {
-    return card;
+  if (!isImageLarge(cleaned.imageUrl) && !isImageLarge(cleaned.imageUrlLarge) && !isImageLarge(cleaned.imageUrlArtCrop)) {
+    return cleaned;
   }
 
-  const optimizedUrl = await compressDataUrlIfNeeded(card.imageUrl);
+  const optimizedUrl = await compressDataUrlIfNeeded(cleaned.imageUrl);
   const optimizedLarge =
-    card.imageUrlLarge === card.imageUrl ? optimizedUrl : await compressDataUrlIfNeeded(card.imageUrlLarge);
+    cleaned.imageUrlLarge === cleaned.imageUrl ? optimizedUrl : await compressDataUrlIfNeeded(cleaned.imageUrlLarge);
   const optimizedCrop =
-    card.imageUrlArtCrop === card.imageUrl ? optimizedUrl : await compressDataUrlIfNeeded(card.imageUrlArtCrop);
+    cleaned.imageUrlArtCrop === cleaned.imageUrl ? optimizedUrl : await compressDataUrlIfNeeded(cleaned.imageUrlArtCrop);
 
   return {
-    ...card,
-    imageUrl: optimizedUrl || card.imageUrl,
-    imageUrlLarge: optimizedLarge || card.imageUrlLarge,
-    imageUrlArtCrop: optimizedCrop || card.imageUrlArtCrop,
+    ...cleaned,
+    imageUrl: optimizedUrl || cleaned.imageUrl,
+    imageUrlLarge: optimizedLarge || cleaned.imageUrlLarge,
+    imageUrlArtCrop: optimizedCrop || cleaned.imageUrlArtCrop,
   };
 }
 
@@ -418,11 +471,15 @@ export async function saveUserCloudData(
     collection: CollectionItem[];
     decks: Deck[];
     proxies: ProxyItem[];
+    deckTags?: DeckTag[];
+    settings?: Record<string, any>;
+    clientSessionId?: string;
   }
 ): Promise<void> {
   const instances = getFirebaseInstances();
 
-  // Compress oversized user-uploaded base64 images so they stay safely under Firestore's 1MB limit
+  // Compress oversized user-uploaded base64 images and strip bloated cache properties
+  // so payloads stay safely well below Firestore's 1MB document limit
   const collection = await optimizeCollectionImages(data.collection);
   const decks = await optimizeDecksImages(data.decks);
   const proxies = await optimizeProxiesImages(data.proxies);
@@ -431,9 +488,12 @@ export async function saveUserCloudData(
     app: 'proliferate',
     schemaVersion: 1,
     updatedAt: new Date().toISOString(),
+    clientSessionId: data.clientSessionId,
     collection,
     decks,
     proxies,
+    deckTags: data.deckTags || [],
+    settings: data.settings || {},
   };
 
   // Strip all undefined properties recursively (Firestore setDoc rejects any undefined values)
@@ -451,6 +511,11 @@ export async function saveUserCloudData(
     const all = rawAll ? JSON.parse(rawAll) : {};
     all[uid] = sanitizedPayload;
     localStorage.setItem(STORAGE_KEY_SIMULATED_CLOUD_DATA, JSON.stringify(all));
+    window.dispatchEvent(
+      new CustomEvent('proliferate:simulated-cloud-sync', {
+        detail: { uid, data: sanitizedPayload },
+      })
+    );
   } catch (err) {
     console.error('Erro ao salvar dados na simulação de nuvem:', err);
     throw err;
@@ -476,6 +541,65 @@ export async function loadUserCloudData(uid: string): Promise<CloudUserData | nu
   } catch {
     return null;
   }
+}
+
+/**
+ * Subscribes to real-time updates for a user's cloud data.
+ * Fires instantly whenever another device/tab saves changes,
+ * achieving real-time synchronization between computers.
+ */
+export function subscribeToUserCloudData(
+  uid: string,
+  onUpdate: (data: CloudUserData) => void,
+  onError?: (err: any) => void
+): () => void {
+  const instances = getFirebaseInstances();
+
+  if (instances) {
+    const userDocRef = doc(instances.db, 'userData', uid);
+    const unsubscribe = onSnapshot(
+      userDocRef,
+      (snap) => {
+        if (snap.exists()) {
+          onUpdate(snap.data() as CloudUserData);
+        }
+      },
+      (err) => {
+        console.warn('Erro na escuta em tempo real da nuvem:', err);
+        onError?.(err);
+      }
+    );
+    return () => unsubscribe();
+  }
+
+  // Fallback: Listen to storage events and custom events for simulated sync
+  const handleStorage = (e: StorageEvent) => {
+    if (e.key === STORAGE_KEY_SIMULATED_CLOUD_DATA && e.newValue) {
+      try {
+        const all = JSON.parse(e.newValue);
+        if (all[uid]) {
+          onUpdate(all[uid]);
+        }
+      } catch (err) {
+        console.error('Erro ao ler simulação de nuvem via storage event:', err);
+      }
+    }
+  };
+
+  const handleCustomSync = (e: Event) => {
+    const custom = e as CustomEvent;
+    if (custom.detail?.uid === uid && custom.detail?.data) {
+      onUpdate(custom.detail.data);
+    }
+  };
+
+  window.addEventListener('storage', handleStorage);
+  window.addEventListener('proliferate:simulated-cloud-sync', handleCustomSync);
+
+  return () => {
+    window.removeEventListener('storage', handleStorage);
+    window.removeEventListener('proliferate:simulated-cloud-sync', handleCustomSync);
+  };
 }
 
 /* =================================================================================
