@@ -429,21 +429,80 @@ export function createPrintFromCustomImage(
 }
 
 /**
+ * Normalizes a card or alter name for strict equivalence matching.
+ */
+export function normalizeMpcName(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’‘`]/g, "'")
+    .replace(/["\u201C\u201D]/g, '')
+    .replace(/æ/g, 'ae')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Checks whether an alter returned by MPCFill belongs specifically to the requested card,
+ * rejecting substring-overlapping cards (e.g. rejecting "Horn of Greed" when searching for "Greed").
+ */
+export function isMpcAlterForCard(
+  alterName: string | undefined,
+  targetName: string,
+  targetCardType: 'CARD' | 'TOKEN' = 'CARD'
+): boolean {
+  if (!alterName || !targetName) return true;
+
+  const normTarget = normalizeMpcName(targetName);
+  const targetFront = normTarget.split('//')[0].trim();
+
+  const normAlter = normalizeMpcName(alterName);
+  const alterFront = normAlter.split('//')[0].trim();
+
+  if (targetCardType === 'TOKEN') {
+    const normAlterNoToken = alterFront.replace(/\b(tokens?|fichas?)\b/gi, '').trim();
+    const strippedToken = normAlterNoToken.replace(/\s*[\(\[\{].*$/, '').trim();
+    if (strippedToken === targetFront || alterFront.startsWith(targetFront)) return true;
+    return false;
+  }
+
+  // 1. Direct match (e.g. "greed" === "greed")
+  if (alterFront === targetFront) return true;
+
+  // 2. Remove parenthetical, bracketed, or brace annotations
+  // e.g. "Greed (Izzy-79)", "Greed [MH2] {274}", "Greed {402}", "Greed (Modern Izzy)" -> "Greed"
+  const strippedAnnotations = alterFront.replace(/\s*[\(\[\{].*$/, '').trim();
+  if (strippedAnnotations === targetFront) return true;
+
+  // 3. Remove trailing design/frame descriptors
+  // e.g. "Greed - Retro", "Greed - Extended", "Greed_Extended", "Greed - Showcase", "Greed - Borderless"
+  const strippedHyphen = alterFront
+    .replace(/\s*[-_]\s*(retro|extended|borderless|showcase|full art|foil|promo|alt|shifted).*$/, '')
+    .trim();
+  if (strippedHyphen === targetFront) return true;
+
+  return false;
+}
+
+/**
  * Extracts matching alter arts from an uploaded/provided MPCFill XML string for a specific card name.
  */
 export function extractAltersFromXmlForCard(xmlString: string, targetCardName: string): CardPrint[] {
   try {
     const order = parseMpcFillXml(xmlString);
-    const cleanTarget = targetCardName.toLowerCase().replace(/[~`!@#$%^&*(){}\[\];:"'’<,.>?/\\|_+=]/g, '').trim();
+    const cleanTarget = normalizeMpcName(targetCardName);
 
     const matches: CardPrint[] = [];
     const allCards = [...order.fronts, ...order.backs];
 
     for (const c of allCards) {
-      const cleanName = c.name.toLowerCase().replace(/[~`!@#$%^&*(){}\[\];:"'’<,.>?/\\|_+=]/g, '').trim();
-      const cleanQuery = c.query.toLowerCase().replace(/[~`!@#$%^&*(){}\[\];:"'’<,.>?/\\|_+=]/g, '').trim();
-
-      if (cleanName.includes(cleanTarget) || cleanTarget.includes(cleanName) || cleanQuery === cleanTarget) {
+      if (
+        isMpcAlterForCard(c.name, targetCardName) ||
+        isMpcAlterForCard(c.query, targetCardName) ||
+        normalizeMpcName(c.name) === cleanTarget ||
+        normalizeMpcName(c.query) === cleanTarget
+      ) {
         matches.push({
           id: `mpc-xml-${c.id}`,
           setCode: 'MPC',
@@ -569,7 +628,8 @@ export async function searchMpcFillAlters(
       }
     }
 
-    // 2. Query editorSearch
+    // 2. Query editorSearch (default fuzzySearch to false for exact card match)
+    const exactSearch = options?.fuzzySearch !== undefined ? options.fuzzySearch : false;
     const searchBody = {
       queries: [{ query: cleanQuery, cardType: targetCardType }],
       searchSettings: {
@@ -583,13 +643,13 @@ export async function searchMpcFillAlters(
         },
         searchTypeSettings: {
           filterCardbacks: false,
-          fuzzySearch: options?.fuzzySearch !== undefined ? options.fuzzySearch : true,
+          fuzzySearch: exactSearch,
         },
         sourceSettings: { sources: cachedMpcSources || [] },
       },
     };
 
-    const searchRes = await fetch(`${baseUrl}/2/editorSearch/`, {
+    let searchRes = await fetch(`${baseUrl}/2/editorSearch/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -597,15 +657,15 @@ export async function searchMpcFillAlters(
       body: JSON.stringify(searchBody),
     });
 
-    const contentType = searchRes.headers.get('content-type') || '';
+    let contentType = searchRes.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
       throw new Error('PROXY_RETURNED_HTML');
     }
 
     if (!searchRes.ok) return [];
 
-    const searchData = await searchRes.json();
-    const resultObj =
+    let searchData = await searchRes.json();
+    let resultObj =
       searchData?.results?.[cleanQuery] ||
       (searchData?.results
         ? Object.entries(searchData.results).find(
@@ -614,10 +674,51 @@ export async function searchMpcFillAlters(
         : undefined) ||
       (searchData?.results ? (Object.values(searchData.results)[0] as any) : undefined);
 
-    const ids: string[] =
+    let ids: string[] =
       targetCardType === 'TOKEN'
         ? resultObj?.TOKEN || resultObj?.CARD || []
         : resultObj?.CARD || resultObj?.TOKEN || [];
+
+    // Fallback: If exact search returned 0 results and fuzzySearch was not explicitly specified,
+    // retry once with fuzzySearch: true and let our strict name validator filter the results
+    if (ids.length === 0 && options?.fuzzySearch === undefined) {
+      try {
+        const fallbackSearchBody = {
+          ...searchBody,
+          searchSettings: {
+            ...searchBody.searchSettings,
+            searchTypeSettings: {
+              ...searchBody.searchSettings.searchTypeSettings,
+              fuzzySearch: true,
+            },
+          },
+        };
+        const fallbackRes = await fetch(`${baseUrl}/2/editorSearch/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fallbackSearchBody),
+        });
+        if (fallbackRes.ok) {
+          const fallbackData = await fallbackRes.json();
+          const fallbackObj =
+            fallbackData?.results?.[cleanQuery] ||
+            (fallbackData?.results
+              ? Object.entries(fallbackData.results).find(
+                  ([k]) => k.toLowerCase() === cleanQuery.toLowerCase()
+                )?.[1]
+              : undefined) ||
+            (fallbackData?.results ? (Object.values(fallbackData.results)[0] as any) : undefined);
+
+          ids =
+            targetCardType === 'TOKEN'
+              ? fallbackObj?.TOKEN || fallbackObj?.CARD || []
+              : fallbackObj?.CARD || fallbackObj?.TOKEN || [];
+        }
+      } catch (err) {
+        console.warn('Fallback fuzzy search falhou:', err);
+      }
+    }
+
     if (!ids || ids.length === 0) return [];
 
     // 3. Query card metadata for all matching alter IDs (chunked if very large)
@@ -645,12 +746,22 @@ export async function searchMpcFillAlters(
       }
     }
 
-    // 4. Transform into CardPrint
-    const prints: MpcCardPrint[] = ids.map((id, index) => {
+    // 4. Transform into CardPrint and strictly validate that each alter belongs to this exact card
+    const prints: MpcCardPrint[] = [];
+    for (let index = 0; index < ids.length; index++) {
+      const id = ids[index];
       const meta = cardsMetaMap[id];
+      const alterName = meta?.name;
+
+      // Strict rejection: discard alters that belong to different cards
+      // (e.g. discarding "Horn of Greed" or "Traitorous Greed" when searching for "Greed")
+      if (alterName && !isMpcAlterForCard(alterName, cleanQuery, targetCardType)) {
+        continue;
+      }
+
       const imageUrl = `https://lh3.googleusercontent.com/d/${id}`;
       const dpiNum = meta?.dpi ? Number(meta.dpi) : undefined;
-      return {
+      prints.push({
         id: `mpc-alter-${id}`,
         setCode: 'MPC',
         setName: meta?.name || `MPCFill Alter #${index + 1}`,
@@ -664,8 +775,8 @@ export async function searchMpcFillAlters(
         sourceName: meta?.sourceName || meta?.source || 'Comunidade MPCFill',
         tags: meta?.tags || [],
         dateCreated: meta?.dateCreated,
-      };
-    });
+      });
+    }
 
     // Filter by minDpi if specified
     const filteredPrints = prints.filter((p) => {
