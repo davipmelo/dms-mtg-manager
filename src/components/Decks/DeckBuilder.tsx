@@ -762,17 +762,15 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   };
 
   const [isScrolled, setIsScrolled] = useState(false);
-  const headerWrapperRef = useRef<HTMLDivElement>(null);
-  const normalHeaderHeightRef = useRef<number>(140);
 
   useEffect(() => {
     const handleScroll = () => {
-      const threshold = 30;
-      const scrolled = window.scrollY > threshold;
-      if (!scrolled && headerWrapperRef.current) {
-        normalHeaderHeightRef.current = headerWrapperRef.current.offsetHeight;
-      }
-      setIsScrolled(scrolled);
+      const y = window.scrollY;
+      setIsScrolled((prev) => {
+        if (!prev && y > 50) return true;
+        if (prev && y < 25) return false;
+        return prev;
+      });
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -784,81 +782,115 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Top Navigation & Deck Header (Sticky & Docks to Main Header on scroll) */}
       <div
-        ref={headerWrapperRef}
+        className="glass-panel deck-header-panel"
         style={{
-          minHeight: isScrolled ? `${normalHeaderHeightRef.current}px` : undefined,
+          position: 'sticky',
+          top: 'var(--app-header-height, 58px)',
+          zIndex: 900,
+          background: isScrolled ? 'rgba(10, 13, 20, 0.96)' : undefined,
+          backdropFilter: isScrolled ? 'blur(16px)' : undefined,
+          WebkitBackdropFilter: isScrolled ? 'blur(16px)' : undefined,
+          borderTop: isScrolled ? 'none' : undefined,
+          borderRadius: isScrolled ? '0 0 14px 14px' : '16px',
+          boxShadow: isScrolled ? '0 10px 25px rgba(0, 0, 0, 0.7)' : undefined,
+          borderColor: isScrolled ? 'rgba(255, 255, 255, 0.1)' : undefined,
+          padding: isScrolled ? '8px 16px' : '20px',
+          transition: 'padding 0.15s ease, border-radius 0.15s ease',
         }}
       >
-        <div
-          className="glass-panel deck-header-panel"
-          style={{
-            position: 'sticky',
-            top: 'var(--app-header-height, 58px)',
-            zIndex: 900,
-            background: isScrolled ? 'rgba(10, 13, 20, 0.96)' : undefined,
-            backdropFilter: isScrolled ? 'blur(16px)' : undefined,
-            WebkitBackdropFilter: isScrolled ? 'blur(16px)' : undefined,
-            borderTop: isScrolled ? 'none' : undefined,
-            borderRadius: isScrolled ? '0 0 14px 14px' : '16px',
-            boxShadow: isScrolled ? '0 10px 25px rgba(0, 0, 0, 0.7)' : undefined,
-            borderColor: isScrolled ? 'rgba(255, 255, 255, 0.1)' : undefined,
-            padding: isScrolled ? '8px 16px' : '20px',
-            marginTop: isScrolled ? '-20px' : '0',
-            transition: 'padding 0.15s ease, border-radius 0.15s ease, margin-top 0.15s ease',
-          }}
-        >
-          {isScrolled ? (
-            /* Compact Docked Header (Single slim row without taking much space) */
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                flexWrap: 'nowrap',
-                width: '100%',
-              }}
-            >
-              {/* Left Group: Back button, deck title, format & count badges */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flexShrink: 1 }}>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={onBack}
-                  title="Voltar aos Decks"
-                  style={{ padding: '4px 8px', height: '32px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <ArrowLeft size={15} />
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Decks</span>
-                </button>
+        {isScrolled ? (
+          /* Compact Docked Header (Single slim row without taking much space) */
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'nowrap',
+              width: '100%',
+            }}
+          >
+            {/* Left Group: Back button, deck title, format & count badges, tags */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flexShrink: 1, overflow: 'hidden' }}>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={onBack}
+                title="Voltar aos Decks"
+                style={{ padding: '4px 8px', height: '32px', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
+              >
+                <ArrowLeft size={15} />
+                <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Decks</span>
+              </button>
 
-                <div
-                  style={{
-                    fontSize: '1.05rem',
-                    fontWeight: 800,
-                    color: '#f8fafc',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    maxWidth: '320px',
-                  }}
-                  title={deck.name}
-                >
-                  {deck.name}
-                </div>
-
-                <span className="badge badge-primary" style={{ fontSize: '0.68rem', padding: '2px 7px', flexShrink: 0 }}>
-                  {deck.format.toUpperCase()}
-                </span>
-
-                <span
-                  className={`badge ${
-                    totalCardsCount === targetCardsCount ? 'badge-success' : 'badge-warning'
-                  }`}
-                  style={{ fontSize: '0.68rem', padding: '2px 7px', flexShrink: 0 }}
-                >
-                  {totalCardsCount} / {targetCardsCount}
-                </span>
+              <div
+                style={{
+                  fontSize: '1.05rem',
+                  fontWeight: 800,
+                  color: '#f8fafc',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '280px',
+                  flexShrink: 1,
+                }}
+                title={deck.name}
+              >
+                {deck.name}
               </div>
+
+              <span className="badge badge-primary" style={{ fontSize: '0.68rem', padding: '2px 7px', flexShrink: 0 }}>
+                {deck.format.toUpperCase()}
+              </span>
+
+              <span
+                className={`badge ${
+                  totalCardsCount === targetCardsCount ? 'badge-success' : 'badge-warning'
+                }`}
+                style={{ fontSize: '0.68rem', padding: '2px 7px', flexShrink: 0 }}
+              >
+                {totalCardsCount} / {targetCardsCount}
+              </span>
+
+              {/* Deck Tags in compact mode */}
+              {deck.tags && deck.tags.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'nowrap', flexShrink: 0 }}>
+                  {deck.tags.map((tIdOrName) => {
+                    const tag = deckTags.find(
+                      (t) => t.id === tIdOrName || t.name.toLowerCase() === tIdOrName.toLowerCase()
+                    ) || { id: tIdOrName, name: tIdOrName, color: '#3b82f6' };
+
+                    return (
+                      <span
+                        key={tag.id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '2px 7px',
+                          borderRadius: '10px',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          color: tag.color,
+                          backgroundColor: `${tag.color}20`,
+                          border: `1px solid ${tag.color}50`,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: '5px',
+                            height: '5px',
+                            borderRadius: '50%',
+                            backgroundColor: tag.color,
+                          }}
+                        />
+                        {tag.name}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
               {/* Right Group: Action buttons */}
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
@@ -1039,7 +1071,6 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             </>
           )}
         </div>
-      </div>
 
       {/* Interactive Deck Analytics / Charts */}
       <div className="glass-panel" style={{ padding: '26px' }}>
