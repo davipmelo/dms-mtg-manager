@@ -477,7 +477,6 @@ export async function generateDeckPoster(
   let bestCardWidth = 100;
   let bestCardHeight = 140;
   let bestRowStep = 140;
-  let bestRows = 10;
 
   const minCols = options.aspectRatio === 'a4-landscape' || options.aspectRatio === 'wallpaper-16-9' ? 7 : 5;
   const maxCols = options.aspectRatio === 'a4-landscape' || options.aspectRatio === 'wallpaper-16-9' ? 18 : 12;
@@ -508,7 +507,6 @@ export async function generateDeckPoster(
     if (score > bestScore) {
       bestScore = score;
       bestCols = c;
-      bestRows = r;
       bestCardWidth = Math.floor(cWidth);
       bestCardHeight = Math.floor(cHeight);
       bestRowStep = rStep;
@@ -516,7 +514,6 @@ export async function generateDeckPoster(
   }
 
   const cols = bestCols;
-  const rows = bestRows;
   const cardWidth = bestCardWidth;
   const cardHeight = bestCardHeight;
   const gapX = Math.floor((availableWidth - cols * cardWidth) / Math.max(1, cols - 1));

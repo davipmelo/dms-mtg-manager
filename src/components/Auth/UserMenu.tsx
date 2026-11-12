@@ -5,10 +5,8 @@ import {
   RefreshCw,
   AlertCircle,
   WifiOff,
-  User,
   KeyRound,
   LogOut,
-  Settings,
   ShieldCheck,
   ChevronDown,
 } from 'lucide-react';
@@ -189,6 +187,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({
               ? `Sincronizado (${formatLastSync()})`
               : syncStatus === 'offline'
               ? 'Modo Offline'
+              : syncStatus === 'error'
+              ? 'Erro ao sincronizar'
               : 'Status da sincronização'
           }
         >
@@ -307,6 +307,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                     ? 'Nuvem Sincronizada'
                     : syncStatus === 'syncing' || isManualSyncing
                     ? 'Sincronizando...'
+                    : syncStatus === 'error'
+                    ? 'Erro ao sincronizar'
                     : 'Modo Offline'}
                 </span>
               </div>

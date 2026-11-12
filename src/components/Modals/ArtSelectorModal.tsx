@@ -7,7 +7,6 @@ import {
   createPrintFromMpcId,
   createPrintFromCustomImage,
   extractAltersFromXmlForCard,
-  extractGoogleDriveId,
   isMpcCardImage,
 } from '../../services/mpcFillService';
 import { compressImageFile } from '../../services/imageUtils';

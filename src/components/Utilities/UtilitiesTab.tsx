@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TokenCard, UtilityCategory, Card, CardPrint } from '../../types';
 import { searchUtilityCards } from '../../services/scryfall';
+import { getUiSettings, saveUiSettings } from '../../services/storage';
 import { CardImage } from '../Common/CardImage';
 import { ArtSelectorModal } from '../Modals/ArtSelectorModal';
 import { CardHoverPreview, CardHoverPreviewData } from '../Common/CardHoverPreview';
@@ -131,23 +132,29 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
   const [artTargetIndex, setArtTargetIndex] = useState<number | null>(null);
   const requestIdRef = useRef(0);
 
-  const [gridCardSize, setGridCardSize] = useState<number>(() => {
-    const saved = localStorage.getItem('dms_grid_card_size');
-    return saved ? Math.min(340, Math.max(110, Number(saved))) : 200;
-  });
-  const [showGridDetails, setShowGridDetails] = useState<boolean>(() => {
-    return localStorage.getItem('dms_grid_show_details') !== 'false';
-  });
+  const [gridCardSize, setGridCardSize] = useState<number>(() => getUiSettings().gridCardSize);
+  const [showGridDetails, setShowGridDetails] = useState<boolean>(() => getUiSettings().gridShowDetails);
+
+  useEffect(() => {
+    const handleCloudUiSync = () => {
+      const next = getUiSettings();
+      setGridCardSize(next.gridCardSize);
+      setShowGridDetails(next.gridShowDetails);
+    };
+    window.addEventListener('proliferate:ui-settings-cloud', handleCloudUiSync);
+    return () => window.removeEventListener('proliferate:ui-settings-cloud', handleCloudUiSync);
+  }, []);
 
   const handleGridCardSizeChange = (val: number) => {
-    setGridCardSize(val);
-    localStorage.setItem('dms_grid_card_size', String(val));
+    const clamped = Math.min(340, Math.max(110, val));
+    setGridCardSize(clamped);
+    saveUiSettings({ gridCardSize: clamped });
   };
 
   const handleToggleGridDetails = () => {
     setShowGridDetails((prev) => {
       const next = !prev;
-      localStorage.setItem('dms_grid_show_details', String(next));
+      saveUiSettings({ gridShowDetails: next });
       return next;
     });
   };

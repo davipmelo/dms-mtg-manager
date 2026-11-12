@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { CollectionItem, ViewMode, CardPrint, Card, isDoubleFacedCard } from '../../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { CollectionItem, ViewMode, Card, isDoubleFacedCard } from '../../types';
 import { resolveCardFaces } from '../../services/scryfall';
+import { getUiSettings, saveUiSettings, UiSettings } from '../../services/storage';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
 import { InteractiveCharts } from '../Analytics/InteractiveCharts';
@@ -9,8 +10,6 @@ import {
   Grid,
   List,
   Search,
-  Filter,
-  Download,
   Plus,
   Minus,
   Sparkles,
@@ -18,8 +17,6 @@ import {
   ChevronDown,
   ChevronUp,
   Image as ImageIcon,
-  CheckCircle,
-  AlertCircle,
   BarChart3,
   ZoomIn,
   ZoomOut,
@@ -37,7 +34,6 @@ interface CollectionViewProps {
   onAddToProxies: (card: Card, qty: number) => void;
   onRemoveItem: (id: string) => void;
   onRemoveItems?: (itemIds: string[]) => void;
-  onOpenImportModal?: () => void;
 }
 
 export type SortColumn = 'quantity' | 'available' | 'name' | 'cmc' | 'type' | 'set' | 'rarity' | 'price';
@@ -50,17 +46,13 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
   onAddToProxies,
   onRemoveItem,
   onRemoveItems,
-  onOpenImportModal,
 }) => {
-  // View mode: Grid is now primary, persisted across sessions
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    const saved = localStorage.getItem('dms_collection_view_mode');
-    return (saved as ViewMode) || 'grid';
-  });
+  // View mode: Grid is now primary, persisted across sessions & synced to cloud
+  const [viewMode, setViewMode] = useState<ViewMode>(() => getUiSettings().collectionViewMode);
 
   const handleSetViewMode = (mode: ViewMode) => {
     setViewMode(mode);
-    localStorage.setItem('dms_collection_view_mode', mode);
+    saveUiSettings({ collectionViewMode: mode }, 'local');
   };
 
   // Batch Selection state for quick removal in list/table view
@@ -80,30 +72,36 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
   const [isMultiOnly, setIsMultiOnly] = useState(false);
   const [isColorlessOnly, setIsColorlessOnly] = useState(false);
   const [colorMatchMode, setColorMatchMode] = useState<'exact' | 'pool'>('exact');
-  const [selectedRarity, setSelectedRarity] = useState<string>('all');
   const [usageFilter, setUsageFilter] = useState<'all' | 'available' | 'in_use'>('all');
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [showCharts, setShowCharts] = useState(false);
   const [hoveredPreview, setHoveredPreview] = useState<CardHoverPreviewData | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [gridCardSize, setGridCardSize] = useState<number>(() => {
-    const saved = localStorage.getItem('dms_grid_card_size');
-    return saved ? Math.min(340, Math.max(110, Number(saved))) : 200;
-  });
-  const [showGridDetails, setShowGridDetails] = useState<boolean>(() => {
-    return localStorage.getItem('dms_grid_show_details') !== 'false';
-  });
+  const [gridCardSize, setGridCardSize] = useState<number>(() => getUiSettings().gridCardSize);
+  const [showGridDetails, setShowGridDetails] = useState<boolean>(() => getUiSettings().gridShowDetails);
+
+  useEffect(() => {
+    const onCloudSettings = (e: Event) => {
+      const s = (e as CustomEvent<UiSettings>).detail;
+      if (!s) return;
+      setViewMode(s.collectionViewMode);
+      setGridCardSize(s.gridCardSize);
+      setShowGridDetails(s.gridShowDetails);
+    };
+    window.addEventListener('proliferate:ui-settings-cloud', onCloudSettings);
+    return () => window.removeEventListener('proliferate:ui-settings-cloud', onCloudSettings);
+  }, []);
 
   const handleGridCardSizeChange = (val: number) => {
     setGridCardSize(val);
-    localStorage.setItem('dms_grid_card_size', String(val));
+    saveUiSettings({ gridCardSize: val }, 'local');
   };
 
   const handleToggleGridDetails = () => {
     setShowGridDetails((prev) => {
       const next = !prev;
-      localStorage.setItem('dms_grid_show_details', String(next));
+      saveUiSettings({ gridShowDetails: next }, 'local');
       return next;
     });
   };
@@ -212,12 +210,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
         }
       }
 
-      // Rarity
-      if (selectedRarity !== 'all' && item.card.rarity !== selectedRarity) {
-        return false;
-      }
-
-      // Usage Filter (Requirement 4)
+      // Usage Filter
       if (usageFilter === 'available') {
         if ((item.availableQuantity ?? item.quantity) <= 0) return false;
       } else if (usageFilter === 'in_use') {
@@ -226,7 +219,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
 
       return true;
     });
-  }, [collection, searchQuery, selectedColors, isMultiOnly, isColorlessOnly, colorMatchMode, selectedRarity, usageFilter]);
+  }, [collection, searchQuery, selectedColors, isMultiOnly, isColorlessOnly, colorMatchMode, usageFilter]);
 
   // Sorted items
   const sortedItems = useMemo(() => {

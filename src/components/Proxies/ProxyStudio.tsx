@@ -5,7 +5,6 @@ import { CardHoverPreview, CardHoverPreviewData } from '../Common/CardHoverPrevi
 import {
   generateProxiesPdf,
   ProxyPdfOptions,
-  DEFAULT_PROXY_PDF_OPTIONS,
 } from '../../services/proxyPdfService';
 import {
   MpcFillOrder,
@@ -22,7 +21,6 @@ import {
   Layers,
   Scissors,
   CheckSquare,
-  Square,
   Image as ImageIcon,
   Palette,
   Sliders,
@@ -31,13 +29,9 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  FileText,
   HelpCircle,
-  Upload,
   FileCode,
   X,
-  Check,
-  ExternalLink,
 } from 'lucide-react';
 
 const COLOR_PRESETS = [

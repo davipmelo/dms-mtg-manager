@@ -7,12 +7,6 @@ const STORAGE_KEYS = {
   DECK_TAGS: 'dms_mtg_deck_tags_v1',
 };
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function isValidUuid(val?: string): boolean {
-  return Boolean(val && UUID_REGEX.test(val.trim()));
-}
-
 // Initial starter collection with verified Scryfall UUIDs, image URLs, and printsSearchUri
 export const SAMPLE_STARTER_CARDS: Card[] = [
   {
@@ -522,7 +516,7 @@ export function getStoredDeckTags(): DeckTag[] {
       return DEFAULT_DECK_TAGS;
     }
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    if (Array.isArray(parsed)) return parsed;
     return DEFAULT_DECK_TAGS;
   } catch {
     return DEFAULT_DECK_TAGS;
@@ -535,6 +529,65 @@ export function saveStoredDeckTags(tags: DeckTag[]): void {
   } catch (err) {
     console.error('Error saving deck tags to storage:', err);
   }
+}
+
+export interface UiSettings {
+  collectionViewMode: 'grid' | 'table';
+  deckViewMode: 'grid' | 'table';
+  gridCardSize: number;
+  gridShowDetails: boolean;
+}
+
+export function getUiSettings(): UiSettings {
+  try {
+    const colMode = localStorage.getItem('dms_collection_view_mode');
+    const deckMode = localStorage.getItem('dms_deck_view_mode');
+    const savedSize = localStorage.getItem('dms_grid_card_size');
+    const parsedSize = savedSize ? Number(savedSize) : 200;
+    return {
+      collectionViewMode: colMode === 'table' ? 'table' : 'grid',
+      deckViewMode: deckMode === 'table' ? 'table' : 'grid',
+      gridCardSize: Number.isFinite(parsedSize) ? Math.min(340, Math.max(110, parsedSize)) : 200,
+      gridShowDetails: localStorage.getItem('dms_grid_show_details') !== 'false',
+    };
+  } catch {
+    return {
+      collectionViewMode: 'grid',
+      deckViewMode: 'grid',
+      gridCardSize: 200,
+      gridShowDetails: true,
+    };
+  }
+}
+
+export function saveUiSettings(partial: Partial<UiSettings>, source: 'local' | 'cloud' = 'local'): UiSettings {
+  try {
+    if (partial.collectionViewMode === 'grid' || partial.collectionViewMode === 'table') {
+      localStorage.setItem('dms_collection_view_mode', partial.collectionViewMode);
+    }
+    if (partial.deckViewMode === 'grid' || partial.deckViewMode === 'table') {
+      localStorage.setItem('dms_deck_view_mode', partial.deckViewMode);
+    }
+    if (typeof partial.gridCardSize === 'number' && Number.isFinite(partial.gridCardSize)) {
+      localStorage.setItem(
+        'dms_grid_card_size',
+        String(Math.min(340, Math.max(110, Math.round(partial.gridCardSize))))
+      );
+    }
+    if (typeof partial.gridShowDetails === 'boolean') {
+      localStorage.setItem('dms_grid_show_details', String(partial.gridShowDetails));
+    }
+  } catch (err) {
+    console.error('Error saving UI settings to storage:', err);
+  }
+
+  const current = getUiSettings();
+  if (typeof window !== 'undefined') {
+    const eventName =
+      source === 'cloud' ? 'proliferate:ui-settings-cloud' : 'proliferate:ui-settings-local';
+    window.dispatchEvent(new CustomEvent(eventName, { detail: current }));
+  }
+  return current;
 }
 
 /**

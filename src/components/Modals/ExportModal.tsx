@@ -12,7 +12,6 @@ import {
   Upload,
   Copy,
   Check,
-  FileText,
   Download,
   X,
 } from 'lucide-react';

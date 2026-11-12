@@ -199,6 +199,7 @@ export interface CloudUserData {
   app: 'dms-mtg-manager' | 'proliferate';
   schemaVersion: number;
   updatedAt: string;
+  syncRevision?: number;
   clientSessionId?: string;
   collection: CollectionItem[];
   decks: Deck[];
@@ -299,9 +300,14 @@ export function isCardNameMatch(nameA?: string, nameB?: string): boolean {
 export function isSameCardPrint(a?: Card | null, b?: Card | null): boolean {
   if (!a || !b) return false;
   if (!isCardNameMatch(a.name, b.name)) return false;
-  if (a.id === b.id) return true;
 
-  // Check back faces if either card has resolved faces
+  // Check DFC faces before matching by ID so custom front/back face swaps never collide
+  const aFrontFaceImg = a.cardFaces?.[0]?.imageUrl;
+  const bFrontFaceImg = b.cardFaces?.[0]?.imageUrl;
+  if (aFrontFaceImg && bFrontFaceImg && aFrontFaceImg !== bFrontFaceImg) {
+    return false;
+  }
+
   const aBackImg = a.cardFaces?.[1]?.imageUrl;
   const bBackImg = b.cardFaces?.[1]?.imageUrl;
   if (aBackImg && bBackImg && aBackImg !== bBackImg) {
@@ -318,6 +324,7 @@ export function isSameCardPrint(a?: Card | null, b?: Card | null): boolean {
   if (isAlterOrCustom) {
     return Boolean(a.imageUrl && b.imageUrl && a.imageUrl === b.imageUrl);
   }
+  if (a.id === b.id) return true;
   return Boolean(
     a.setCode &&
       b.setCode &&

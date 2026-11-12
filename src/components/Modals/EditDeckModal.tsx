@@ -3,7 +3,7 @@ import { Deck, DeckFormat, DeckCard, Card, CollectionItem, DeckTag, isCardNameMa
 import { parseCardList } from '../../services/importer';
 import { getCardByName, getCardBySetAndNumber, getCardBySetAndName } from '../../services/scryfall';
 import { useModalOverlay } from '../../hooks/useModalOverlay';
-import { X, Save, Edit3, Crown, AlertTriangle, FileText, Loader2, Sparkles, Check, Tag } from 'lucide-react';
+import { X, Save, Edit3, Crown, AlertTriangle, FileText, Loader2, Check, Tag } from 'lucide-react';
 
 interface EditDeckModalProps {
   isOpen: boolean;
@@ -179,12 +179,24 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
         }
       }
 
+      const resolvedCommander = commanderCard || deck.commanderCard;
+      const oldCoverWasCommander =
+        !deck.coverImageUrl ||
+        deck.coverImageUrl === deck.commanderCard?.imageUrlArtCrop ||
+        deck.coverImageUrl === deck.commanderCard?.imageUrl;
+      const commanderChanged =
+        Boolean(commanderCard) && commanderCard?.id !== deck.commanderCard?.id;
+
       const updatedDeck: Deck = {
         ...deck,
         name: deckName.trim(),
         format: deckFormat,
         description: description.trim() || undefined,
-        commanderCard: commanderCard || deck.commanderCard,
+        commanderCard: resolvedCommander,
+        coverImageUrl:
+          commanderChanged && oldCoverWasCommander
+            ? resolvedCommander?.imageUrlArtCrop || resolvedCommander?.imageUrl || deck.coverImageUrl
+            : deck.coverImageUrl,
         cards: updatedDeckCards,
         tags: selectedTags,
         updatedAt: new Date().toISOString(),
@@ -353,12 +365,24 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
         }
       }
 
+      const resolvedCommander = commanderCard || deck.commanderCard;
+      const oldCoverWasCommander =
+        !deck.coverImageUrl ||
+        deck.coverImageUrl === deck.commanderCard?.imageUrlArtCrop ||
+        deck.coverImageUrl === deck.commanderCard?.imageUrl;
+      const commanderChanged =
+        Boolean(commanderCard) && commanderCard?.id !== deck.commanderCard?.id;
+
       const updatedDeck: Deck = {
         ...deck,
         name: deckName.trim(),
         format: deckFormat,
         description: description.trim() || undefined,
-        commanderCard: commanderCard || deck.commanderCard,
+        commanderCard: resolvedCommander,
+        coverImageUrl:
+          commanderChanged && oldCoverWasCommander
+            ? resolvedCommander?.imageUrlArtCrop || resolvedCommander?.imageUrl || deck.coverImageUrl
+            : deck.coverImageUrl,
         cards: updatedDeckCards,
         tags: selectedTags,
         updatedAt: new Date().toISOString(),

@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Deck, DeckCard, ViewMode, Card, CollectionItem, CardCategory, isDoubleFacedCard, isSameCardPrint, isCardNameMatch, DeckTag } from '../../types';
 import { resolveCardFaces } from '../../services/scryfall';
-import { normalizeDeck } from '../../services/storage';
+import { normalizeDeck, getUiSettings, saveUiSettings, UiSettings } from '../../services/storage';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
 import { InteractiveCharts } from '../Analytics/InteractiveCharts';
@@ -26,7 +26,6 @@ import {
   ChevronUp,
   Search,
   Edit3,
-  Loader2,
   ZoomIn,
   ZoomOut,
   Eye,
@@ -79,15 +78,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   onOpenImportModal,
   onOpenManageTags,
 }) => {
-  // View mode: Grid is default/primary, persisted across sessions
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    const saved = localStorage.getItem('dms_deck_view_mode');
-    return (saved as ViewMode) || 'grid';
-  });
+  // View mode: Grid is default/primary, persisted across sessions & synced to cloud
+  const [viewMode, setViewMode] = useState<ViewMode>(() => getUiSettings().deckViewMode);
 
   const handleSetViewMode = (mode: ViewMode) => {
     setViewMode(mode);
-    localStorage.setItem('dms_deck_view_mode', mode);
+    saveUiSettings({ deckViewMode: mode }, 'local');
   };
 
   // Selection state for quick removal in list/table view
@@ -122,24 +118,31 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   // Export Deck Poster / Image Modal state
   const [isExportImageModalOpen, setIsExportImageModalOpen] = useState(false);
 
-  // Grid Scale & Details state (persisted across sessions)
-  const [gridCardSize, setGridCardSize] = useState<number>(() => {
-    const saved = localStorage.getItem('dms_grid_card_size');
-    return saved ? Math.min(340, Math.max(110, Number(saved))) : 200;
-  });
-  const [showGridDetails, setShowGridDetails] = useState<boolean>(() => {
-    return localStorage.getItem('dms_grid_show_details') !== 'false';
-  });
+  // Grid Scale & Details state (persisted across sessions & synced to cloud)
+  const [gridCardSize, setGridCardSize] = useState<number>(() => getUiSettings().gridCardSize);
+  const [showGridDetails, setShowGridDetails] = useState<boolean>(() => getUiSettings().gridShowDetails);
+
+  useEffect(() => {
+    const onCloudSettings = (e: Event) => {
+      const s = (e as CustomEvent<UiSettings>).detail;
+      if (!s) return;
+      setViewMode(s.deckViewMode);
+      setGridCardSize(s.gridCardSize);
+      setShowGridDetails(s.gridShowDetails);
+    };
+    window.addEventListener('proliferate:ui-settings-cloud', onCloudSettings);
+    return () => window.removeEventListener('proliferate:ui-settings-cloud', onCloudSettings);
+  }, []);
 
   const handleGridCardSizeChange = (val: number) => {
     setGridCardSize(val);
-    localStorage.setItem('dms_grid_card_size', String(val));
+    saveUiSettings({ gridCardSize: val }, 'local');
   };
 
   const handleToggleGridDetails = () => {
     setShowGridDetails((prev) => {
       const next = !prev;
-      localStorage.setItem('dms_grid_show_details', String(next));
+      saveUiSettings({ gridShowDetails: next }, 'local');
       return next;
     });
   };
@@ -415,22 +418,33 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   // Auto-normalize deck on mount/update if needed (missing instanceId, qty > 1, or duplicate non-partner commanders)
   useEffect(() => {
-    const hasMultipleCommanders =
+    const commandersInCards = (deck.cards || []).filter((c) => c.category === 'commander');
+    const hasPartner = (c: Card) => {
+      const text = `${c.typeLine || ''} ${c.oracleText || ''}`.toLowerCase();
+      return (
+        text.includes('partner') ||
+        text.includes('friends forever') ||
+        text.includes('choose a background') ||
+        text.includes("doctor's companion")
+      );
+    };
+    const hasNonPartnerMultipleCommanders =
       (deck.format === 'commander' || deck.format === 'brawl') &&
-      deck.cards.filter((c) => c.category === 'commander').length > 1;
+      commandersInCards.length > 1 &&
+      !commandersInCards.every((c) => hasPartner(c.card));
     const hasOrphanCommander =
-      deck.commanderCard &&
-      !deck.cards.some((c) => c.card.name.toLowerCase() === deck.commanderCard!.name.toLowerCase()) &&
-      deck.cards.length >= 100;
+      Boolean(deck.commanderCard) &&
+      commandersInCards.length > 0 &&
+      !(deck.cards || []).some((c) => isCardNameMatch(c.card.name, deck.commanderCard!.name));
     const needsNorm =
-      hasMultipleCommanders ||
+      hasNonPartnerMultipleCommanders ||
       hasOrphanCommander ||
       (deck.cards || []).some((c) => !c.instanceId || (c.quantity && c.quantity > 1));
 
     if (needsNorm) {
       onUpdateDeck(normalizeDeck(deck));
     }
-  }, [deck, onUpdateDeck]);
+  }, [deck]);
 
   // Helper to find index of a card copy in deck.cards with multi-tier fallback
   const findDeckCardIndex = useCallback(
@@ -506,8 +520,18 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       nextCards = deck.cards.filter((item) => getCardKey(item) !== targetKey);
     }
     const isCommander = isCommanderCard(c);
-    const updatedCommander = isCommander && deck.commanderCard?.id === c.card.id ? undefined : deck.commanderCard;
-    const updatedPartner = isCommander && deck.partnerCard?.id === c.card.id ? undefined : deck.partnerCard;
+    const updatedCommander =
+      isCommander &&
+      deck.commanderCard &&
+      (deck.commanderCard.id === c.card.id || isCardNameMatch(deck.commanderCard.name, c.card.name))
+        ? undefined
+        : deck.commanderCard;
+    const updatedPartner =
+      isCommander &&
+      deck.partnerCard &&
+      (deck.partnerCard.id === c.card.id || isCardNameMatch(deck.partnerCard.name, c.card.name))
+        ? undefined
+        : deck.partnerCard;
     onUpdateDeck({
       ...deck,
       cards: nextCards,
@@ -1893,7 +1917,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               </tr>
             </thead>
             <tbody>
-              {sortedMainCards.map((c, idx) => {
+              {sortedMainCards.map((c) => {
                 const linked = getCollectionItemForCard(c);
                 const availQty = linked?.availableQuantity ?? 0;
                 const inUseQty = linked?.inUseQuantity ?? c.quantity;
@@ -2124,7 +2148,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedSideCards.map((c, idx) => {
+                  {sortedSideCards.map((c) => {
                     const linked = getCollectionItemForCard(c);
                     const availQty = linked?.availableQuantity ?? 0;
                     const inUseQty = linked?.inUseQuantity ?? c.quantity;
@@ -2276,7 +2300,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               className="cards-grid"
               style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardSize}px, 1fr))` }}
             >
-              {sortedSideCards.map((c, idx) => {
+              {sortedSideCards.map((c) => {
                 const isFoil = c.isFoil || c.card.isFoil;
                 return (
                   <div key={`side-grid-${getCardKey(c)}`} className={`card-item-container ${isFoil ? 'is-foil' : ''}`}>

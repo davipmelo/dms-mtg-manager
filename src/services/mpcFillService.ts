@@ -385,7 +385,7 @@ export function extractGoogleDriveId(input: string): string | null {
  * Creates a CardPrint instance from a Google Drive ID or MPCFill alter.
  */
 export function createPrintFromMpcId(
-  cardName: string,
+  _cardName: string,
   driveIdOrUrl: string,
   title?: string,
   artist?: string
@@ -410,7 +410,7 @@ export function createPrintFromMpcId(
  * Creates a CardPrint instance from a user-uploaded image (data URL, blob URL, or external link).
  */
 export function createPrintFromCustomImage(
-  cardName: string,
+  _cardName: string,
   imageUrl: string,
   title?: string,
   artist?: string

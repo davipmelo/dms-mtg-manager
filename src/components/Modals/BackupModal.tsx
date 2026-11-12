@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { CollectionItem, Deck, ProxyItem, SystemBackup } from '../../types';
+import { CollectionItem, Deck, DeckTag, ProxyItem, SystemBackup } from '../../types';
 import { createSystemBackup, parseSystemBackup } from '../../services/storage';
 import { useModalOverlay } from '../../hooks/useModalOverlay';
 import {
@@ -20,6 +20,7 @@ interface BackupModalProps {
   collection: CollectionItem[];
   decks: Deck[];
   proxies: ProxyItem[];
+  deckTags?: DeckTag[];
   onRestoreSystemBackup: (backup: SystemBackup, mode: 'replace' | 'merge') => void;
 }
 
@@ -29,6 +30,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   collection,
   decks,
   proxies,
+  deckTags,
   onRestoreSystemBackup,
 }) => {
   useModalOverlay(isOpen, onClose);
@@ -55,7 +57,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
   };
 
   const handleDownloadFullBackup = () => {
-    const backup = createSystemBackup(collection, decks, proxies);
+    const backup = createSystemBackup(collection, decks, proxies, deckTags);
     const dateStamp = new Date().toISOString().slice(0, 10);
     const filename = `dms-mtg-backup-${dateStamp}.json`;
     triggerBrowserDownload(

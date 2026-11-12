@@ -16,19 +16,16 @@ import { useModalOverlay } from '../../hooks/useModalOverlay';
 import {
   X,
   Image as ImageIcon,
-  FileText,
   Sliders,
   Layers,
   Sparkles,
   Download,
   Loader2,
   Check,
-  Shield,
   Palette,
   Layout,
   Maximize2,
   Info,
-  Type,
   FileDown,
 } from 'lucide-react';
 

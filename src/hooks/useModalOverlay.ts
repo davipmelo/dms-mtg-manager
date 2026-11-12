@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 // Global modal counter to support nested modals and prevent scroll locking race conditions
 let openModalsCount = 0;
@@ -12,6 +12,9 @@ let originalHtmlOverflow = '';
  * 3. Safely restores background scrolling when all modals are closed
  */
 export function useModalOverlay(isOpen: boolean, onClose: () => void, disableEsc = false) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -25,7 +28,7 @@ export function useModalOverlay(isOpen: boolean, onClose: () => void, disableEsc
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !disableEsc) {
-        onClose();
+        onCloseRef.current();
       }
     };
 
@@ -42,6 +45,6 @@ export function useModalOverlay(isOpen: boolean, onClose: () => void, disableEsc
           originalHtmlOverflow === 'hidden' ? '' : originalHtmlOverflow;
       }
     };
-  }, [isOpen, onClose, disableEsc]);
+  }, [isOpen, disableEsc]);
 }
 

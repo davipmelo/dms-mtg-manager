@@ -364,6 +364,7 @@ export function cleanCardForCloud<T extends Card>(card: T): T {
   };
 
   if (card.oracleId) clean.oracleId = card.oracleId;
+  if (card.namePt) clean.namePt = card.namePt;
   if (card.manaCost) clean.manaCost = card.manaCost;
   if (card.oracleText) clean.oracleText = card.oracleText;
   if (card.power !== undefined) clean.power = card.power;
@@ -375,6 +376,8 @@ export function cleanCardForCloud<T extends Card>(card: T): T {
   if (card.isFoil) clean.isFoil = card.isFoil;
   if (card.layout) clean.layout = card.layout;
   if (card.artist) clean.artist = card.artist;
+  if (card.frame) clean.frame = card.frame;
+  if (card.printsSearchUri) clean.printsSearchUri = card.printsSearchUri;
   if (card.faceLabel) clean.faceLabel = card.faceLabel;
   if (card.meldResultName) clean.meldResultName = card.meldResultName;
 
@@ -392,57 +395,129 @@ export function cleanCardForCloud<T extends Card>(card: T): T {
       imageUrlSmall: f.imageUrlSmall,
       imageUrlArtCrop: f.imageUrlArtCrop,
       artist: f.artist,
+      frame: f.frame,
     }));
   }
 
   return clean as T;
 }
 
-async function optimizeCardImages<T extends Card>(card: T): Promise<T> {
+async function optimizeCardImages<T extends Card>(
+  card: T,
+  compactMode = false
+): Promise<T> {
   if (!card) return card;
   const cleaned = cleanCardForCloud(card);
-  const isImageLarge = (url?: string) => Boolean(url && url.startsWith('data:image/') && url.length > 150000);
-  if (!isImageLarge(cleaned.imageUrl) && !isImageLarge(cleaned.imageUrlLarge) && !isImageLarge(cleaned.imageUrlArtCrop)) {
-    return cleaned;
+
+  const maxW = compactMode ? 500 : 800;
+  const maxH = compactMode ? 700 : 1120;
+  const quality = compactMode ? 0.65 : 0.82;
+  const minCompressLen = compactMode ? 40000 : 150000;
+
+  const isDataUrlTooLarge = (url?: string) =>
+    Boolean(url && url.startsWith('data:image/') && url.length > minCompressLen);
+
+  const compressIfNeeded = async (url?: string) =>
+    isDataUrlTooLarge(url) ? compressDataUrlIfNeeded(url, maxW, maxH, quality) : url;
+
+  const optimizedUrl = await compressIfNeeded(cleaned.imageUrl);
+  const optimizedLarge =
+    cleaned.imageUrlLarge === cleaned.imageUrl
+      ? optimizedUrl
+      : compactMode && cleaned.imageUrlLarge && cleaned.imageUrl
+      ? undefined
+      : await compressIfNeeded(cleaned.imageUrlLarge);
+  const optimizedCrop =
+    cleaned.imageUrlArtCrop === cleaned.imageUrl
+      ? optimizedUrl
+      : await compressIfNeeded(cleaned.imageUrlArtCrop);
+
+  let optimizedFaces = cleaned.cardFaces;
+  if (cleaned.cardFaces && cleaned.cardFaces.length > 0) {
+    optimizedFaces = await Promise.all(
+      cleaned.cardFaces.map(async (face) => {
+        const fImg = await compressIfNeeded(face.imageUrl);
+        const fLarge =
+          face.imageUrlLarge === face.imageUrl
+            ? fImg
+            : compactMode
+            ? undefined
+            : await compressIfNeeded(face.imageUrlLarge);
+        const fCrop =
+          face.imageUrlArtCrop === face.imageUrl
+            ? fImg
+            : await compressIfNeeded(face.imageUrlArtCrop);
+        return {
+          ...face,
+          imageUrl: fImg || face.imageUrl,
+          imageUrlLarge: fLarge,
+          imageUrlArtCrop: fCrop,
+        };
+      })
+    );
   }
 
-  const optimizedUrl = await compressDataUrlIfNeeded(cleaned.imageUrl);
-  const optimizedLarge =
-    cleaned.imageUrlLarge === cleaned.imageUrl ? optimizedUrl : await compressDataUrlIfNeeded(cleaned.imageUrlLarge);
-  const optimizedCrop =
-    cleaned.imageUrlArtCrop === cleaned.imageUrl ? optimizedUrl : await compressDataUrlIfNeeded(cleaned.imageUrlArtCrop);
-
-  return {
+  const result: any = {
     ...cleaned,
     imageUrl: optimizedUrl || cleaned.imageUrl,
-    imageUrlLarge: optimizedLarge || cleaned.imageUrlLarge,
-    imageUrlArtCrop: optimizedCrop || cleaned.imageUrlArtCrop,
+    imageUrlLarge: optimizedLarge,
+    imageUrlArtCrop: optimizedCrop,
   };
+  if (optimizedFaces) {
+    result.cardFaces = optimizedFaces;
+  }
+  if (compactMode) {
+    delete result.imageUrlSmall;
+  }
+
+  return result as T;
 }
 
-async function optimizeCollectionImages(items: CollectionItem[]): Promise<CollectionItem[]> {
+async function optimizeCollectionImages(
+  items: CollectionItem[],
+  compactMode = false
+): Promise<CollectionItem[]> {
   if (!items || items.length === 0) return items;
   return Promise.all(
-    items.map(async (item) => ({
-      ...item,
-      card: await optimizeCardImages(item.card),
-    }))
+    items.map(async (item) => {
+      const { inUseQuantity, availableQuantity, usedInDecks, ...rest } = item;
+      return {
+        ...rest,
+        card: await optimizeCardImages(item.card, compactMode),
+      };
+    })
   );
 }
 
-async function optimizeDecksImages(decks: Deck[]): Promise<Deck[]> {
+async function optimizeDecksImages(
+  decks: Deck[],
+  compactMode = false
+): Promise<Deck[]> {
   if (!decks || decks.length === 0) return decks;
+  const maxW = compactMode ? 500 : 800;
+  const maxH = compactMode ? 700 : 1120;
+  const quality = compactMode ? 0.65 : 0.82;
+
   return Promise.all(
     decks.map(async (deck) => {
       const optimizedCards = await Promise.all(
         deck.cards.map(async (dc) => ({
           ...dc,
-          card: await optimizeCardImages(dc.card),
+          card: await optimizeCardImages(dc.card, compactMode),
         }))
       );
-      const optimizedCover = await compressDataUrlIfNeeded(deck.coverImageUrl);
-      const optimizedCommander = deck.commanderCard ? await optimizeCardImages(deck.commanderCard) : deck.commanderCard;
-      const optimizedPartner = deck.partnerCard ? await optimizeCardImages(deck.partnerCard) : deck.partnerCard;
+      const optimizedCover = await compressDataUrlIfNeeded(
+        deck.coverImageUrl,
+        maxW,
+        maxH,
+        quality
+      );
+      const optimizedCommander = deck.commanderCard
+        ? await optimizeCardImages(deck.commanderCard, compactMode)
+        : deck.commanderCard;
+      const optimizedPartner = deck.partnerCard
+        ? await optimizeCardImages(deck.partnerCard, compactMode)
+        : deck.partnerCard;
 
       return {
         ...deck,
@@ -455,14 +530,63 @@ async function optimizeDecksImages(decks: Deck[]): Promise<Deck[]> {
   );
 }
 
-async function optimizeProxiesImages(proxies: ProxyItem[]): Promise<ProxyItem[]> {
+async function optimizeProxiesImages(
+  proxies: ProxyItem[],
+  compactMode = false
+): Promise<ProxyItem[]> {
   if (!proxies || proxies.length === 0) return proxies;
   return Promise.all(
     proxies.map(async (proxy) => ({
       ...proxy,
-      card: await optimizeCardImages(proxy.card as Card),
+      card: await optimizeCardImages(proxy.card as Card, compactMode),
     }))
   );
+}
+
+export async function buildCloudPayload(data: {
+  collection: CollectionItem[];
+  decks: Deck[];
+  proxies: ProxyItem[];
+  deckTags?: DeckTag[];
+  settings?: Record<string, any>;
+  clientSessionId?: string;
+  syncRevision?: number;
+}): Promise<CloudUserData> {
+  const createSanitized = async (compact: boolean): Promise<{ obj: CloudUserData; bytes: number }> => {
+    const collection = await optimizeCollectionImages(data.collection, compact);
+    const decks = await optimizeDecksImages(data.decks, compact);
+    const proxies = await optimizeProxiesImages(data.proxies, compact);
+
+    const payload: CloudUserData = {
+      app: 'proliferate',
+      schemaVersion: 1,
+      updatedAt: new Date().toISOString(),
+      syncRevision: data.syncRevision,
+      clientSessionId: data.clientSessionId,
+      collection,
+      decks,
+      proxies,
+      deckTags: data.deckTags || [],
+      settings: data.settings || {},
+    };
+
+    const json = JSON.stringify(payload);
+    const bytes = new TextEncoder().encode(json).length;
+    return { obj: JSON.parse(json) as CloudUserData, bytes };
+  };
+
+  let built = await createSanitized(false);
+  // Firestore hard document cap is 1,048,576 bytes. Compact proactively above 900KB.
+  if (built.bytes > 900000) {
+    built = await createSanitized(true);
+  }
+  if (built.bytes > 1040000) {
+    throw new Error(
+      'Os dados excedem o limite máximo de tamanho por documento na nuvem (1MB). Considere remover imagens personalizadas muito pesadas ou cartas excedentes.'
+    );
+  }
+
+  return built.obj;
 }
 
 export async function saveUserCloudData(
@@ -474,35 +598,19 @@ export async function saveUserCloudData(
     deckTags?: DeckTag[];
     settings?: Record<string, any>;
     clientSessionId?: string;
+    syncRevision?: number;
   }
-): Promise<void> {
+): Promise<CloudUserData> {
   const instances = getFirebaseInstances();
 
   // Compress oversized user-uploaded base64 images and strip bloated cache properties
   // so payloads stay safely well below Firestore's 1MB document limit
-  const collection = await optimizeCollectionImages(data.collection);
-  const decks = await optimizeDecksImages(data.decks);
-  const proxies = await optimizeProxiesImages(data.proxies);
-
-  const payload: CloudUserData = {
-    app: 'proliferate',
-    schemaVersion: 1,
-    updatedAt: new Date().toISOString(),
-    clientSessionId: data.clientSessionId,
-    collection,
-    decks,
-    proxies,
-    deckTags: data.deckTags || [],
-    settings: data.settings || {},
-  };
-
-  // Strip all undefined properties recursively (Firestore setDoc rejects any undefined values)
-  const sanitizedPayload = JSON.parse(JSON.stringify(payload));
+  const sanitizedPayload = await buildCloudPayload(data);
 
   if (instances) {
     const userDocRef = doc(instances.db, 'userData', uid);
     await setDoc(userDocRef, sanitizedPayload);
-    return;
+    return sanitizedPayload;
   }
 
   // Fallback: Simulated cloud storage in localStorage
@@ -516,6 +624,7 @@ export async function saveUserCloudData(
         detail: { uid, data: sanitizedPayload },
       })
     );
+    return sanitizedPayload;
   } catch (err) {
     console.error('Erro ao salvar dados na simulação de nuvem:', err);
     throw err;

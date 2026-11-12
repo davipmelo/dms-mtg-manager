@@ -23,7 +23,6 @@ interface AnalyticsProps {
 
 export const InteractiveCharts: React.FC<AnalyticsProps> = ({
   cards,
-  title = 'Análise Estatística',
   showDeckMetrics = false,
 }) => {
   const stats = useMemo(() => {
