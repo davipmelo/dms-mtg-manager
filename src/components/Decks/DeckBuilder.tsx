@@ -1167,7 +1167,6 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     imageUrlLarge={displayImageUrlLarge}
                     setCode={c.card.setCode}
                     collectorNumber={c.card.collectorNumber}
-                    preferLarge
                     face={isFlipped ? 'back' : 'front'}
                     className="card-image"
                   />
@@ -2113,7 +2112,6 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         imageUrlLarge={c.card.imageUrlLarge}
                         setCode={c.card.setCode}
                         collectorNumber={c.card.collectorNumber}
-                        preferLarge
                         className="card-image"
                       />
 

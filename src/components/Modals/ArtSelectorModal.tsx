@@ -360,6 +360,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     'released-desc' | 'released-asc' | 'price-asc' | 'price-desc' | 'set-name' | 'artist'
   >('released-desc');
   const [officialTypeFilter, setOfficialTypeFilter] = useState<'all' | 'old-frame' | 'regular' | 'special' | 'with-price'>('all');
+  const [officialRenderLimit, setOfficialRenderLimit] = useState<number>(40);
 
   // MPCFill Alters State
   const [mpcPrints, setMpcPrints] = useState<MpcCardPrint[]>([]);
@@ -374,6 +375,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   const [mpcDriveInput, setMpcDriveInput] = useState('');
   const [mpcError, setMpcError] = useState<string | null>(null);
   const [mpcProxyNotice, setMpcProxyNotice] = useState<boolean>(false);
+  const [mpcRenderLimit, setMpcRenderLimit] = useState<number>(40);
   const mpcXmlInputRef = useRef<HTMLInputElement>(null);
 
   // References for scroll containers to enable full-screen wheel scrolling
@@ -506,6 +508,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     if (officialScrollRef.current) officialScrollRef.current.scrollTop = 0;
     if (mpcScrollRef.current) mpcScrollRef.current.scrollTop = 0;
     if (customScrollRef.current) customScrollRef.current.scrollTop = 0;
+    setOfficialRenderLimit(40);
+    setMpcRenderLimit(40);
     setFilterOfficialQuery('');
     setMpcDriveInput('');
     setMpcError(null);
@@ -830,6 +834,24 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
     return list;
   }, [mpcPrints, mpcFilterText, mpcSourceFilter, mpcTagFilter, mpcSortBy]);
+
+  // Reset render limits when filters change
+  useEffect(() => {
+    setOfficialRenderLimit(40);
+  }, [filterOfficialQuery, officialTypeFilter, officialSortBy, activeFace]);
+
+  useEffect(() => {
+    setMpcRenderLimit(40);
+  }, [mpcFilterText, mpcSourceFilter, mpcTagFilter, mpcSortBy, mpcMinDpi, activeFace]);
+
+  // Progressive batch rendering slices to prevent DOM bloat and render in 60 FPS
+  const displayedOfficialPrints = useMemo(() => {
+    return filteredOfficialPrints.slice(0, officialRenderLimit);
+  }, [filteredOfficialPrints, officialRenderLimit]);
+
+  const displayedMpcPrints = useMemo(() => {
+    return filteredMpcPrints.slice(0, mpcRenderLimit);
+  }, [filteredMpcPrints, mpcRenderLimit]);
 
   // Consolidated selection handler that immediately updates local thumbnails + dfcFaces and notifies parent
   const handleSelectCardArt = (
@@ -1183,7 +1205,11 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             >
               <img
                 key={currentPreviewData.url}
-                src={currentPreviewData.url}
+                src={
+                  currentPreviewData.url.includes('lh3.googleusercontent.com/d/') && !currentPreviewData.url.includes('=')
+                    ? `${currentPreviewData.url}=w800`
+                    : currentPreviewData.url
+                }
                 alt={currentPreviewData.name}
                 referrerPolicy="no-referrer"
                 decoding="async"
@@ -1903,7 +1929,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                  Exibindo <strong>{filteredOfficialPrints.length}</strong> de <strong>{officialPrints.length}</strong> ilustrações oficiais
+                  Exibindo <strong>{displayedOfficialPrints.length}</strong> de <strong>{filteredOfficialPrints.length}</strong> ilustrações oficiais
                 </span>
                 {(filterOfficialQuery || officialTypeFilter !== 'all') && (
                   <button
@@ -1931,8 +1957,17 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             {/* Prints Grid */}
             <div
               ref={officialScrollRef}
-              onScroll={() => {
+              onScroll={(e) => {
                 if (hoveredPreview) setHoveredPreview(null);
+                const target = e.currentTarget;
+                if (target.scrollTop + target.clientHeight >= target.scrollHeight - 600) {
+                  setOfficialRenderLimit((prev) => {
+                    if (prev < filteredOfficialPrints.length) {
+                      return Math.min(prev + 40, filteredOfficialPrints.length);
+                    }
+                    return prev;
+                  });
+                }
               }}
               style={{ padding: '24px', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}
             >
@@ -1984,141 +2019,148 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   )}
                 </div>
               ) : (
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))',
-                    gap: '16px',
-                  }}
-                >
-                  {filteredOfficialPrints.map((p) => {
-                    const printImg =
-                      activeFace === 'back'
-                        ? p.cardFaces?.[1]?.imageUrl ||
-                          (p.setCode && p.collectorNumber && p.collectorNumber !== '★' && p.setCode !== 'MPC' && p.setCode !== 'CUSTOM'
-                            ? `https://api.scryfall.com/cards/${p.setCode.toLowerCase()}/${encodeURIComponent(p.collectorNumber)}?format=image&version=normal&face=back`
-                            : p.imageUrl)
-                        : p.imageUrl;
+                <>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))',
+                      gap: '16px',
+                    }}
+                  >
+                    {displayedOfficialPrints.map((p) => {
+                      const printImg =
+                        activeFace === 'back'
+                          ? p.cardFaces?.[1]?.imageUrl ||
+                            (p.setCode && p.collectorNumber && p.collectorNumber !== '★' && p.setCode !== 'MPC' && p.setCode !== 'CUSTOM'
+                              ? `https://api.scryfall.com/cards/${p.setCode.toLowerCase()}/${encodeURIComponent(p.collectorNumber)}?format=image&version=normal&face=back`
+                              : p.imageUrl)
+                          : p.imageUrl;
 
-                    const printImgLarge =
-                      activeFace === 'back'
-                        ? p.cardFaces?.[1]?.imageUrlLarge ||
-                          p.cardFaces?.[1]?.imageUrl ||
-                          (p.setCode && p.collectorNumber && p.collectorNumber !== '★' && p.setCode !== 'MPC' && p.setCode !== 'CUSTOM'
-                            ? `https://api.scryfall.com/cards/${p.setCode.toLowerCase()}/${encodeURIComponent(p.collectorNumber)}?format=image&version=large&face=back`
-                            : p.imageUrlLarge || p.imageUrl)
-                        : p.imageUrlLarge || p.imageUrl;
+                      const printImgLarge =
+                        activeFace === 'back'
+                          ? p.cardFaces?.[1]?.imageUrlLarge ||
+                            p.cardFaces?.[1]?.imageUrl ||
+                            (p.setCode && p.collectorNumber && p.collectorNumber !== '★' && p.setCode !== 'MPC' && p.setCode !== 'CUSTOM'
+                              ? `https://api.scryfall.com/cards/${p.setCode.toLowerCase()}/${encodeURIComponent(p.collectorNumber)}?format=image&version=large&face=back`
+                              : p.imageUrlLarge || p.imageUrl)
+                          : p.imageUrlLarge || p.imageUrl;
 
-                    const printArtist =
-                      activeFace === 'back'
-                        ? p.cardFaces?.[1]?.artist || p.artist
-                        : p.cardFaces?.[0]?.artist || p.artist;
+                      const printArtist =
+                        activeFace === 'back'
+                          ? p.cardFaces?.[1]?.artist || p.artist
+                          : p.cardFaces?.[0]?.artist || p.artist;
 
-                    const printFaceName =
-                      activeFace === 'back'
-                        ? p.cardFaces?.[1]?.name || backFaceName || `${card.name} (Verso)`
-                        : p.cardFaces?.[0]?.name || frontFaceName;
+                      const printFaceName =
+                        activeFace === 'back'
+                          ? p.cardFaces?.[1]?.name || backFaceName || `${card.name} (Verso)`
+                          : p.cardFaces?.[0]?.name || frontFaceName;
 
-                    const isSelected =
-                      activeFace === 'front'
-                        ? p.id === activePrintId ||
-                          p.imageUrl === currentFrontThumbnail ||
-                          p.imageUrl === (card.cardFaces?.[0]?.imageUrl || card.imageUrl)
-                        : p.id === activePrintId ||
-                          (Boolean(p.cardFaces?.[1]?.imageUrl) &&
-                            (p.cardFaces![1].imageUrl === currentBackThumbnail ||
-                              p.cardFaces![1].imageUrl === card.cardFaces?.[1]?.imageUrl)) ||
-                          printImg === currentBackThumbnail;
+                      const isSelected =
+                        activeFace === 'front'
+                          ? p.id === activePrintId ||
+                            p.imageUrl === currentFrontThumbnail ||
+                            p.imageUrl === (card.cardFaces?.[0]?.imageUrl || card.imageUrl)
+                          : p.id === activePrintId ||
+                            (Boolean(p.cardFaces?.[1]?.imageUrl) &&
+                              (p.cardFaces![1].imageUrl === currentBackThumbnail ||
+                                p.cardFaces![1].imageUrl === card.cardFaces?.[1]?.imageUrl)) ||
+                            printImg === currentBackThumbnail;
 
-                    return (
-                      <div
-                        key={p.id}
-                        onClick={() => handleSelectCardArt(p, activeFace)}
-                        onMouseEnter={(e) => {
-                          setPreviewMousePos({ x: e.clientX, y: e.clientY });
-                          setHoveredPreview({
-                            url: printImgLarge,
-                            title: `${printFaceName} (${p.setCode.toUpperCase()} #${p.collectorNumber})`,
-                            subtitle: `${p.setName}${printArtist ? ` • Arte por ${printArtist}` : ''}${activeFace === 'back' ? ' • [Verso]' : ''}`,
-                          });
-                        }}
-                        onMouseMove={(e) => setPreviewMousePos({ x: e.clientX, y: e.clientY })}
-                        onMouseLeave={() => setHoveredPreview(null)}
-                        className="glass-card"
-                        style={{
-                          cursor: 'pointer',
-                          overflow: 'hidden',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          borderColor: isSelected ? 'var(--primary)' : 'var(--border-subtle)',
-                          boxShadow: isSelected ? '0 0 16px rgba(99, 102, 241, 0.4)' : undefined,
-                          transform: isSelected ? 'scale(1.02)' : undefined,
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b', overflow: 'hidden' }}>
-                          <CardImage
-                            name={printFaceName}
-                            imageUrl={printImg}
-                            imageUrlLarge={printImgLarge}
-                            setCode={p.setCode}
-                            collectorNumber={p.collectorNumber}
-                            face={activeFace}
-                            loading="eager"
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                          {isSelected && (
-                            <div
-                              style={{
-                                position: 'absolute',
-                                top: '8px',
-                                right: '8px',
-                                background: 'var(--primary)',
-                                borderRadius: '50%',
-                                padding: '4px',
-                                color: 'white',
-                                display: 'flex',
-                                boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
-                              }}
-                            >
-                              <Check size={14} />
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ padding: '8px 10px', fontSize: '0.75rem', background: '#0f141d' }}>
-                          <div
-                            style={{
-                              fontWeight: 600,
-                              color: '#f1f5f9',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                            title={p.setName}
-                          >
-                            {p.setName}
-                          </div>
-                          <div
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              color: '#64748b',
-                              marginTop: '2px',
-                            }}
-                          >
-                            <span>
-                              {p.setCode} #{p.collectorNumber}
-                              {p.releasedAt ? ` • ${p.releasedAt.slice(0, 4)}` : ''}
-                            </span>
-                            {p.priceUsd !== undefined && (
-                              <span style={{ color: '#10b981' }}>${p.priceUsd.toFixed(2)}</span>
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => handleSelectCardArt(p, activeFace)}
+                          onMouseEnter={(e) => {
+                            setPreviewMousePos({ x: e.clientX, y: e.clientY });
+                            setHoveredPreview({
+                              url: printImgLarge,
+                              title: `${printFaceName} (${p.setCode.toUpperCase()} #${p.collectorNumber})`,
+                              subtitle: `${p.setName}${printArtist ? ` • Arte por ${printArtist}` : ''}${activeFace === 'back' ? ' • [Verso]' : ''}`,
+                            });
+                          }}
+                          onMouseMove={(e) => setPreviewMousePos({ x: e.clientX, y: e.clientY })}
+                          onMouseLeave={() => setHoveredPreview(null)}
+                          className="glass-card"
+                          style={{
+                            cursor: 'pointer',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            borderColor: isSelected ? 'var(--primary)' : 'var(--border-subtle)',
+                            boxShadow: isSelected ? '0 0 16px rgba(99, 102, 241, 0.4)' : undefined,
+                            transform: isSelected ? 'scale(1.02)' : undefined,
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b', overflow: 'hidden' }}>
+                            <CardImage
+                              name={printFaceName}
+                              imageUrl={printImg}
+                              imageUrlLarge={printImgLarge}
+                              setCode={p.setCode}
+                              collectorNumber={p.collectorNumber}
+                              face={activeFace}
+                              loading="lazy"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                            {isSelected && (
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  top: '8px',
+                                  right: '8px',
+                                  background: 'var(--primary)',
+                                  borderRadius: '50%',
+                                  padding: '4px',
+                                  color: 'white',
+                                  display: 'flex',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
+                                }}
+                              >
+                                <Check size={14} />
+                              </div>
                             )}
                           </div>
+                          <div style={{ padding: '8px 10px', fontSize: '0.75rem', background: '#0f141d' }}>
+                            <div
+                              style={{
+                                fontWeight: 600,
+                                color: '#f1f5f9',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                              title={p.setName}
+                            >
+                              {p.setName}
+                            </div>
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                color: '#64748b',
+                                marginTop: '2px',
+                              }}
+                            >
+                              <span>
+                                {p.setCode} #{p.collectorNumber}
+                                {p.releasedAt ? ` • ${p.releasedAt.slice(0, 4)}` : ''}
+                              </span>
+                              {p.priceUsd !== undefined && (
+                                <span style={{ color: '#10b981' }}>${p.priceUsd.toFixed(2)}</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                  {displayedOfficialPrints.length < filteredOfficialPrints.length && (
+                    <div style={{ textAlign: 'center', padding: '24px 0 8px 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                      Mostrando {displayedOfficialPrints.length} de {filteredOfficialPrints.length} ilustrações oficiais. Role para carregar mais...
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -2427,7 +2469,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span>
-                        Exibindo <strong>{filteredMpcPrints.length}</strong> de <strong>{mpcPrints.length}</strong> artes de {mpcCardType === 'TOKEN' ? 'ficha/token' : 'carta'} com {mpcMinDpi}+ DPI
+                        Exibindo <strong>{displayedMpcPrints.length}</strong> de <strong>{filteredMpcPrints.length}</strong> artes de {mpcCardType === 'TOKEN' ? 'ficha/token' : 'carta'} com {mpcMinDpi}+ DPI
                       </span>
                       {(mpcFilterText || mpcSourceFilter || mpcTagFilter || mpcMinDpi !== 200) && (
                         <button
@@ -2463,8 +2505,17 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             {/* MPCFill Cards Grid */}
             <div
               ref={mpcScrollRef}
-              onScroll={() => {
+              onScroll={(e) => {
                 if (hoveredPreview) setHoveredPreview(null);
+                const target = e.currentTarget;
+                if (target.scrollTop + target.clientHeight >= target.scrollHeight - 600) {
+                  setMpcRenderLimit((prev) => {
+                    if (prev < filteredMpcPrints.length) {
+                      return Math.min(prev + 40, filteredMpcPrints.length);
+                    }
+                    return prev;
+                  });
+                }
               }}
               style={{ padding: '24px', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}
             >
@@ -2534,14 +2585,15 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   )}
                 </div>
               ) : (
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))',
-                    gap: '18px',
-                  }}
-                >
-                  {filteredMpcPrints.map((p) => {
+                <>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))',
+                      gap: '18px',
+                    }}
+                  >
+                  {displayedMpcPrints.map((p) => {
                     const isSelected =
                       activeFace === 'back'
                         ? p.id === activePrintId ||
@@ -2616,7 +2668,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                             imageUrlLarge={p.imageUrlLarge || p.imageUrl}
                             setCode="MPC"
                             cropMpcBleed
-                            loading="eager"
+                            loading="lazy"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
 
@@ -2718,59 +2770,65 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     );
                   })}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Tab 3 Content: Importar a Própria Arte */}
-        {activeTab === 'custom' && (
-          <div
-            ref={customScrollRef}
-            onScroll={() => {
-              if (hoveredPreview) setHoveredPreview(null);
-            }}
-            style={{
-              padding: '24px',
-              overflowY: 'auto',
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '20px',
-              overscrollBehavior: 'contain',
-            }}
-          >
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                gap: '24px',
-                alignItems: 'start',
-              }}
-            >
-              {/* Left Column: Upload options */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {isCardDfc && (
-                  <div
-                    style={{
-                      background: activeFace === 'back' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(99, 102, 241, 0.12)',
-                      border: `1px solid ${activeFace === 'back' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(99, 102, 241, 0.35)'}`,
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      color: activeFace === 'back' ? '#fbbf24' : '#a5b4fc',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <Sparkles size={16} />
-                    <span>
-                      Importando arte para a face:{' '}
-                      <strong>{activeFace === 'back' ? `VERSO (${backFaceName || 'Verso'})` : `FRENTE (${frontFaceName})`}</strong>
-                    </span>
+                {displayedMpcPrints.length < filteredMpcPrints.length && (
+                  <div style={{ textAlign: 'center', padding: '24px 0 8px 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                    Mostrando {displayedMpcPrints.length} de {filteredMpcPrints.length} artes do MPCFill. Role para carregar mais...
                   </div>
                 )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3 Content: Importar a Própria Arte */}
+      {activeTab === 'custom' && (
+        <div
+          ref={customScrollRef}
+          onScroll={() => {
+            if (hoveredPreview) setHoveredPreview(null);
+          }}
+          style={{
+            padding: '24px',
+            overflowY: 'auto',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+            overscrollBehavior: 'contain',
+          }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '24px',
+              alignItems: 'start',
+            }}
+          >
+            {/* Left Column: Upload options */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {isCardDfc && (
+                <div
+                  style={{
+                    background: activeFace === 'back' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(99, 102, 241, 0.12)',
+                    border: `1px solid ${activeFace === 'back' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(99, 102, 241, 0.35)'}`,
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.8rem',
+                    color: activeFace === 'back' ? '#fbbf24' : '#a5b4fc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Sparkles size={16} />
+                  <span>
+                    Importando arte para a face:{' '}
+                    <strong>{activeFace === 'back' ? `VERSO (${backFaceName || 'Verso'})` : `FRENTE (${frontFaceName})`}</strong>
+                  </span>
+                </div>
+              )}
 
                 {/* File Dropzone */}
                 <div>

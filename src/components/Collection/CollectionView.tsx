@@ -611,7 +611,6 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     imageUrlLarge={displayImageUrlLarge}
                     setCode={item.card.setCode}
                     collectorNumber={item.card.collectorNumber}
-                    preferLarge
                     face={isFlipped ? 'back' : 'front'}
                     className="card-image"
                   />

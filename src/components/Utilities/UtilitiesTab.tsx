@@ -569,7 +569,6 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
                     imageUrlLarge={item.imageUrlLarge}
                     setCode={item.setCode}
                     collectorNumber={item.collectorNumber}
-                    preferLarge
                     className="card-image"
                   />
 

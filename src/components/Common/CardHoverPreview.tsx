@@ -30,6 +30,12 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ preview, mou
 
   const isMpc = isMpcCardImage(undefined, preview.url);
 
+  // Optimize Google Drive MPCFill URLs to 1000px WebP (~200KB) instead of downloading raw 30MB TIFFs
+  const previewSrc =
+    preview.url.includes('lh3.googleusercontent.com/d/') && !preview.url.includes('=')
+      ? `${preview.url}=w1000`
+      : preview.url;
+
   return (
     <div
       style={{
@@ -62,7 +68,7 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ preview, mou
         }}
       >
         <img
-          src={preview.url}
+          src={previewSrc}
           alt={preview.title}
           referrerPolicy="no-referrer"
           decoding="async"
