@@ -522,6 +522,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       handleRemoveCard(c);
     } else if (newQty > c.quantity) {
       handleAddCardCopy(c);
+    } else {
+      const cardIdx = findDeckCardIndex(c);
+      if (cardIdx >= 0) {
+        const nextCards = [...deck.cards];
+        nextCards[cardIdx] = { ...c, quantity: newQty };
+        onUpdateDeck({ ...deck, cards: nextCards, updatedAt: new Date().toISOString() });
+      }
     }
   };
 

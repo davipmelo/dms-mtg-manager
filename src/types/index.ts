@@ -271,16 +271,17 @@ export function isCardNameMatch(nameA?: string, nameB?: string): boolean {
   const b = nameB.toLowerCase().trim();
   if (a === b) return true;
 
-  const aClean = a.replace(/\s*\/\/\s*/g, ' // ');
-  const bClean = b.replace(/\s*\/\/\s*/g, ' // ');
+  // Normalize delimiters (" // ", " / ", or "//" all become " // ")
+  const aClean = a.replace(/\s*\/{1,2}\s*/g, ' // ');
+  const bClean = b.replace(/\s*\/{1,2}\s*/g, ' // ');
   if (aClean === bClean) return true;
 
-  const aFront = a.split('//')[0].trim();
-  const bFront = b.split('//')[0].trim();
+  const aFront = aClean.split(' // ')[0].trim();
+  const bFront = bClean.split(' // ')[0].trim();
   if (aFront && bFront && aFront === bFront) return true;
 
-  const aBack = a.includes('//') ? a.split('//')[1].trim() : '';
-  const bBack = b.includes('//') ? b.split('//')[1].trim() : '';
+  const aBack = aClean.includes(' // ') ? aClean.split(' // ')[1].trim() : '';
+  const bBack = bClean.includes(' // ') ? bClean.split(' // ')[1].trim() : '';
   if (aBack && bBack && aBack === bBack) return true;
 
   // Check if one is exactly the front face of the other

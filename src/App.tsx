@@ -1177,6 +1177,15 @@ export function App() {
         imageUrlLarge: card.imageUrlLarge || card.imageUrl || faces[0].imageUrlLarge || faces[0].imageUrl,
         faceLabel: 'frente',
       };
+      const scryfallBackUrl =
+        card.setCode &&
+        card.collectorNumber &&
+        card.collectorNumber !== '★' &&
+        card.setCode !== 'MPC' &&
+        card.setCode !== 'CUSTOM'
+          ? `https://api.scryfall.com/cards/${card.setCode.toLowerCase()}/${encodeURIComponent(card.collectorNumber)}?format=image&version=large&face=back`
+          : card.imageUrl;
+
       const backCard: Card | TokenCard = {
         ...card,
         id: `${card.id}-back`,
@@ -1186,13 +1195,11 @@ export function App() {
             ? card.name.split(' // ')[1].trim()
             : `${card.name} (Verso)`),
         typeLine: faces[1].typeLine || card.typeLine,
-        imageUrl:
-          faces[1].imageUrl ||
-          `https://api.scryfall.com/cards/${card.setCode.toLowerCase()}/${card.collectorNumber}?format=image&version=large&face=back`,
+        imageUrl: faces[1].imageUrl || scryfallBackUrl,
         imageUrlLarge:
           faces[1].imageUrlLarge ||
           faces[1].imageUrl ||
-          `https://api.scryfall.com/cards/${card.setCode.toLowerCase()}/${card.collectorNumber}?format=image&version=large&face=back`,
+          scryfallBackUrl,
         faceLabel: 'verso',
       };
 
@@ -1340,6 +1347,15 @@ export function App() {
           quantity: entry.quantity,
         });
 
+        const scryfallBackFallback =
+          entry.card.setCode &&
+          entry.card.collectorNumber &&
+          entry.card.collectorNumber !== '★' &&
+          entry.card.setCode !== 'MPC' &&
+          entry.card.setCode !== 'CUSTOM'
+            ? `https://api.scryfall.com/cards/${entry.card.setCode.toLowerCase()}/${encodeURIComponent(entry.card.collectorNumber)}?format=image&version=large&face=back`
+            : entry.card.imageUrl;
+
         // Back face (immediately follows front face!)
         const backCard: Card = {
           ...entry.card,
@@ -1350,13 +1366,11 @@ export function App() {
               ? entry.card.name.split(' // ')[1].trim()
               : `${entry.card.name} (Verso)`),
           typeLine: faces[1].typeLine || entry.card.typeLine,
-          imageUrl:
-            faces[1].imageUrl ||
-            `https://api.scryfall.com/cards/${entry.card.setCode.toLowerCase()}/${entry.card.collectorNumber}?format=image&version=large&face=back`,
+          imageUrl: faces[1].imageUrl || scryfallBackFallback,
           imageUrlLarge:
             faces[1].imageUrlLarge ||
             faces[1].imageUrl ||
-            `https://api.scryfall.com/cards/${entry.card.setCode.toLowerCase()}/${entry.card.collectorNumber}?format=image&version=large&face=back`,
+            scryfallBackFallback,
           faceLabel: 'verso',
         };
         deckProxyItems.push({

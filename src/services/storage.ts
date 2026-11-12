@@ -333,38 +333,18 @@ export function normalizeDeck(deck: Deck): Deck {
       };
       const allPartners = commandersInCards.every((c) => hasPartner(c.card));
       if (!allPartners) {
-        // If deck has 101 cards, and one commander doesn't match the rest of the deck, remove the extra
-        if (unGroupedCards.length === 101) {
-          const nonCmdColors = new Set(
-            unGroupedCards
-              .filter((c) => c.category !== 'commander')
-              .flatMap((c) => c.card.colors || [])
-          );
-          let intruderIndex = unGroupedCards.findIndex((c) => {
-            if (c.category !== 'commander') return false;
-            const cColors = c.card.colors || [];
-            return cColors.length > 0 && !cColors.some((col) => nonCmdColors.has(col));
-          });
-          if (intruderIndex === -1) {
-            intruderIndex = unGroupedCards.findIndex((c) => c.category === 'commander');
-          }
-          if (intruderIndex !== -1) {
-            unGroupedCards.splice(intruderIndex, 1);
-          }
-        } else {
-          // Demote secondary commander to 'main'
-          let foundPrimary = false;
-          unGroupedCards = unGroupedCards.map((c) => {
-            if (c.category === 'commander') {
-              if (!foundPrimary) {
-                foundPrimary = true;
-                return c;
-              }
-              return { ...c, category: 'main' as const };
+        // Demote secondary non-partner commander to 'main' (never delete user cards!)
+        let foundPrimary = false;
+        unGroupedCards = unGroupedCards.map((c) => {
+          if (c.category === 'commander') {
+            if (!foundPrimary) {
+              foundPrimary = true;
+              return c;
             }
-            return c;
-          });
-        }
+            return { ...c, category: 'main' as const };
+          }
+          return c;
+        });
       }
     }
 
@@ -375,10 +355,10 @@ export function normalizeDeck(deck: Deck): Deck {
     }
   }
 
-  const hasBrokenCover = BROKEN_IMAGE_SNIPPETS.some((s) => deck.coverImageUrl?.includes(s));
+  const hasBrokenCover = Boolean(deck.coverImageUrl && BROKEN_IMAGE_SNIPPETS.some((s) => deck.coverImageUrl?.includes(s)));
   const coverImageUrl = hasBrokenCover
     ? commanderCard?.imageUrlArtCrop || unGroupedCards[0]?.card.imageUrlArtCrop
-    : commanderCard?.imageUrlArtCrop || deck.coverImageUrl;
+    : deck.coverImageUrl || commanderCard?.imageUrlArtCrop || unGroupedCards[0]?.card.imageUrlArtCrop;
 
   return {
     ...deck,
