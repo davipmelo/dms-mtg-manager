@@ -204,28 +204,55 @@ export interface CloudUserData {
 
 /**
  * Checks if a card is double-faced (Transform, MDFC, Battle, Meld, Reversible, Double-Faced Token)
- * Excluding physical split / adventure / flip cards that share the same single front face.
+ * Excluding physical split / adventure / flip / aftermath / normal cards that share the same single front face.
  */
 export function isDoubleFacedCard(card?: Card | TokenCard | null): boolean {
   if (!card) return false;
-  if (card.cardFaces && card.cardFaces.length > 1) return true;
+
+  const layout = card.layout?.toLowerCase();
+
+  // 1. Explicitly single-faced layouts are NEVER double-faced
   if (
-    card.layout &&
-    ['transform', 'modal_dfc', 'meld', 'battle', 'reversible_card', 'double_faced_token'].includes(
-      card.layout
+    layout &&
+    ['split', 'adventure', 'flip', 'aftermath', 'normal', 'leveler', 'saga', 'class', 'case', 'prototype'].includes(
+      layout
     )
+  ) {
+    return false;
+  }
+
+  // 2. Adventure cards (unless transform) are single-faced
+  if (card.typeLine?.toLowerCase().includes('adventure') && !layout?.includes('transform')) {
+    return false;
+  }
+
+  // 3. Known double-faced card layouts
+  if (
+    layout &&
+    [
+      'transform',
+      'modal_dfc',
+      'meld',
+      'battle',
+      'reversible_card',
+      'double_faced_token',
+      'double_sided',
+      'art_series',
+    ].includes(layout)
   ) {
     return true;
   }
-  if (card.layout && ['split', 'adventure', 'flip'].includes(card.layout)) {
-    return false;
-  }
-  if (card.name && (card.name.includes(' // ') || card.name.includes('//') || card.name.includes(' / '))) {
-    return true;
-  }
+
+  // 4. Meld cards
   if ('meldResultName' in card && Boolean(card.meldResultName)) {
     return true;
   }
+
+  // 5. Card with valid multiple faces already attached (excluding single-faced layouts)
+  if (card.cardFaces && card.cardFaces.length > 1) {
+    return true;
+  }
+
   return false;
 }
 

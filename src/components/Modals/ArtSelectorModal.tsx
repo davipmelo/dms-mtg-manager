@@ -84,12 +84,22 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   const [faceLargeImages, setFaceLargeImages] = useState<{ front?: string; back?: string }>({});
 
   const isCardDfc = useMemo(() => {
-    return Boolean(
-      (dfcFaces && dfcFaces.length >= 2) ||
-        isDoubleFacedCard(card) ||
-        (card?.cardFaces && card.cardFaces.length >= 2) ||
-        (card?.name && card.name.includes(' // '))
-    );
+    if (!card) return false;
+    const layout = card.layout?.toLowerCase();
+    if (
+      layout &&
+      ['split', 'adventure', 'flip', 'aftermath', 'normal', 'leveler', 'saga', 'class', 'case', 'prototype'].includes(
+        layout
+      )
+    ) {
+      return false;
+    }
+    if (card.typeLine?.toLowerCase().includes('adventure') && !layout?.includes('transform')) {
+      return false;
+    }
+    if (dfcFaces && dfcFaces.length >= 2) return true;
+    if (card.cardFaces && card.cardFaces.length >= 2) return true;
+    return isDoubleFacedCard(card);
   }, [dfcFaces, card]);
 
   const frontFaceName = useMemo(() => {
@@ -292,6 +302,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   useEffect(() => {
     if (!isOpen || !card) {
       activeModalCardKeyRef.current = '';
+      setDfcFaces(null);
+      setResolvingFaces(false);
+      setFaceThumbnails({});
+      setFaceLargeImages({});
       return;
     }
 
@@ -305,7 +319,19 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     setActiveFace(initialFace || 'front');
     setFaceThumbnails({});
     setFaceLargeImages({});
-    if (card.cardFaces && card.cardFaces.length >= 2) {
+    setDfcFaces(null);
+
+    const cardLayout = card.layout?.toLowerCase();
+    const isSingleFaced =
+      (cardLayout &&
+        ['split', 'adventure', 'flip', 'aftermath', 'normal', 'leveler', 'saga', 'class', 'case', 'prototype'].includes(
+          cardLayout
+        )) ||
+      (card.typeLine?.toLowerCase().includes('adventure') && !cardLayout?.includes('transform'));
+
+    if (isSingleFaced) {
+      setDfcFaces(null);
+    } else if (card.cardFaces && card.cardFaces.length >= 2) {
       setDfcFaces(card.cardFaces);
     } else {
       // Automatically attempt to resolve faces for double-faced cards, MDFCs, meld, or legacy cards
@@ -412,6 +438,33 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     [mpcCardType, card?.typeLine]
   );
 
+  // Manual reload for official prints (Scryfall)
+  const handleReloadOfficialPrints = useCallback(() => {
+    if (!card) return;
+    setLoadingOfficial(true);
+    getCardPrints(card, true)
+      .then((data) => {
+        setOfficialPrints(data);
+        const cardLayout = card.layout?.toLowerCase();
+        const isSingleFaced =
+          (cardLayout &&
+            ['split', 'adventure', 'flip', 'aftermath', 'normal', 'leveler', 'saga', 'class', 'case', 'prototype'].includes(
+              cardLayout
+            )) ||
+          (card.typeLine?.toLowerCase().includes('adventure') && !cardLayout?.includes('transform'));
+
+        if (!isSingleFaced) {
+          const dfcPrint = data.find((p) => p.cardFaces && p.cardFaces.length >= 2);
+          if (dfcPrint && dfcPrint.cardFaces) {
+            setDfcFaces((prev) => (prev && prev.length >= 2 ? prev : dfcPrint.cardFaces!));
+          }
+        }
+      })
+      .finally(() => {
+        setLoadingOfficial(false);
+      });
+  }, [card]);
+
   // Reset and load on open, or when navigating to a different card name
   useEffect(() => {
     if (!isOpen) {
@@ -424,7 +477,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     if (!card) return;
 
     // If prints for this exact card name are already loaded, do NOT reload or flash!
-    if (loadedCardNameRef.current === card.name) {
+    if (loadedCardNameRef.current === card.name && officialPrints.length > 0) {
       setActivePrintId(card.id);
       return;
     }
@@ -458,10 +511,19 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
       .then((data) => {
         if (!cancelled) {
           setOfficialPrints(data);
-          // If this card is double-faced, ensure dfcFaces is populated from the official prints
-          const dfcPrint = data.find((p) => p.cardFaces && p.cardFaces.length >= 2);
-          if (dfcPrint && dfcPrint.cardFaces) {
-            setDfcFaces((prev) => (prev && prev.length >= 2 ? prev : dfcPrint.cardFaces!));
+          const cardLayout = card.layout?.toLowerCase();
+          const isSingleFaced =
+            (cardLayout &&
+              ['split', 'adventure', 'flip', 'aftermath', 'normal', 'leveler', 'saga', 'class', 'case', 'prototype'].includes(
+                cardLayout
+              )) ||
+            (card.typeLine?.toLowerCase().includes('adventure') && !cardLayout?.includes('transform'));
+
+          if (!isSingleFaced) {
+            const dfcPrint = data.find((p) => p.cardFaces && p.cardFaces.length >= 2);
+            if (dfcPrint && dfcPrint.cardFaces) {
+              setDfcFaces((prev) => (prev && prev.length >= 2 ? prev : dfcPrint.cardFaces!));
+            }
           }
         }
       })
@@ -472,7 +534,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, card?.name, isCardToken, activeFace, backFaceName, frontFaceName]);
+  }, [isOpen, card?.name, isCardToken]);
 
   // Fetch MPCFill community alters whenever card or active face changes
   const lastMpcTargetRef = useRef<string>('');
@@ -1536,18 +1598,20 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
         {activeTab === 'official' && (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
             {/* Filter toolbar */}
-            {officialPrints.length > 6 && (
-              <div
-                style={{
-                  padding: '12px 24px',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  background: 'rgba(18, 23, 34, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div style={{ position: 'relative', width: '280px' }}>
+            <div
+              style={{
+                padding: '12px 24px',
+                borderBottom: '1px solid var(--border-subtle)',
+                background: 'rgba(18, 23, 34, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '220px' }}>
+                <div style={{ position: 'relative', width: '280px', maxWidth: '100%' }}>
                   <Search
                     size={15}
                     style={{ position: 'absolute', left: '10px', top: '10px', color: '#64748b' }}
@@ -1561,11 +1625,29 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     style={{ paddingLeft: '32px', height: '34px', fontSize: '0.8rem', width: '100%' }}
                   />
                 </div>
-                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                  Exibindo {filteredOfficialPrints.length} de {officialPrints.length} ilustrações oficiais
-                </span>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleReloadOfficialPrints}
+                  disabled={loadingOfficial}
+                  title="Recarregar ilustrações oficiais do Scryfall"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.8rem',
+                    padding: '6px 12px',
+                    height: '34px',
+                  }}
+                >
+                  <RotateCw size={14} className={loadingOfficial ? 'animate-spin' : ''} />
+                  <span>Recarregar</span>
+                </button>
               </div>
-            )}
+              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                Exibindo {filteredOfficialPrints.length} de {officialPrints.length} ilustrações oficiais
+              </span>
+            </div>
 
             {/* Prints Grid */}
             <div style={{ padding: '24px', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}>
@@ -1586,9 +1668,23 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 </div>
               ) : filteredOfficialPrints.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                  {officialPrints.length > 0
-                    ? 'Nenhuma edição corresponde ao filtro digitado.'
-                    : 'Nenhuma outra arte oficial encontrada para esta carta.'}
+                  <p style={{ marginBottom: '16px' }}>
+                    {officialPrints.length > 0
+                      ? 'Nenhuma edição corresponde ao filtro digitado.'
+                      : 'Nenhuma outra arte oficial encontrada para esta carta.'}
+                  </p>
+                  {officialPrints.length === 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={handleReloadOfficialPrints}
+                      disabled={loadingOfficial}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}
+                    >
+                      <RotateCw size={15} className={loadingOfficial ? 'animate-spin' : ''} />
+                      Tentar Novamente
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div

@@ -8,8 +8,35 @@ const cardCache = new Map<string, Card>();
  * Handles double-faced cards (MDFC / Transform), split cards, planar cards, and normal cards.
  */
 export function parseScryfallCard(raw: any): Card {
-  // If double-faced or transform card, extract primary face
-  const isMultiFace = raw.card_faces && raw.card_faces.length > 0 && !raw.image_uris;
+  // A true multi-faced card in Scryfall has card_faces without root image_uris,
+  // or has an explicit double-faced layout (transform, modal_dfc, battle, reversible_card, etc.)
+  const isDfcLayout = [
+    'transform',
+    'modal_dfc',
+    'battle',
+    'reversible_card',
+    'double_faced_token',
+    'double_sided',
+    'art_series',
+  ].includes(raw.layout);
+
+  const isSingleFacedLayout = [
+    'split',
+    'adventure',
+    'flip',
+    'aftermath',
+    'normal',
+    'leveler',
+    'saga',
+    'class',
+    'case',
+    'prototype',
+  ].includes(raw.layout);
+
+  const isMultiFace =
+    (Boolean(raw.card_faces && raw.card_faces.length > 1 && !raw.image_uris) || isDfcLayout) &&
+    !isSingleFacedLayout;
+
   const primaryFace = isMultiFace ? raw.card_faces[0] : raw;
 
   const imageUris = raw.image_uris || (primaryFace && primaryFace.image_uris) || {};
@@ -18,9 +45,10 @@ export function parseScryfallCard(raw: any): Card {
   const smallImg = imageUris.small || normalImg;
   const artCropImg = imageUris.art_crop || normalImg;
 
-  // Extract distinct card faces if this is a true double-faced card (Transform, MDFC, Battle, etc.)
+  // Extract distinct card faces ONLY if this is a true double-faced card (Transform, MDFC, Battle, etc.)
+  // Split cards, Adventure cards, Flip cards, and Aftermath cards are single-faced cards printed on one side!
   let cardFaces: CardFace[] | undefined = undefined;
-  if (Array.isArray(raw.card_faces) && raw.card_faces.length > 1) {
+  if (isMultiFace && Array.isArray(raw.card_faces) && raw.card_faces.length > 1) {
     const parsedFaces = raw.card_faces.map((f: any, idx: number) => {
       const fUris = f.image_uris || {};
       let fNorm = fUris.normal || fUris.large || fUris.small || '';
@@ -29,7 +57,7 @@ export function parseScryfallCard(raw: any): Card {
       let fArtCrop = fUris.art_crop || fNorm;
 
       // Resilient fallback if face image_uris is missing on multi-faced prints
-      if (!fNorm && raw.set && raw.collector_number) {
+      if (!fNorm && raw.set && raw.collector_number && isDfcLayout) {
         const faceParam = idx === 1 ? '&face=back' : '';
         fNorm = `https://api.scryfall.com/cards/${raw.set.toLowerCase()}/${encodeURIComponent(raw.collector_number)}?format=image&version=normal${faceParam}`;
         fLarge = `https://api.scryfall.com/cards/${raw.set.toLowerCase()}/${encodeURIComponent(raw.collector_number)}?format=image&version=large${faceParam}`;
@@ -247,6 +275,12 @@ function isValidUuid(value?: string): boolean {
   return Boolean(value && UUID_REGEX.test(value.trim()));
 }
 
+const printsCache = new Map<string, CardPrint[]>();
+
+export function clearPrintsCache(): void {
+  printsCache.clear();
+}
+
 async function fetchPrintsFromUrl(initialUrl: string, maxPages: number = 3): Promise<CardPrint[]> {
   const collected: CardPrint[] = [];
   const seenIds = new Set<string>();
@@ -255,33 +289,43 @@ async function fetchPrintsFromUrl(initialUrl: string, maxPages: number = 3): Pro
 
   while (nextUrl && page < maxPages) {
     page++;
-    const res: Response = await fetch(nextUrl, { headers: { Accept: 'application/json' } });
-    if (!res.ok) break;
-    const data: any = await res.json();
-    if (!data?.data || !Array.isArray(data.data)) break;
+    try {
+      let res: Response = await fetch(nextUrl, { headers: { Accept: 'application/json' } });
+      if (res.status === 429) {
+        // Scryfall rate limit hit - back off briefly and retry once
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        res = await fetch(nextUrl, { headers: { Accept: 'application/json' } });
+      }
+      if (!res.ok) break;
+      const data: any = await res.json();
+      if (!data?.data || !Array.isArray(data.data)) break;
 
-    for (const raw of data.data) {
-      const parsed = parseScryfallCard(raw);
-      if (!parsed.imageUrl || seenIds.has(parsed.id)) continue;
-      seenIds.add(parsed.id);
-      collected.push({
-        id: parsed.id,
-        oracleId: parsed.oracleId,
-        printsSearchUri: parsed.printsSearchUri,
-        setCode: parsed.setCode,
-        setName: parsed.setName,
-        collectorNumber: parsed.collectorNumber,
-        imageUrl: parsed.imageUrl,
-        imageUrlLarge: parsed.imageUrlLarge,
-        imageUrlArtCrop: parsed.imageUrlArtCrop,
-        cardFaces: parsed.cardFaces,
-        releasedAt: raw.released_at,
-        artist: raw.artist,
-        priceUsd: parsed.priceUsd,
-      });
+      for (const raw of data.data) {
+        const parsed = parseScryfallCard(raw);
+        if (!parsed.imageUrl || seenIds.has(parsed.id)) continue;
+        seenIds.add(parsed.id);
+        collected.push({
+          id: parsed.id,
+          oracleId: parsed.oracleId,
+          printsSearchUri: parsed.printsSearchUri,
+          setCode: parsed.setCode,
+          setName: parsed.setName,
+          collectorNumber: parsed.collectorNumber,
+          imageUrl: parsed.imageUrl,
+          imageUrlLarge: parsed.imageUrlLarge,
+          imageUrlArtCrop: parsed.imageUrlArtCrop,
+          cardFaces: parsed.cardFaces,
+          releasedAt: raw.released_at,
+          artist: raw.artist,
+          priceUsd: parsed.priceUsd,
+        });
+      }
+
+      nextUrl = data.has_more && data.next_page ? data.next_page : null;
+    } catch (err) {
+      console.warn('Network error fetching prints from URL:', nextUrl, err);
+      break;
     }
-
-    nextUrl = data.has_more && data.next_page ? data.next_page : null;
   }
 
   return collected;
@@ -303,7 +347,12 @@ function mergeUniquePrints(primary: CardPrint[], extra: CardPrint[]): CardPrint[
  * Fetch all prints for a card, token, plane, emblem, or utility card (all art versions, sets, promos).
  * Uses multi-stage fallback (printsSearchUri -> valid UUID oracleId -> exact name with include:extras -> canonical resolution).
  */
-export async function getCardPrints(card: Card): Promise<CardPrint[]> {
+export async function getCardPrints(card: Card, bypassCache: boolean = false): Promise<CardPrint[]> {
+  const cacheKey = (card.name || card.id).toLowerCase().trim();
+  if (!bypassCache && printsCache.has(cacheKey) && printsCache.get(cacheKey)!.length > 0) {
+    return printsCache.get(cacheKey)!;
+  }
+
   try {
     let foundPrints: CardPrint[] = [];
 
@@ -325,7 +374,7 @@ export async function getCardPrints(card: Card): Promise<CardPrint[]> {
       card.typeLine?.toLowerCase().includes('token') ||
       card.typeLine?.toLowerCase().includes('emblem');
     if (isTokenOrExtra && foundPrints.length < 20 && card.name) {
-      const primaryFaceName = card.name.split('//')[0].trim();
+      const primaryFaceName = card.name.split('//')[0].replace(/"/g, '').trim();
       const extraQuery = card.typeLine?.toLowerCase().includes('emblem')
         ? `t:emblem "${primaryFaceName}" include:extras`
         : `!"${primaryFaceName}" t:token include:extras`;
@@ -336,39 +385,98 @@ export async function getCardPrints(card: Card): Promise<CardPrint[]> {
       foundPrints = mergeUniquePrints(foundPrints, extraPrints);
     }
 
-    if (foundPrints.length > 0) return foundPrints;
+    if (foundPrints.length > 0) {
+      printsCache.set(cacheKey, foundPrints);
+      return foundPrints;
+    }
 
-    // 3. Try exact card name search (with include:extras so planes, tokens, dungeons, markers work)
+    // 3. Try exact card name search (with inner quotes removed so e.g. Kongming, "Sleeping Dragon" works)
     if (card.name) {
+      const cleanName = card.name.replace(/"/g, '').trim();
       const exactNameUrl = `${API_BASE}/cards/search?order=released&q=${encodeURIComponent(
-        `!"${card.name}" include:extras`
+        `!"${cleanName}" include:extras`
       )}&unique=prints`;
       const byExactName = await fetchPrintsFromUrl(exactNameUrl);
-      if (byExactName.length > 0) return byExactName;
+      if (byExactName.length > 0) {
+        printsCache.set(cacheKey, byExactName);
+        return byExactName;
+      }
 
       // If DFC card name has '//', also try querying just the primary/front face name
       if (card.name.includes('//')) {
-        const primaryFaceName = card.name.split('//')[0].trim();
+        const primaryFaceName = card.name.split('//')[0].replace(/"/g, '').trim();
         const primaryExactUrl = `${API_BASE}/cards/search?order=released&q=${encodeURIComponent(
           `!"${primaryFaceName}" include:extras`
         )}&unique=prints`;
         const byPrimary = await fetchPrintsFromUrl(primaryExactUrl);
-        if (byPrimary.length > 0) return byPrimary;
+        if (byPrimary.length > 0) {
+          printsCache.set(cacheKey, byPrimary);
+          return byPrimary;
+        }
+      }
+
+      // If card name has trailing numbers or parenthetical suffixes (e.g. "Arcane Signet 2" or "Sol Ring (Retro)")
+      const strippedName = cleanName.replace(/\s*\([^)]*\)/g, '').replace(/\s+\d+$/g, '').trim();
+      if (strippedName !== cleanName && strippedName.length > 1) {
+        const strippedUrl = `${API_BASE}/cards/search?order=released&q=${encodeURIComponent(
+          `!"${strippedName}" include:extras`
+        )}&unique=prints`;
+        const byStripped = await fetchPrintsFromUrl(strippedUrl);
+        if (byStripped.length > 0) {
+          printsCache.set(cacheKey, byStripped);
+          return byStripped;
+        }
       }
 
       // 4. Resolve canonical card via /cards/named (handles front-face DFC names or fuzzy matches)
-      const canonical = await getCardByName(card.name);
+      const canonical = await getCardByName(cleanName.includes('//') ? cleanName.split('//')[0].trim() : cleanName);
       if (canonical) {
         if (canonical.printsSearchUri) {
           const byCanonicalUri = await fetchPrintsFromUrl(canonical.printsSearchUri);
-          if (byCanonicalUri.length > 0) return byCanonicalUri;
+          if (byCanonicalUri.length > 0) {
+            printsCache.set(cacheKey, byCanonicalUri);
+            return byCanonicalUri;
+          }
         }
         if (isValidUuid(canonical.oracleId)) {
           const canonicalOracleUrl = `${API_BASE}/cards/search?order=released&q=${encodeURIComponent(
             `oracleid:${canonical.oracleId} include:extras`
           )}&unique=prints`;
           const byCanonicalOracle = await fetchPrintsFromUrl(canonicalOracleUrl);
-          if (byCanonicalOracle.length > 0) return byCanonicalOracle;
+          if (byCanonicalOracle.length > 0) {
+            printsCache.set(cacheKey, byCanonicalOracle);
+            return byCanonicalOracle;
+          }
+        }
+      }
+
+      // 5. Try Scryfall lookup by setCode and collectorNumber if valid
+      if (
+        card.setCode &&
+        card.collectorNumber &&
+        card.collectorNumber !== '★' &&
+        card.setCode !== 'MPC' &&
+        card.setCode !== 'CUSTOM'
+      ) {
+        const bySetAndNumber = await getCardBySetAndNumber(card.setCode, card.collectorNumber);
+        if (bySetAndNumber) {
+          if (bySetAndNumber.printsSearchUri) {
+            const bySetUri = await fetchPrintsFromUrl(bySetAndNumber.printsSearchUri);
+            if (bySetUri.length > 0) {
+              printsCache.set(cacheKey, bySetUri);
+              return bySetUri;
+            }
+          }
+          if (isValidUuid(bySetAndNumber.oracleId)) {
+            const setOracleUrl = `${API_BASE}/cards/search?order=released&q=${encodeURIComponent(
+              `oracleid:${bySetAndNumber.oracleId} include:extras`
+            )}&unique=prints`;
+            const bySetOracle = await fetchPrintsFromUrl(setOracleUrl);
+            if (bySetOracle.length > 0) {
+              printsCache.set(cacheKey, bySetOracle);
+              return bySetOracle;
+            }
+          }
         }
       }
     }
@@ -536,7 +644,29 @@ const singleFacedCache = new Set<string>();
  * Returns an array of [frontFace, backFace] or null if single-faced.
  */
 export async function resolveCardFaces(card: Card | TokenCard): Promise<CardFace[] | null> {
-  // If faces are already resolved and cached, return them
+  const currentLayout = card.layout?.toLowerCase();
+
+  // Explicitly single-faced cards (split, adventure, flip, aftermath, normal, etc.) never have dual faces
+  if (
+    currentLayout &&
+    ['split', 'adventure', 'flip', 'aftermath', 'normal', 'leveler', 'saga', 'class', 'case', 'prototype'].includes(
+      currentLayout
+    )
+  ) {
+    if (card.cardFaces) {
+      delete card.cardFaces;
+    }
+    return null;
+  }
+
+  if (card.typeLine?.toLowerCase().includes('adventure') && !currentLayout?.includes('transform')) {
+    if (card.cardFaces) {
+      delete card.cardFaces;
+    }
+    return null;
+  }
+
+  // If faces are already resolved and cached on a genuine DFC card, return them
   if (card.cardFaces && card.cardFaces.length > 1) {
     return card.cardFaces;
   }
@@ -613,6 +743,21 @@ export async function resolveCardFaces(card: Card | TokenCard): Promise<CardFace
     }
 
     if (resolved) {
+      const resLayout = resolved.layout?.toLowerCase();
+      const isResolvedSingleFaced =
+        (resLayout &&
+          ['split', 'adventure', 'flip', 'aftermath', 'normal', 'leveler', 'saga', 'class', 'case', 'prototype'].includes(
+            resLayout
+          )) ||
+        (resolved.typeLine?.toLowerCase().includes('adventure') && !resLayout?.includes('transform'));
+
+      if (isResolvedSingleFaced) {
+        if (resolved.layout) card.layout = resolved.layout;
+        delete card.cardFaces;
+        singleFacedCache.add(normalizedName);
+        return null;
+      }
+
       // Check standard DFC / MDFC / Battles / Reversible
       if (resolved.cardFaces && resolved.cardFaces.length > 1) {
         card.cardFaces = resolved.cardFaces;

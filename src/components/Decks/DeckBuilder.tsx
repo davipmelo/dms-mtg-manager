@@ -147,11 +147,65 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
   // Flip state for double-faced cards in visual grid
   const [flippedCardKeys, setFlippedCardKeys] = useState<Set<string>>(new Set());
 
-  // Auto-upgrade legacy double-faced cards in older decks that lack cardFaces
+  // Auto-upgrade legacy double-faced cards and sanitize single-faced cards (e.g. split/adventure)
   useEffect(() => {
     if (!deck || !onUpdateDeck) return;
+
+    // 1. Sanitize any cards that were wrongly marked with cardFaces or layout modal_dfc (split, adventure, flip, normal)
+    const cardsNeedingCleanup = deck.cards.filter((c) => {
+      const layout = c.card.layout?.toLowerCase();
+      const isSingleFaced =
+        (layout &&
+          ['split', 'adventure', 'flip', 'aftermath', 'normal', 'leveler', 'saga', 'class', 'case', 'prototype'].includes(
+            layout
+          )) ||
+        (c.card.typeLine?.toLowerCase().includes('adventure') && !layout?.includes('transform'));
+
+      return isSingleFaced && Boolean(c.card.cardFaces && c.card.cardFaces.length > 0);
+    });
+
+    if (cardsNeedingCleanup.length > 0) {
+      const cleanedCards = deck.cards.map((dc) => {
+        const needsClean = cardsNeedingCleanup.some((cl) =>
+          cl.instanceId && dc.instanceId ? cl.instanceId === dc.instanceId : cl.card.id === dc.card.id
+        );
+        if (needsClean) {
+          const { cardFaces, ...restCard } = dc.card;
+          const trueLayout = dc.card.typeLine?.toLowerCase().includes('adventure')
+            ? 'adventure'
+            : dc.card.name.includes('//')
+            ? 'split'
+            : 'normal';
+          return {
+            ...dc,
+            card: {
+              ...restCard,
+              layout: trueLayout,
+            },
+          };
+        }
+        return dc;
+      });
+      onUpdateDeck({ ...deck, cards: cleanedCards });
+      return;
+    }
+
+    // 2. Resolve true double-faced cards that lack cardFaces
     const cardsNeedingResolution = deck.cards.filter((c) => {
       if (c.card.cardFaces && c.card.cardFaces.length >= 2) return false;
+      const layout = c.card.layout?.toLowerCase();
+      if (
+        layout &&
+        ['split', 'adventure', 'flip', 'aftermath', 'normal', 'leveler', 'saga', 'class', 'case', 'prototype'].includes(
+          layout
+        )
+      ) {
+        return false;
+      }
+      if (c.card.typeLine?.toLowerCase().includes('adventure') && !layout?.includes('transform')) {
+        return false;
+      }
+
       return (
         isDoubleFacedCard(c.card) ||
         c.card.name.includes('//') ||

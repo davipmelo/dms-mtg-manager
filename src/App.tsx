@@ -761,22 +761,34 @@ export function App() {
   ) => {
     if (!artSelectorCard) return;
 
+    const cardLayout = artSelectorCard.layout?.toLowerCase();
+    const isSingleFacedLayout =
+      cardLayout &&
+      ['split', 'adventure', 'flip', 'aftermath', 'normal', 'leveler', 'saga', 'class', 'case', 'prototype'].includes(
+        cardLayout
+      );
+    const isAdventure =
+      artSelectorCard.typeLine?.toLowerCase().includes('adventure') &&
+      !cardLayout?.includes('transform');
+
     const knownFaces =
-      artSelectorCard.cardFaces && artSelectorCard.cardFaces.length >= 2
-        ? artSelectorCard.cardFaces
-        : resolvedFaces && resolvedFaces.length >= 2
-        ? resolvedFaces
-        : selectedPrint.cardFaces && selectedPrint.cardFaces.length >= 2
-        ? selectedPrint.cardFaces
+      !isSingleFacedLayout && !isAdventure
+        ? artSelectorCard.cardFaces && artSelectorCard.cardFaces.length >= 2
+          ? artSelectorCard.cardFaces
+          : resolvedFaces && resolvedFaces.length >= 2
+          ? resolvedFaces
+          : selectedPrint.cardFaces && selectedPrint.cardFaces.length >= 2
+          ? selectedPrint.cardFaces
+          : null
         : null;
 
     const isDfc =
-      targetFace === 'back' ||
-      Boolean(knownFaces && knownFaces.length >= 2) ||
-      isDoubleFacedCard(artSelectorCard) ||
-      artSelectorCard.name.includes(' // ') ||
-      artSelectorCard.name.includes('//') ||
-      Boolean(selectedPrint.cardFaces && selectedPrint.cardFaces.length >= 2);
+      !isSingleFacedLayout &&
+      !isAdventure &&
+      (targetFace === 'back' ||
+        Boolean(knownFaces && knownFaces.length >= 2) ||
+        isDoubleFacedCard(artSelectorCard) ||
+        Boolean(selectedPrint.cardFaces && selectedPrint.cardFaces.length >= 2));
 
     let newCardData: Card;
 
@@ -952,6 +964,7 @@ export function App() {
         imageUrlArtCrop: selectedPrint.imageUrlArtCrop || selectedPrint.imageUrl || artSelectorCard.imageUrlArtCrop,
         priceUsd: selectedPrint.priceUsd ?? artSelectorCard.priceUsd,
       };
+      delete newCardData.cardFaces;
     }
 
     setArtSelectorCard(newCardData);
