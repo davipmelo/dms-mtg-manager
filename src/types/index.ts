@@ -34,6 +34,7 @@ export interface CardPrint {
   releasedAt?: string;
   artist?: string;
   priceUsd?: number;
+  frame?: string;
   cardFaces?: CardFace[];
 }
 
@@ -50,6 +51,7 @@ export interface CardFace {
   imageUrlSmall?: string;
   imageUrlArtCrop?: string;
   artist?: string;
+  frame?: string;
 }
 
 export interface Card {
@@ -83,6 +85,7 @@ export interface Card {
   meldResultName?: string;
   meldResultUri?: string;
   artist?: string;
+  frame?: string;
 }
 
 export interface CollectionItem {
@@ -160,6 +163,7 @@ export interface TokenCard {
   meldResultName?: string;
   meldResultUri?: string;
   artist?: string;
+  frame?: string;
 }
 
 export interface ProxyItem {

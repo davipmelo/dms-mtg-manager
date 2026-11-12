@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Card, CardPrint, isDoubleFacedCard, CardFace } from '../../types';
-import { getCardPrints, resolveCardFaces, MELD_PAIRS_MAP } from '../../services/scryfall';
+import { getCardPrints, resolveCardFaces, MELD_PAIRS_MAP, isOldFramePrint } from '../../services/scryfall';
 import {
   searchMpcFillAlters,
   MpcCardPrint,
@@ -359,7 +359,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   const [officialSortBy, setOfficialSortBy] = useState<
     'released-desc' | 'released-asc' | 'price-asc' | 'price-desc' | 'set-name' | 'artist'
   >('released-desc');
-  const [officialTypeFilter, setOfficialTypeFilter] = useState<'all' | 'regular' | 'special' | 'with-price'>('all');
+  const [officialTypeFilter, setOfficialTypeFilter] = useState<'all' | 'old-frame' | 'regular' | 'special' | 'with-price'>('all');
 
   // MPCFill Alters State
   const [mpcPrints, setMpcPrints] = useState<MpcCardPrint[]>([]);
@@ -688,7 +688,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     }
 
     // 2. Type / Category filter
-    if (officialTypeFilter === 'regular') {
+    if (officialTypeFilter === 'old-frame') {
+      list = list.filter((p) => isOldFramePrint(p));
+    } else if (officialTypeFilter === 'regular') {
       list = list.filter((p) => {
         const lowerSet = p.setName.toLowerCase();
         const code = p.setCode.toLowerCase();
@@ -1853,6 +1855,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     title="Filtrar tipo de edição oficial"
                   >
                     <option value="all">Todas as edições</option>
+                    <option value="old-frame">Moldura Clássica (Old Frame / Retrô)</option>
                     <option value="regular">Edições Regulares</option>
                     <option value="special">Secret Lair & Especiais</option>
                     <option value="with-price">Com Preço em Dólar</option>

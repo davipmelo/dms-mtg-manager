@@ -132,6 +132,8 @@ export function parseScryfallCard(raw: any): Card {
     layout: raw.layout,
     meldResultName,
     meldResultUri,
+    artist: raw.artist,
+    frame: raw.frame,
   };
 }
 
@@ -281,7 +283,7 @@ export function clearPrintsCache(): void {
   printsCache.clear();
 }
 
-async function fetchPrintsFromUrl(initialUrl: string, maxPages: number = 3): Promise<CardPrint[]> {
+async function fetchPrintsFromUrl(initialUrl: string, maxPages: number = 10): Promise<CardPrint[]> {
   const collected: CardPrint[] = [];
   const seenIds = new Set<string>();
   let nextUrl: string | null = initialUrl;
@@ -318,10 +320,15 @@ async function fetchPrintsFromUrl(initialUrl: string, maxPages: number = 3): Pro
           releasedAt: raw.released_at,
           artist: raw.artist,
           priceUsd: parsed.priceUsd,
+          frame: raw.frame,
         });
       }
 
       nextUrl = data.has_more && data.next_page ? data.next_page : null;
+      if (nextUrl) {
+        // Polite delay between paginated Scryfall API calls
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
     } catch (err) {
       console.warn('Network error fetching prints from URL:', nextUrl, err);
       break;
@@ -329,6 +336,22 @@ async function fetchPrintsFromUrl(initialUrl: string, maxPages: number = 3): Pro
   }
 
   return collected;
+}
+
+/**
+ * Checks if a card print has an old/classic MTG frame (pre-8th Edition / 1993-2003 or modern retro reprints).
+ */
+export function isOldFramePrint(p: CardPrint): boolean {
+  if (p.frame === '1993' || p.frame === '1997') return true;
+  if (p.releasedAt && p.releasedAt < '2003-07-28') return true;
+  const oldFrameSets = new Set([
+    'lea', 'leb', '2ed', 'ced', 'cei', 'arn', 'atq', '3ed', 'leg', 'drk', 'fem', '4ed',
+    'ice', 'chr', 'hml', 'all', 'mir', 'vis', '5ed', 'wth', 'tmp', 'sth', 'exo', 'usg',
+    'ulg', 'uds', 'mmq', 'nem', 'pcy', 'inv', 'pls', '7ed', 'apc', 'ody', 'tor', 'jud',
+    'ons', 'lgn', 'scg', 'por', 'p02', 'ptk', 's99', 's00', 'ugl', 'tsb', 'tsr', 'dmr', 'rvr', 'brr'
+  ]);
+  if (p.setCode && oldFrameSets.has(p.setCode.toLowerCase())) return true;
+  return false;
 }
 
 function mergeUniquePrints(primary: CardPrint[], extra: CardPrint[]): CardPrint[] {
