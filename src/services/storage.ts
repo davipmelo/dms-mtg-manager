@@ -365,6 +365,10 @@ export function normalizeDeck(deck: Deck): Deck {
     commanderCard,
     partnerCard,
     coverImageUrl,
+    coverPosition:
+      typeof deck.coverPosition === 'number'
+        ? Math.max(0, Math.min(100, Math.round(deck.coverPosition)))
+        : undefined,
     cards: unGroupedCards,
   };
 }

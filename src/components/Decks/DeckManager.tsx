@@ -12,6 +12,7 @@ import {
   Check,
   X,
   SlidersHorizontal,
+  MoveVertical,
 } from 'lucide-react';
 
 interface DeckManagerProps {
@@ -43,6 +44,81 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
   const [quickTagMenuDeckId, setQuickTagMenuDeckId] = useState<string | null>(null);
   const tagMenuRef = useRef<HTMLDivElement>(null);
+
+  // Cover image vertical repositioning state
+  const [repositioningDeckId, setRepositioningDeckId] = useState<string | null>(null);
+  const [tempCoverPosition, setTempCoverPosition] = useState<number>(50);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartYRef = useRef<number>(0);
+  const dragStartPosRef = useRef<number>(50);
+
+  // Global pointerup listener to ensure dragging never gets stuck
+  useEffect(() => {
+    if (!isDragging) return;
+    const handleGlobalPointerUp = () => setIsDragging(false);
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    return () => window.removeEventListener('pointerup', handleGlobalPointerUp);
+  }, [isDragging]);
+
+  const handleStartReposition = (deck: Deck) => {
+    setRepositioningDeckId(deck.id);
+    setTempCoverPosition(typeof deck.coverPosition === 'number' ? deck.coverPosition : 50);
+  };
+
+  const handleSaveReposition = (deck: Deck) => {
+    if (onUpdateDeck) {
+      onUpdateDeck({
+        ...deck,
+        coverPosition: tempCoverPosition,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    setRepositioningDeckId(null);
+    setIsDragging(false);
+  };
+
+  const handleCancelReposition = () => {
+    setRepositioningDeckId(null);
+    setIsDragging(false);
+  };
+
+  const handleBannerPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    dragStartYRef.current = e.clientY;
+    dragStartPosRef.current = tempCoverPosition;
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleBannerPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const deltaY = e.clientY - dragStartYRef.current;
+    // Drag down (positive deltaY) -> shifts view towards top of image (lower position %)
+    // Drag up (negative deltaY) -> shifts view towards bottom of image (higher position %)
+    const sensitivity = 0.5;
+    const nextPos = Math.round(
+      Math.min(100, Math.max(0, dragStartPosRef.current - deltaY * sensitivity))
+    );
+    setTempCoverPosition(nextPos);
+  };
+
+  const handleBannerPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDragging) {
+      setIsDragging(false);
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+    }
+  };
 
   // Close quick tag menu when clicking outside
   useEffect(() => {
@@ -429,6 +505,8 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
 
             const appliedTags = getDeckTags(deck);
             const isTagMenuOpen = quickTagMenuDeckId === deck.id;
+            const isRepositioning = repositioningDeckId === deck.id;
+            const currentPosition = isRepositioning ? tempCoverPosition : (deck.coverPosition ?? 50);
 
             return (
               <div
@@ -438,32 +516,47 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                   display: 'flex',
                   flexDirection: 'column',
                   overflow: 'visible',
-                  cursor: 'pointer',
-                  border: '1px solid var(--border-subtle)',
+                  cursor: isRepositioning ? 'default' : 'pointer',
+                  border: isRepositioning ? '1px solid #f59e0b' : '1px solid var(--border-subtle)',
                   borderRadius: '14px',
                   position: 'relative',
+                  transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                  boxShadow: isRepositioning ? '0 0 20px rgba(245, 158, 11, 0.2)' : undefined,
                 }}
-                onClick={() => onOpenDeck(deck.id)}
+                onClick={() => {
+                  if (isRepositioning) return;
+                  onOpenDeck(deck.id);
+                }}
               >
                 {/* Cover Art Banner */}
                 <div
                   style={{
                     position: 'relative',
-                    height: '140px',
+                    height: isRepositioning ? '200px' : '140px',
                     backgroundImage: `url(${coverImage})`,
                     backgroundSize: 'cover',
-                    backgroundPosition: 'center',
+                    backgroundPosition: `center ${currentPosition}%`,
                     borderTopLeftRadius: '13px',
                     borderTopRightRadius: '13px',
                     overflow: 'hidden',
+                    transition: isDragging ? 'none' : 'height 0.2s ease, background-position 0.15s ease',
+                    cursor: isRepositioning ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
+                    touchAction: isRepositioning ? 'none' : 'auto',
+                    userSelect: 'none',
                   }}
+                  onPointerDown={isRepositioning ? handleBannerPointerDown : undefined}
+                  onPointerMove={isRepositioning ? handleBannerPointerMove : undefined}
+                  onPointerUp={isRepositioning ? handleBannerPointerUp : undefined}
+                  onPointerCancel={isRepositioning ? handleBannerPointerUp : undefined}
                 >
                   <div
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      background:
-                        'linear-gradient(to bottom, rgba(12,15,23,0.3) 0%, rgba(12,15,23,0.95) 100%)',
+                      background: isRepositioning
+                        ? 'linear-gradient(to bottom, rgba(12,15,23,0.15) 0%, rgba(12,15,23,0.7) 100%)'
+                        : 'linear-gradient(to bottom, rgba(12,15,23,0.3) 0%, rgba(12,15,23,0.95) 100%)',
+                      pointerEvents: 'none',
                     }}
                   />
 
@@ -477,6 +570,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
+                      pointerEvents: 'none',
                     }}
                   >
                     <span className="badge badge-primary">{deck.format.toUpperCase()}</span>
@@ -488,7 +582,212 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                       {cardCount} / {targetCount} Cartas
                     </span>
                   </div>
+
+                  {/* Hint overlay during repositioning */}
+                  {isRepositioning && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 4,
+                        pointerEvents: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 14px',
+                        borderRadius: '20px',
+                        background: 'rgba(15, 23, 42, 0.88)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(245, 158, 11, 0.6)',
+                        color: '#f8fafc',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        boxShadow: '0 4px 14px rgba(0,0,0,0.6)',
+                        userSelect: 'none',
+                      }}
+                    >
+                      <MoveVertical size={13} color="#f59e0b" />
+                      <span>Arraste para ajustar ({tempCoverPosition}%)</span>
+                    </div>
+                  )}
+
+                  {/* Idle Reposition Trigger Button */}
+                  {!isRepositioning && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartReposition(deck);
+                      }}
+                      title="Ajustar posição vertical da capa"
+                      style={{
+                        position: 'absolute',
+                        bottom: '10px',
+                        right: '10px',
+                        zIndex: 5,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        background: 'rgba(15, 23, 42, 0.82)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        color: '#e2e8f0',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f59e0b';
+                        e.currentTarget.style.color = '#000';
+                        e.currentTarget.style.borderColor = '#f59e0b';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(15, 23, 42, 0.82)';
+                        e.currentTarget.style.color = '#e2e8f0';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                      }}
+                    >
+                      <MoveVertical size={12} />
+                      Reposicionar
+                    </button>
+                  )}
                 </div>
+
+                {/* Repositioning Control Bar */}
+                {isRepositioning && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      background: '#0d1322',
+                      borderBottom: '1px solid rgba(245, 158, 11, 0.3)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      zIndex: 10,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    {/* Slider fine-tuning */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>
+                        Posição:
+                      </span>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={tempCoverPosition}
+                        onChange={(e) => setTempCoverPosition(Number(e.target.value))}
+                        style={{
+                          flex: 1,
+                          accentColor: '#f59e0b',
+                          cursor: 'pointer',
+                          height: '4px',
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          color: '#fbbf24',
+                          minWidth: '36px',
+                          textAlign: 'right',
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
+                        {tempCoverPosition}%
+                      </span>
+                    </div>
+
+                    {/* Presets and Save / Cancel Buttons */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '6px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {[
+                          { label: 'Topo', val: 0 },
+                          { label: 'Centro', val: 50 },
+                          { label: 'Fundo', val: 100 },
+                        ].map((preset) => (
+                          <button
+                            key={preset.val}
+                            type="button"
+                            onClick={() => setTempCoverPosition(preset.val)}
+                            style={{
+                              padding: '2px 8px',
+                              fontSize: '0.68rem',
+                              fontWeight: tempCoverPosition === preset.val ? 700 : 500,
+                              borderRadius: '6px',
+                              background:
+                                tempCoverPosition === preset.val
+                                  ? 'rgba(245, 158, 11, 0.25)'
+                                  : 'rgba(255, 255, 255, 0.05)',
+                              border: `1px solid ${
+                                tempCoverPosition === preset.val
+                                  ? '#f59e0b'
+                                  : 'rgba(255, 255, 255, 0.1)'
+                              }`,
+                              color: tempCoverPosition === preset.val ? '#fbbf24' : '#94a3b8',
+                              cursor: 'pointer',
+                              transition: 'all 0.1s ease',
+                            }}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={handleCancelReposition}
+                          className="btn btn-secondary btn-sm"
+                          style={{
+                            fontSize: '0.72rem',
+                            padding: '2px 8px',
+                            height: '24px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                          }}
+                        >
+                          <X size={12} /> Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveReposition(deck)}
+                          className="btn btn-primary btn-sm"
+                          style={{
+                            fontSize: '0.72rem',
+                            padding: '2px 10px',
+                            height: '24px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            backgroundColor: '#f59e0b',
+                            color: '#000',
+                            fontWeight: 700,
+                          }}
+                        >
+                          <Check size={12} /> Salvar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Deck Info & Actions */}
                 <div
