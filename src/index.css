@@ -55,6 +55,7 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
   --shadow-glow: 0 0 20px rgba(255, 187, 0, 0.25);
+  --app-header-height: 58px;
 }
 
 * {
@@ -68,7 +69,7 @@ body {
   background-color: var(--bg-darkest);
   color: var(--text-main);
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -661,15 +662,15 @@ img.is-mpc-bleed-crop {
 
 @media (max-width: 768px) {
   body {
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
-  /* Compact header with horizontal scrolling tab navigation */
+  /* Full-width sticky header on mobile */
   .app-header {
-    margin: 8px 8px 0 8px !important;
-    padding: 10px 12px !important;
-    border-radius: 12px !important;
-    gap: 10px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    width: 100% !important;
   }
 
   .app-header-top {

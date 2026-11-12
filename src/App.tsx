@@ -1510,26 +1510,61 @@ export function App() {
 
   const totalProxyCount = proxies.reduce((sum, p) => sum + p.quantity, 0);
 
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        document.documentElement.style.setProperty(
+          '--app-header-height',
+          `${headerRef.current.offsetHeight}px`
+        );
+      }
+    };
+    updateHeaderHeight();
+    const ro = new ResizeObserver(updateHeaderHeight);
+    ro.observe(headerRef.current);
+    window.addEventListener('resize', updateHeaderHeight);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updateHeaderHeight);
+    };
+  }, []);
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Sleek Top Navigation Bar (Hidden during print) */}
+      {/* Sleek Top Navigation Bar (Full width, pinned to top of screen) */}
       <header
-        className="glass-panel print-hide app-header"
+        ref={headerRef}
+        className="print-hide app-header"
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 1000,
-          margin: '12px 16px 0 16px',
-          padding: '10px 20px',
-          borderRadius: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px',
+          width: '100%',
+          background: 'rgba(10, 13, 20, 0.95)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.45)',
         }}
       >
-        <div className="app-header-top" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div
+          className="app-header-inner"
+          style={{
+            maxWidth: '1600px',
+            width: '100%',
+            margin: '0 auto',
+            padding: '10px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '16px',
+          }}
+        >
+          <div className="app-header-top" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {/* Brand / Logo */}
           <div className="app-brand" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div
@@ -1674,6 +1709,7 @@ export function App() {
             onLogout={handleLogout}
             onForceSync={handleForceSync}
           />
+        </div>
         </div>
       </header>
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Deck, DeckCard, ViewMode, Card, CollectionItem, CardCategory, isDoubleFacedCard, isSameCardPrint, isCardNameMatch, DeckTag } from '../../types';
 import { resolveCardFaces } from '../../services/scryfall';
 import { normalizeDeck } from '../../services/storage';
@@ -761,133 +761,283 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     }
   };
 
+  const [isScrolled, setIsScrolled] = useState(false);
+  const headerWrapperRef = useRef<HTMLDivElement>(null);
+  const normalHeaderHeightRef = useRef<number>(140);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const threshold = 30;
+      const scrolled = window.scrollY > threshold;
+      if (!scrolled && headerWrapperRef.current) {
+        normalHeaderHeightRef.current = headerWrapperRef.current.offsetHeight;
+      }
+      setIsScrolled(scrolled);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Top Navigation & Deck Header */}
-      <div className="glass-panel" style={{ padding: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          <button className="btn btn-ghost btn-sm" onClick={onBack}>
-            <ArrowLeft size={16} /> Voltar aos Decks
-          </button>
-          <span className="badge badge-primary">{deck.format.toUpperCase()}</span>
-          <span
-            className={`badge ${
-              totalCardsCount === targetCardsCount ? 'badge-success' : 'badge-warning'
-            }`}
-          >
-            {totalCardsCount} / {targetCardsCount} Cartas
-          </span>
-
-          {/* Deck Tags */}
-          {deck.tags && deck.tags.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-              {deck.tags.map((tIdOrName) => {
-                const tag = deckTags.find(
-                  (t) => t.id === tIdOrName || t.name.toLowerCase() === tIdOrName.toLowerCase()
-                ) || { id: tIdOrName, name: tIdOrName, color: '#3b82f6' };
-
-                return (
-                  <span
-                    key={tag.id}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      color: tag.color,
-                      backgroundColor: `${tag.color}20`,
-                      border: `1px solid ${tag.color}50`,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        backgroundColor: tag.color,
-                      }}
-                    />
-                    {tag.name}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
+      {/* Top Navigation & Deck Header (Sticky & Docks to Main Header on scroll) */}
+      <div
+        ref={headerWrapperRef}
+        style={{
+          minHeight: isScrolled ? `${normalHeaderHeightRef.current}px` : undefined,
+        }}
+      >
         <div
+          className="glass-panel deck-header-panel"
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: '16px',
+            position: 'sticky',
+            top: 'var(--app-header-height, 58px)',
+            zIndex: 900,
+            background: isScrolled ? 'rgba(10, 13, 20, 0.96)' : undefined,
+            backdropFilter: isScrolled ? 'blur(16px)' : undefined,
+            WebkitBackdropFilter: isScrolled ? 'blur(16px)' : undefined,
+            borderTop: isScrolled ? 'none' : undefined,
+            borderRadius: isScrolled ? '0 0 14px 14px' : '16px',
+            boxShadow: isScrolled ? '0 10px 25px rgba(0, 0, 0, 0.7)' : undefined,
+            borderColor: isScrolled ? 'rgba(255, 255, 255, 0.1)' : undefined,
+            padding: isScrolled ? '8px 16px' : '20px',
+            marginTop: isScrolled ? '-20px' : '0',
+            transition: 'padding 0.15s ease, border-radius 0.15s ease, margin-top 0.15s ease',
           }}
         >
-          <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f8fafc' }}>
-              {deck.name}
-            </h1>
-            {deck.description && (
-              <p
+          {isScrolled ? (
+            /* Compact Docked Header (Single slim row without taking much space) */
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                flexWrap: 'nowrap',
+                width: '100%',
+              }}
+            >
+              {/* Left Group: Back button, deck title, format & count badges */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flexShrink: 1 }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={onBack}
+                  title="Voltar aos Decks"
+                  style={{ padding: '4px 8px', height: '32px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <ArrowLeft size={15} />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Decks</span>
+                </button>
+
+                <div
+                  style={{
+                    fontSize: '1.05rem',
+                    fontWeight: 800,
+                    color: '#f8fafc',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '320px',
+                  }}
+                  title={deck.name}
+                >
+                  {deck.name}
+                </div>
+
+                <span className="badge badge-primary" style={{ fontSize: '0.68rem', padding: '2px 7px', flexShrink: 0 }}>
+                  {deck.format.toUpperCase()}
+                </span>
+
+                <span
+                  className={`badge ${
+                    totalCardsCount === targetCardsCount ? 'badge-success' : 'badge-warning'
+                  }`}
+                  style={{ fontSize: '0.68rem', padding: '2px 7px', flexShrink: 0 }}
+                >
+                  {totalCardsCount} / {targetCardsCount}
+                </span>
+              </div>
+
+              {/* Right Group: Action buttons */}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setIsEditModalOpen(true)}
+                  style={{ height: '32px', padding: '0 10px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                  title="Editar nome, formato, comandante ou lista"
+                >
+                  <Edit3 size={14} /> <span>Editar</span>
+                </button>
+
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setIsExportImageModalOpen(true)}
+                  disabled={totalCardsCount === 0}
+                  style={{ height: '32px', padding: '0 10px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                  title="Personalizar e exportar imagem/pôster do deck"
+                >
+                  <ImageIcon size={14} /> <span>Imagem</span>
+                </button>
+
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => onSendDeckToProxies(deck)}
+                  style={{ height: '32px', padding: '0 10px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                  title="Diagramar 9 cartas por folha A4 e imprimir"
+                >
+                  <Printer size={14} /> <span>Proxies</span>
+                </button>
+
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => onOpenExportModal(deck.id)}
+                  style={{ height: '32px', padding: '0 10px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                  title="Exportar lista de cartas"
+                >
+                  <Upload size={14} /> <span>Exportar</span>
+                </button>
+
+                <button
+                  className="btn btn-highlight btn-sm"
+                  onClick={() => onOpenImportModal?.(deck.id)}
+                  style={{ height: '32px', padding: '0 10px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+                  title="Importar lista de cartas diretamente para este deck"
+                >
+                  <Download size={14} /> <span>Importar</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Normal Expanded Deck Header (When at top of page) */
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                <button className="btn btn-ghost btn-sm" onClick={onBack}>
+                  <ArrowLeft size={16} /> Voltar aos Decks
+                </button>
+                <span className="badge badge-primary">{deck.format.toUpperCase()}</span>
+                <span
+                  className={`badge ${
+                    totalCardsCount === targetCardsCount ? 'badge-success' : 'badge-warning'
+                  }`}
+                >
+                  {totalCardsCount} / {targetCardsCount} Cartas
+                </span>
+
+                {/* Deck Tags */}
+                {deck.tags && deck.tags.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    {deck.tags.map((tIdOrName) => {
+                      const tag = deckTags.find(
+                        (t) => t.id === tIdOrName || t.name.toLowerCase() === tIdOrName.toLowerCase()
+                      ) || { id: tIdOrName, name: tIdOrName, color: '#3b82f6' };
+
+                      return (
+                        <span
+                          key={tag.id}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            color: tag.color,
+                            backgroundColor: `${tag.color}20`,
+                            border: `1px solid ${tag.color}50`,
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: tag.color,
+                            }}
+                          />
+                          {tag.name}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div
                 style={{
-                  fontSize: '0.875rem',
-                  color: '#94a3b8',
-                  marginTop: '4px',
-                  maxWidth: '640px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  flexWrap: 'wrap',
+                  gap: '16px',
                 }}
               >
-                {deck.description}
-              </p>
-            )}
-          </div>
+                <div>
+                  <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f8fafc' }}>
+                    {deck.name}
+                  </h1>
+                  {deck.description && (
+                    <p
+                      style={{
+                        fontSize: '0.875rem',
+                        color: '#94a3b8',
+                        marginTop: '4px',
+                        maxWidth: '640px',
+                      }}
+                    >
+                      {deck.description}
+                    </p>
+                  )}
+                </div>
 
-          {/* Quick Deck Actions */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => setIsEditModalOpen(true)}
-              title="Editar nome, formato, comandante ou lista de cartas do deck"
-            >
-              <Edit3 size={15} /> Editar
-            </button>
+                {/* Quick Deck Actions */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setIsEditModalOpen(true)}
+                    title="Editar nome, formato, comandante ou lista de cartas do deck"
+                  >
+                    <Edit3 size={15} /> Editar
+                  </button>
 
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => setIsExportImageModalOpen(true)}
-              disabled={totalCardsCount === 0}
-              title="Personalizar e exportar imagem/pôster do deck (resoluções, JPG/PNG/PDF, agrupamento de artes)"
-            >
-              <ImageIcon size={15} /> Gerar Imagem do Deck
-            </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setIsExportImageModalOpen(true)}
+                    disabled={totalCardsCount === 0}
+                    title="Personalizar e exportar imagem/pôster do deck (resoluções, JPG/PNG/PDF, agrupamento de artes)"
+                  >
+                    <ImageIcon size={15} /> Gerar Imagem do Deck
+                  </button>
 
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => onSendDeckToProxies(deck)}
-              title="Diagramar 9 cartas por folha A4 e imprimir"
-            >
-              <Printer size={15} /> Imprimir Proxies (A4)
-            </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => onSendDeckToProxies(deck)}
+                    title="Diagramar 9 cartas por folha A4 e imprimir"
+                  >
+                    <Printer size={15} /> Imprimir Proxies (A4)
+                  </button>
 
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => onOpenExportModal(deck.id)}
-              title="Exportar lista de cartas para Moxfield, Arena, LigaMagic ou CSV"
-            >
-              <Upload size={15} /> Exportar Deck
-            </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => onOpenExportModal(deck.id)}
+                    title="Exportar lista de cartas para Moxfield, Arena, LigaMagic ou CSV"
+                  >
+                    <Upload size={15} /> Exportar Deck
+                  </button>
 
-            <button
-              className="btn btn-highlight btn-sm"
-              onClick={() => onOpenImportModal?.(deck.id)}
-              title="Importar lista de cartas diretamente para este deck"
-            >
-              <Download size={15} /> Importar Cartas
-            </button>
-          </div>
+                  <button
+                    className="btn btn-highlight btn-sm"
+                    onClick={() => onOpenImportModal?.(deck.id)}
+                    title="Importar lista de cartas diretamente para este deck"
+                  >
+                    <Download size={15} /> Importar Cartas
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
