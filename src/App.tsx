@@ -1080,7 +1080,10 @@ export function App() {
           targetIndex = activeDeck.cards.findIndex(
             (c) =>
               isCardNameMatch(c.card.name, targetCardName) ||
-              isCardNameMatch(c.card.name, artSelectorCard.name)
+              isCardNameMatch(c.card.name, artSelectorCard.name) ||
+              (c.card.namePt && (isCardNameMatch(c.card.namePt, targetCardName) || isCardNameMatch(c.card.namePt, artSelectorCard.name))) ||
+              (c.card.name?.toLowerCase().includes('anel solar') && targetCardName.toLowerCase() === 'sol ring') ||
+              (c.card.name?.toLowerCase().includes('sol ring') && targetCardName.toLowerCase() === 'anel solar')
           );
         }
 
@@ -1100,11 +1103,13 @@ export function App() {
         const isEntryPartner = targetEntry?.category === 'partner';
 
         if (targetIndex >= 0 && targetEntry) {
+          const safeInstanceId = targetEntry.instanceId || `dc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
           nextCards[targetIndex] = {
             ...targetEntry,
             card: newCardData,
             // Detach collectionItemId so this card's art is independent and never overridden by collection
             collectionItemId: undefined,
+            instanceId: safeInstanceId,
           };
 
           // Update context so subsequent face selections during the same modal session continue to track this card smoothly
@@ -1113,7 +1118,7 @@ export function App() {
             deckCardIndex: targetIndex,
             targetCardId: newCardData.id,
             targetCardName: newCardData.name,
-            targetInstanceId: targetEntry.instanceId || prev.targetInstanceId,
+            targetInstanceId: safeInstanceId,
           }));
         }
 

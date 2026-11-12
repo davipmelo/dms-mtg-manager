@@ -194,15 +194,29 @@ const BROKEN_IMAGE_SNIPPETS = [
 ];
 
 /**
- * Repairs legacy starter card records stored in localStorage that had non-UUID IDs or broken image URLs.
+ * Repairs legacy starter card records stored in localStorage that had broken image URLs from early mock seeds.
+ * NEVER overwrites user-chosen arts, MPCFill alters, custom arts, or cards with valid images!
  */
 function repairCardRecord(card: Card): { card: Card; repaired: boolean } {
-  const hasInvalidId = !isValidUuid(card.id);
-  const hasInvalidOracle = Boolean(card.oracleId && !isValidUuid(card.oracleId));
-  const hasBrokenImage = BROKEN_IMAGE_SNIPPETS.some((s) => card.imageUrl?.includes(s));
+  if (!card) return { card, repaired: false };
 
-  if (hasInvalidId || hasInvalidOracle || hasBrokenImage) {
-    const starterMatch = STARTER_BY_NAME.get(card.name.toLowerCase());
+  // Never overwrite MPCFill alters or custom user arts
+  if (
+    card.setCode === 'MPC' ||
+    card.setCode === 'CUSTOM' ||
+    card.id?.startsWith('mpc-') ||
+    card.id?.startsWith('custom-')
+  ) {
+    return { card, repaired: false };
+  }
+
+  // Check if card has a broken image snippet from the early mock seed
+  const hasBrokenImage = Boolean(card.imageUrl && BROKEN_IMAGE_SNIPPETS.some((s) => card.imageUrl.includes(s)));
+  const hasNoImage = !card.imageUrl && (!card.cardFaces || card.cardFaces.length === 0 || !card.cardFaces[0]?.imageUrl);
+
+  // ONLY repair if the card's image is genuinely broken or missing AND it matches a starter card by name
+  if ((hasBrokenImage || hasNoImage) && card.name) {
+    const starterMatch = STARTER_BY_NAME.get(card.name.toLowerCase().trim());
     if (starterMatch) {
       return {
         card: {
