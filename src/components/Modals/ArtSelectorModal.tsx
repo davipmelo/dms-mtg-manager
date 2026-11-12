@@ -33,6 +33,7 @@ import {
   SlidersHorizontal,
   ArrowUpDown,
   Tag,
+  Filter,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -355,17 +356,30 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   const [officialPrints, setOfficialPrints] = useState<CardPrint[]>([]);
   const [loadingOfficial, setLoadingOfficial] = useState(false);
   const [filterOfficialQuery, setFilterOfficialQuery] = useState('');
+  const [officialSortBy, setOfficialSortBy] = useState<
+    'released-desc' | 'released-asc' | 'price-asc' | 'price-desc' | 'set-name' | 'artist'
+  >('released-desc');
+  const [officialTypeFilter, setOfficialTypeFilter] = useState<'all' | 'regular' | 'special' | 'with-price'>('all');
 
   // MPCFill Alters State
   const [mpcPrints, setMpcPrints] = useState<MpcCardPrint[]>([]);
   const [loadingMpc, setLoadingMpc] = useState(false);
   const [mpcMinDpi, setMpcMinDpi] = useState<number>(200);
   const [mpcFilterText, setMpcFilterText] = useState<string>('');
-  const [mpcSortBy, setMpcSortBy] = useState<'dpi-desc' | 'dpi-asc' | 'recent' | 'name'>('dpi-desc');
+  const [mpcSortBy, setMpcSortBy] = useState<
+    'dpi-desc' | 'dpi-asc' | 'recent' | 'oldest' | 'name' | 'source'
+  >('dpi-desc');
+  const [mpcSourceFilter, setMpcSourceFilter] = useState<string>('');
+  const [mpcTagFilter, setMpcTagFilter] = useState<string>('');
   const [mpcDriveInput, setMpcDriveInput] = useState('');
   const [mpcError, setMpcError] = useState<string | null>(null);
   const [mpcProxyNotice, setMpcProxyNotice] = useState<boolean>(false);
   const mpcXmlInputRef = useRef<HTMLInputElement>(null);
+
+  // References for scroll containers to enable full-screen wheel scrolling
+  const officialScrollRef = useRef<HTMLDivElement>(null);
+  const mpcScrollRef = useRef<HTMLDivElement>(null);
+  const customScrollRef = useRef<HTMLDivElement>(null);
 
   // Custom User Art State
   const [customImageUrl, setCustomImageUrl] = useState<string>('');
@@ -491,6 +505,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     setMpcError(null);
     setMpcProxyNotice(false);
     setMpcFilterText('');
+    setMpcSourceFilter('');
+    setMpcTagFilter('');
     setCustomImageUrl('');
     setCustomTitle(
       activeFace === 'back'
@@ -586,24 +602,173 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, hasPrev, hasNext, onNavigatePrev, onNavigateNext]);
 
-  // Filter official prints
+  // Scroll forwarding: allow scrolling the active grid from anywhere on the screen (backdrop, header, left preview, etc.)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Prevent background document scrolling while the art selector modal is active
+    const originalBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleGlobalWheel = (e: WheelEvent) => {
+      const activeContainer =
+        activeTab === 'official'
+          ? officialScrollRef.current
+          : activeTab === 'mpcfill'
+          ? mpcScrollRef.current
+          : customScrollRef.current;
+
+      if (!activeContainer) return;
+
+      // If the cursor is already directly over the active scroll container, allow native scroll
+      if (activeContainer.contains(e.target as Node)) {
+        return;
+      }
+
+      // If the cursor is anywhere else on screen (backdrop, header, left preview, filter bar, etc.),
+      // forward the wheel delta to the active card grid
+      activeContainer.scrollBy({
+        top: e.deltaY,
+        left: e.deltaX,
+        behavior: 'auto',
+      });
+    };
+
+    window.addEventListener('wheel', handleGlobalWheel, { passive: true });
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      window.removeEventListener('wheel', handleGlobalWheel);
+    };
+  }, [isOpen, activeTab]);
+
+  // Unique artists/sources available in the loaded MPCFill alters for filtering
+  const availableMpcSources = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of mpcPrints) {
+      const src = (p.artist || p.sourceName || '').trim();
+      if (src && src !== 'Comunidade MPCFill') {
+        counts.set(src, (counts.get(src) || 0) + 1);
+      }
+    }
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  }, [mpcPrints]);
+
+  // Unique tags/styles available in the loaded MPCFill alters for filtering
+  const availableMpcTags = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of mpcPrints) {
+      if (p.tags && Array.isArray(p.tags)) {
+        for (const t of p.tags) {
+          const cleanTag = t.trim();
+          if (cleanTag && !['mpcfill', 'alters', 'proxy'].includes(cleanTag.toLowerCase())) {
+            counts.set(cleanTag, (counts.get(cleanTag) || 0) + 1);
+          }
+        }
+      }
+    }
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  }, [mpcPrints]);
+
+  // Filter and sort official prints
   const filteredOfficialPrints = useMemo(() => {
+    let list = [...officialPrints];
     const q = filterOfficialQuery.trim().toLowerCase();
-    if (!q) return officialPrints;
-    return officialPrints.filter(
-      (p) =>
-        p.setName.toLowerCase().includes(q) ||
-        p.setCode.toLowerCase().includes(q) ||
-        p.collectorNumber.toLowerCase().includes(q) ||
-        (p.artist && p.artist.toLowerCase().includes(q)) ||
-        (p.releasedAt && p.releasedAt.includes(q))
-    );
-  }, [officialPrints, filterOfficialQuery]);
+
+    // 1. Text filter
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.setName.toLowerCase().includes(q) ||
+          p.setCode.toLowerCase().includes(q) ||
+          p.collectorNumber.toLowerCase().includes(q) ||
+          (p.artist && p.artist.toLowerCase().includes(q)) ||
+          (p.releasedAt && p.releasedAt.includes(q))
+      );
+    }
+
+    // 2. Type / Category filter
+    if (officialTypeFilter === 'regular') {
+      list = list.filter((p) => {
+        const lowerSet = p.setName.toLowerCase();
+        const code = p.setCode.toLowerCase();
+        const isSpecial =
+          lowerSet.includes('secret lair') ||
+          lowerSet.includes('promo') ||
+          lowerSet.includes('special guest') ||
+          lowerSet.includes('timeshifted') ||
+          code.startsWith('sl') ||
+          code === 'plist' ||
+          code === 'fmb1' ||
+          code === 'mb2' ||
+          p.collectorNumber.startsWith('★');
+        return !isSpecial;
+      });
+    } else if (officialTypeFilter === 'special') {
+      list = list.filter((p) => {
+        const lowerSet = p.setName.toLowerCase();
+        const code = p.setCode.toLowerCase();
+        const isSpecial =
+          lowerSet.includes('secret lair') ||
+          lowerSet.includes('promo') ||
+          lowerSet.includes('special guest') ||
+          lowerSet.includes('timeshifted') ||
+          code.startsWith('sl') ||
+          code === 'plist' ||
+          code === 'fmb1' ||
+          code === 'mb2' ||
+          p.collectorNumber.startsWith('★');
+        return isSpecial;
+      });
+    } else if (officialTypeFilter === 'with-price') {
+      list = list.filter((p) => p.priceUsd !== undefined && p.priceUsd > 0);
+    }
+
+    // 3. Sorting
+    list.sort((a, b) => {
+      if (officialSortBy === 'released-desc') {
+        const dateA = a.releasedAt || '0000-00-00';
+        const dateB = b.releasedAt || '0000-00-00';
+        const diff = dateB.localeCompare(dateA);
+        if (diff !== 0) return diff;
+        return (parseInt(a.collectorNumber, 10) || 0) - (parseInt(b.collectorNumber, 10) || 0);
+      }
+      if (officialSortBy === 'released-asc') {
+        const dateA = a.releasedAt || '9999-99-99';
+        const dateB = b.releasedAt || '9999-99-99';
+        const diff = dateA.localeCompare(dateB);
+        if (diff !== 0) return diff;
+        return (parseInt(a.collectorNumber, 10) || 0) - (parseInt(b.collectorNumber, 10) || 0);
+      }
+      if (officialSortBy === 'price-asc') {
+        const priceA = a.priceUsd !== undefined && a.priceUsd > 0 ? a.priceUsd : 999999;
+        const priceB = b.priceUsd !== undefined && b.priceUsd > 0 ? b.priceUsd : 999999;
+        return priceA - priceB;
+      }
+      if (officialSortBy === 'price-desc') {
+        const priceA = a.priceUsd !== undefined && a.priceUsd > 0 ? a.priceUsd : -1;
+        const priceB = b.priceUsd !== undefined && b.priceUsd > 0 ? b.priceUsd : -1;
+        return priceB - priceA;
+      }
+      if (officialSortBy === 'set-name') {
+        return a.setName.localeCompare(b.setName);
+      }
+      if (officialSortBy === 'artist') {
+        const artistA = a.artist || '';
+        const artistB = b.artist || '';
+        return artistA.localeCompare(artistB);
+      }
+      return 0;
+    });
+
+    return list;
+  }, [officialPrints, filterOfficialQuery, officialTypeFilter, officialSortBy]);
 
   // Filter and sort MPCFill community alters
   const filteredMpcPrints = useMemo(() => {
     let list = [...mpcPrints];
     const q = mpcFilterText.trim().toLowerCase();
+
+    // 1. Text filter
     if (q) {
       list = list.filter(
         (p) =>
@@ -614,18 +779,54 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           (p.collectorNumber && p.collectorNumber.toLowerCase().includes(q))
       );
     }
-    // Sorting
+
+    // 2. Specific source/artist filter
+    if (mpcSourceFilter) {
+      const targetSource = mpcSourceFilter.toLowerCase();
+      list = list.filter(
+        (p) =>
+          (p.artist && p.artist.toLowerCase() === targetSource) ||
+          (p.sourceName && p.sourceName.toLowerCase() === targetSource)
+      );
+    }
+
+    // 3. Specific tag/style filter
+    if (mpcTagFilter) {
+      const targetTag = mpcTagFilter.toLowerCase();
+      list = list.filter(
+        (p) => p.tags && p.tags.some((t) => t.toLowerCase() === targetTag)
+      );
+    }
+
+    // 4. Sorting
     list.sort((a, b) => {
       const dpiA = a.dpi || parseInt(a.collectorNumber, 10) || 0;
       const dpiB = b.dpi || parseInt(b.collectorNumber, 10) || 0;
       if (mpcSortBy === 'dpi-desc') return dpiB - dpiA;
       if (mpcSortBy === 'dpi-asc') return dpiA - dpiB;
-      if (mpcSortBy === 'name') return (a.artist || a.setName).localeCompare(b.artist || b.setName);
-      if (mpcSortBy === 'recent') return (b.dateCreated || '').localeCompare(a.dateCreated || '');
+      if (mpcSortBy === 'recent') {
+        const dateA = a.dateCreated || a.releasedAt || '0000-00-00';
+        const dateB = b.dateCreated || b.releasedAt || '0000-00-00';
+        return dateB.localeCompare(dateA);
+      }
+      if (mpcSortBy === 'oldest') {
+        const dateA = a.dateCreated || a.releasedAt || '9999-99-99';
+        const dateB = b.dateCreated || b.releasedAt || '9999-99-99';
+        return dateA.localeCompare(dateB);
+      }
+      if (mpcSortBy === 'name') {
+        return (a.artist || a.setName).localeCompare(b.artist || b.setName);
+      }
+      if (mpcSortBy === 'source') {
+        const sourceA = a.sourceName || a.artist || '';
+        const sourceB = b.sourceName || b.artist || '';
+        return sourceA.localeCompare(sourceB);
+      }
       return 0;
     });
+
     return list;
-  }, [mpcPrints, mpcFilterText, mpcSortBy]);
+  }, [mpcPrints, mpcFilterText, mpcSourceFilter, mpcTagFilter, mpcSortBy]);
 
   // Consolidated selection handler that immediately updates local thumbnails + dfcFaces and notifies parent
   const handleSelectCardArt = (
@@ -833,17 +1034,11 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
         justifyContent: 'center',
         padding: '20px',
         overscrollBehavior: 'contain',
-        touchAction: 'none',
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           setHoveredPreview(null);
           onClose();
-        }
-      }}
-      onWheel={(e) => {
-        if (e.target === e.currentTarget) {
-          e.preventDefault();
         }
       }}
     >
@@ -1610,8 +1805,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 gap: '10px',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '220px' }}>
-                <div style={{ position: 'relative', width: '280px', maxWidth: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '220px', flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', width: '250px', minWidth: '180px' }}>
                   <Search
                     size={15}
                     style={{ position: 'absolute', left: '10px', top: '10px', color: '#64748b' }}
@@ -1619,12 +1814,69 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   <input
                     type="text"
                     className="input-text"
-                    placeholder="Filtrar por edição, código, ano..."
+                    placeholder="Filtrar por edição, código, ano, artista..."
                     value={filterOfficialQuery}
                     onChange={(e) => setFilterOfficialQuery(e.target.value)}
-                    style={{ paddingLeft: '32px', height: '34px', fontSize: '0.8rem', width: '100%' }}
+                    style={{ paddingLeft: '32px', paddingRight: filterOfficialQuery ? '28px' : '10px', height: '34px', fontSize: '0.8rem', width: '100%' }}
                   />
+                  {filterOfficialQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setFilterOfficialQuery('')}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        top: '9px',
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'flex',
+                      }}
+                      title="Limpar busca"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
+
+                {/* Filter by Category/Type */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Filter size={14} className="text-indigo-400" />
+                  <select
+                    className="input-text"
+                    value={officialTypeFilter}
+                    onChange={(e) => setOfficialTypeFilter(e.target.value as any)}
+                    style={{ height: '34px', fontSize: '0.8rem', padding: '0 8px' }}
+                    title="Filtrar tipo de edição oficial"
+                  >
+                    <option value="all">Todas as edições</option>
+                    <option value="regular">Edições Regulares</option>
+                    <option value="special">Secret Lair & Especiais</option>
+                    <option value="with-price">Com Preço em Dólar</option>
+                  </select>
+                </div>
+
+                {/* Sort selector */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ArrowUpDown size={14} className="text-indigo-400" />
+                  <select
+                    className="input-text"
+                    value={officialSortBy}
+                    onChange={(e) => setOfficialSortBy(e.target.value as any)}
+                    style={{ height: '34px', fontSize: '0.8rem', padding: '0 8px' }}
+                    title="Ordenar ilustrações oficiais"
+                  >
+                    <option value="released-desc">Mais recentes primeiro</option>
+                    <option value="released-asc">Mais antigas / Clássicas</option>
+                    <option value="price-asc">Menor Preço ($)</option>
+                    <option value="price-desc">Maior Preço ($)</option>
+                    <option value="set-name">Nome da Edição (A-Z)</option>
+                    <option value="artist">Artista (A-Z)</option>
+                  </select>
+                </div>
+
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -1644,13 +1896,42 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   <span>Recarregar</span>
                 </button>
               </div>
-              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                Exibindo {filteredOfficialPrints.length} de {officialPrints.length} ilustrações oficiais
-              </span>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                  Exibindo <strong>{filteredOfficialPrints.length}</strong> de <strong>{officialPrints.length}</strong> ilustrações oficiais
+                </span>
+                {(filterOfficialQuery || officialTypeFilter !== 'all') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterOfficialQuery('');
+                      setOfficialTypeFilter('all');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#818cf8',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      padding: 0,
+                    }}
+                  >
+                    Limpar filtros
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Prints Grid */}
-            <div style={{ padding: '24px', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}>
+            <div
+              ref={officialScrollRef}
+              onScroll={() => {
+                if (hoveredPreview) setHoveredPreview(null);
+              }}
+              style={{ padding: '24px', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}
+            >
               {loadingOfficial ? (
                 <div
                   style={{
@@ -1670,10 +1951,22 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
                   <p style={{ marginBottom: '16px' }}>
                     {officialPrints.length > 0
-                      ? 'Nenhuma edição corresponde ao filtro digitado.'
+                      ? 'Nenhuma edição corresponde aos filtros selecionados.'
                       : 'Nenhuma outra arte oficial encontrada para esta carta.'}
                   </p>
-                  {officialPrints.length === 0 && (
+                  {officialPrints.length > 0 ? (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        setFilterOfficialQuery('');
+                        setOfficialTypeFilter('all');
+                      }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <RotateCw size={13} /> Limpar Filtros
+                    </button>
+                  ) : (
                     <button
                       type="button"
                       className="btn btn-primary"
@@ -1851,7 +2144,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 }}
               >
                 {/* Search in MPC Alters */}
-                <div style={{ position: 'relative', width: '280px', minWidth: '220px' }}>
+                <div style={{ position: 'relative', width: '260px', minWidth: '200px' }}>
                   <Search
                     size={15}
                     style={{ position: 'absolute', left: '10px', top: '10px', color: '#64748b' }}
@@ -1859,14 +2152,34 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   <input
                     type="text"
                     className="input-text"
-                    placeholder="Filtrar por artista, variante..."
+                    placeholder="Filtrar por artista, variante, tag..."
                     value={mpcFilterText}
                     onChange={(e) => setMpcFilterText(e.target.value)}
-                    style={{ paddingLeft: '32px', height: '34px', fontSize: '0.8rem', width: '100%' }}
+                    style={{ paddingLeft: '32px', paddingRight: mpcFilterText ? '28px' : '10px', height: '34px', fontSize: '0.8rem', width: '100%' }}
                   />
+                  {mpcFilterText && (
+                    <button
+                      type="button"
+                      onClick={() => setMpcFilterText('')}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        top: '9px',
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'flex',
+                      }}
+                      title="Limpar busca"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
 
-                {/* DPI, Type and Sort Selectors */}
+                {/* DPI, Type, Source, Tag, and Sort Selectors */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   {/* Card Type Selector (Cartas Oficiais vs Fichas/Tokens) */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1887,6 +2200,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     </select>
                   </div>
 
+                  {/* DPI Resolution Filter */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <SlidersHorizontal size={14} className="text-amber-400" />
                     <select
@@ -1908,6 +2222,49 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     </select>
                   </div>
 
+                  {/* Filter by Source / Artist (if multiple available) */}
+                  {availableMpcSources.length > 1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Filter size={14} className="text-amber-400" />
+                      <select
+                        className="input-text"
+                        value={mpcSourceFilter}
+                        onChange={(e) => setMpcSourceFilter(e.target.value)}
+                        style={{ height: '34px', fontSize: '0.8rem', padding: '0 8px', maxWidth: '170px' }}
+                        title="Filtrar por artista ou fonte do alter"
+                      >
+                        <option value="">Todas as Fontes ({availableMpcSources.length})</option>
+                        {availableMpcSources.map(([src, count]) => (
+                          <option key={src} value={src}>
+                            {src} ({count})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Filter by Tag / Style (if available) */}
+                  {availableMpcTags.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Layers size={14} className="text-amber-400" />
+                      <select
+                        className="input-text"
+                        value={mpcTagFilter}
+                        onChange={(e) => setMpcTagFilter(e.target.value)}
+                        style={{ height: '34px', fontSize: '0.8rem', padding: '0 8px', maxWidth: '150px' }}
+                        title="Filtrar por estilo ou tag"
+                      >
+                        <option value="">Todos os Estilos</option>
+                        {availableMpcTags.map(([tag, count]) => (
+                          <option key={tag} value={tag}>
+                            {tag} ({count})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Sort Selector */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <ArrowUpDown size={14} className="text-amber-400" />
                     <select
@@ -1920,7 +2277,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       <option value="dpi-desc">Maior DPI primeiro</option>
                       <option value="dpi-asc">Menor DPI primeiro</option>
                       <option value="recent">Mais recentes</option>
+                      <option value="oldest">Mais antigas</option>
                       <option value="name">Artista / Nome (A-Z)</option>
+                      <option value="source">Fonte / Drive (A-Z)</option>
                     </select>
                   </div>
 
@@ -2061,10 +2420,34 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 </div>
               ) : (
                 !loadingMpc && mpcPrints.length > 0 && (
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>
-                      Exibindo <strong>{filteredMpcPrints.length}</strong> de <strong>{mpcPrints.length}</strong> artes de {mpcCardType === 'TOKEN' ? 'ficha/token' : 'carta'} com {mpcMinDpi}+ DPI
-                    </span>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>
+                        Exibindo <strong>{filteredMpcPrints.length}</strong> de <strong>{mpcPrints.length}</strong> artes de {mpcCardType === 'TOKEN' ? 'ficha/token' : 'carta'} com {mpcMinDpi}+ DPI
+                      </span>
+                      {(mpcFilterText || mpcSourceFilter || mpcTagFilter || mpcMinDpi !== 200) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMpcFilterText('');
+                            setMpcSourceFilter('');
+                            setMpcTagFilter('');
+                            setMpcMinDpi(200);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#ffbb00',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            padding: 0,
+                          }}
+                        >
+                          Limpar filtros
+                        </button>
+                      )}
+                    </div>
                     <span style={{ color: '#ffbb00' }}>
                       Clique em qualquer arte para selecioná-la
                     </span>
@@ -2074,7 +2457,13 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             </div>
 
             {/* MPCFill Cards Grid */}
-            <div style={{ padding: '24px', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}>
+            <div
+              ref={mpcScrollRef}
+              onScroll={() => {
+                if (hoveredPreview) setHoveredPreview(null);
+              }}
+              style={{ padding: '24px', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}
+            >
               {loadingMpc ? (
                 <div
                   style={{
@@ -2115,7 +2504,21 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                         </>
                       )}
                   </div>
-                  {mpcPrints.length === 0 && (
+                  {mpcPrints.length > 0 ? (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => {
+                        setMpcFilterText('');
+                        setMpcSourceFilter('');
+                        setMpcTagFilter('');
+                        setMpcMinDpi(200);
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <RotateCw size={13} /> Limpar Filtros
+                    </button>
+                  ) : (
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm"
@@ -2319,6 +2722,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
         {/* Tab 3 Content: Importar a Própria Arte */}
         {activeTab === 'custom' && (
           <div
+            ref={customScrollRef}
+            onScroll={() => {
+              if (hoveredPreview) setHoveredPreview(null);
+            }}
             style={{
               padding: '24px',
               overflowY: 'auto',
