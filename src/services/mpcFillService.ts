@@ -533,6 +533,8 @@ export interface MpcSearchOptions {
 export interface MpcCardPrint extends CardPrint {
   dpi?: number;
   sourceName?: string;
+  sourceId?: number;
+  orderIndex?: number;
   tags?: string[];
   dateCreated?: string;
 }
@@ -761,6 +763,7 @@ export async function searchMpcFillAlters(
 
       const imageUrl = `https://lh3.googleusercontent.com/d/${id}`;
       const dpiNum = meta?.dpi ? Number(meta.dpi) : undefined;
+      const sourceIdNum = meta?.sourceId !== undefined ? Number(meta.sourceId) : undefined;
       prints.push({
         id: `mpc-alter-${id}`,
         setCode: 'MPC',
@@ -773,6 +776,8 @@ export async function searchMpcFillAlters(
         releasedAt: meta?.dateCreated || undefined,
         dpi: dpiNum,
         sourceName: meta?.sourceName || meta?.source || 'Comunidade MPCFill',
+        sourceId: sourceIdNum,
+        orderIndex: index,
         tags: meta?.tags || [],
         dateCreated: meta?.dateCreated,
       });

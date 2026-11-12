@@ -368,8 +368,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   const [mpcMinDpi, setMpcMinDpi] = useState<number>(200);
   const [mpcFilterText, setMpcFilterText] = useState<string>('');
   const [mpcSortBy, setMpcSortBy] = useState<
-    'dpi-desc' | 'dpi-asc' | 'recent' | 'oldest' | 'name' | 'source'
-  >('dpi-desc');
+    'best-creators' | 'dpi-desc' | 'dpi-asc' | 'recent' | 'oldest' | 'name' | 'source'
+  >('best-creators');
   const [mpcSourceFilter, setMpcSourceFilter] = useState<string>('');
   const [mpcTagFilter, setMpcTagFilter] = useState<string>('');
   const [mpcDriveInput, setMpcDriveInput] = useState('');
@@ -809,6 +809,18 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     list.sort((a, b) => {
       const dpiA = a.dpi || parseInt(a.collectorNumber, 10) || 0;
       const dpiB = b.dpi || parseInt(b.collectorNumber, 10) || 0;
+
+      if (mpcSortBy === 'best-creators') {
+        const srcA = a.sourceId !== undefined ? a.sourceId : 9999;
+        const srcB = b.sourceId !== undefined ? b.sourceId : 9999;
+        if (srcA !== srcB) return srcA - srcB;
+
+        const idxA = a.orderIndex !== undefined ? a.orderIndex : 9999;
+        const idxB = b.orderIndex !== undefined ? b.orderIndex : 9999;
+        if (idxA !== idxB) return idxA - idxB;
+
+        return dpiB - dpiA;
+      }
       if (mpcSortBy === 'dpi-desc') return dpiB - dpiA;
       if (mpcSortBy === 'dpi-asc') return dpiA - dpiB;
       if (mpcSortBy === 'recent') {
@@ -2320,6 +2332,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       style={{ height: '34px', fontSize: '0.8rem', padding: '0 8px' }}
                       title="Ordenar resultados"
                     >
+                      <option value="best-creators">Melhores Criadores (Recomendadas)</option>
                       <option value="dpi-desc">Maior DPI primeiro</option>
                       <option value="dpi-asc">Menor DPI primeiro</option>
                       <option value="recent">Mais recentes</option>
