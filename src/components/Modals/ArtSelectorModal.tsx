@@ -493,6 +493,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     // If prints for this exact card name are already loaded, do NOT reload or flash!
     if (loadedCardNameRef.current === card.name && officialPrints.length > 0) {
       setActivePrintId(card.id);
+      if (officialScrollRef.current) officialScrollRef.current.scrollTop = 0;
+      if (mpcScrollRef.current) mpcScrollRef.current.scrollTop = 0;
+      if (customScrollRef.current) customScrollRef.current.scrollTop = 0;
       return;
     }
 
@@ -500,6 +503,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
     let cancelled = false;
 
     setActivePrintId(card.id);
+    if (officialScrollRef.current) officialScrollRef.current.scrollTop = 0;
+    if (mpcScrollRef.current) mpcScrollRef.current.scrollTop = 0;
+    if (customScrollRef.current) customScrollRef.current.scrollTop = 0;
     setFilterOfficialQuery('');
     setMpcDriveInput('');
     setMpcError(null);
@@ -606,10 +612,6 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    // Prevent background document scrolling while the art selector modal is active
-    const originalBodyOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
     const handleGlobalWheel = (e: WheelEvent) => {
       const activeContainer =
         activeTab === 'official'
@@ -636,7 +638,6 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
     window.addEventListener('wheel', handleGlobalWheel, { passive: true });
     return () => {
-      document.body.style.overflow = originalBodyOverflow;
       window.removeEventListener('wheel', handleGlobalWheel);
     };
   }, [isOpen, activeTab]);
