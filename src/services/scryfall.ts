@@ -537,7 +537,7 @@ const POPULAR_TOKEN_ORDER = [
 export const POPULAR_TOKENS_QUERY = `(${POPULAR_TOKEN_ORDER.map((n) => `!"${n}"`).join(' or ')})`;
 
 const UTILITY_BASE_QUERIES: Record<UtilityCategory, string> = {
-  tokens: 't:token (layout:token or layout:double_faced_token)',
+  tokens: 't:token include:extras',
   planes: '(t:plane or t:phenomenon) include:extras',
   emblems: 't:emblem include:extras',
   dungeons: 't:dungeon include:extras',
@@ -571,9 +571,15 @@ export async function searchUtilityCards(
     const trimmed = query.trim();
 
     if (trimmed === '__POPULAR_TOKENS__' && category === 'tokens') {
-      q = `t:token layout:token ${POPULAR_TOKENS_QUERY}`;
+      q = `t:token include:extras ${POPULAR_TOKENS_QUERY}`;
     } else if (trimmed) {
-      q += ` ${trimmed}`;
+      const hasScryfallSyntax = /[:!"()]/.test(trimmed);
+      if (hasScryfallSyntax) {
+        q += ` ${trimmed}`;
+      } else {
+        const words = trimmed.split(/\s+/).filter(Boolean);
+        q += ` ${words.map((w) => `(name:${w} or type:${w})`).join(' ')}`;
+      }
     }
 
     if (color && color !== 'all') {

@@ -113,6 +113,7 @@ const POPULAR_TOKEN_CHIPS = [
   { label: 'Fera', query: '!"Beast"' },
   { label: 'Tóptero', query: '!"Thopter"' },
   { label: 'Cópia', query: '!"Copy"' },
+  { label: 'Encantamento', query: 't:enchantment' },
 ];
 
 interface UtilityCardItemProps {
