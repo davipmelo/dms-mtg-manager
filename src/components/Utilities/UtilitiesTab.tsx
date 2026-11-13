@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { TokenCard, UtilityCategory, Card, CardPrint } from '../../types';
 import { searchUtilityCards } from '../../services/scryfall';
 import { getUiSettings, saveUiSettings } from '../../services/storage';
@@ -97,8 +97,8 @@ const UTILITY_CATEGORIES: CategoryOption[] = [
 ];
 
 const POPULAR_TOKEN_CHIPS = [
-  { label: 'Populares', query: '__POPULAR_TOKENS__' },
   { label: 'Todos (A–Z)', query: '' },
+  { label: 'Populares', query: '__POPULAR_TOKENS__' },
   { label: 'Tesouro', query: '!"Treasure"' },
   { label: 'Comida', query: '!"Food"' },
   { label: 'Pista', query: '!"Clue"' },
@@ -115,12 +115,202 @@ const POPULAR_TOKEN_CHIPS = [
   { label: 'Cópia', query: '!"Copy"' },
 ];
 
+interface UtilityCardItemProps {
+  item: TokenCard;
+  isAdded: boolean;
+  showGridDetails: boolean;
+  gridCardSize: number;
+  onHoverStart: (e: React.MouseEvent, item: TokenCard) => void;
+  onHoverMove: (e: React.MouseEvent) => void;
+  onHoverEnd: () => void;
+  onSelectArt: (itemId: string) => void;
+  onAddProxy: (item: TokenCard) => void;
+}
+
+const UtilityCardItem = React.memo<UtilityCardItemProps>(({
+  item,
+  isAdded,
+  showGridDetails,
+  gridCardSize,
+  onHoverStart,
+  onHoverMove,
+  onHoverEnd,
+  onSelectArt,
+  onAddProxy,
+}) => {
+  return (
+    <div
+      className="card-item-container"
+      style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: `${gridCardSize}px ${Math.round(gridCardSize * 1.45)}px`,
+      }}
+    >
+      <div
+        className="card-image-wrapper"
+        onMouseEnter={(e) => onHoverStart(e, item)}
+        onMouseMove={onHoverMove}
+        onMouseLeave={onHoverEnd}
+      >
+        <CardImage
+          name={item.name}
+          imageUrl={item.imageUrl}
+          imageUrlLarge={item.imageUrlLarge}
+          setCode={item.setCode}
+          collectorNumber={item.collectorNumber}
+          className="card-image"
+        />
+
+        {/* Floating quick actions on Art-Only mode */}
+        {!showGridDetails && (
+          <div className="card-art-actions-overlay">
+            <button
+              type="button"
+              className="btn btn-secondary btn-icon"
+              style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onHoverEnd();
+                onSelectArt(item.id);
+              }}
+              title="Escolher Arte Alternativa"
+            >
+              <ImageIcon size={15} />
+            </button>
+            <button
+              type="button"
+              className={`btn btn-icon ${isAdded ? 'btn-secondary' : 'btn-primary'}`}
+              style={{ padding: '6px', background: isAdded ? 'rgba(16, 185, 129, 0.9)' : undefined }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onHoverEnd();
+                onAddProxy(item);
+              }}
+              title="Adicionar à Fila de Impressão"
+            >
+              {isAdded ? <Check size={15} /> : <Printer size={15} />}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Card Details Footer (Hidden in Art-Only mode) */}
+      {showGridDetails && (
+        <div
+          style={{
+            padding: '12px',
+            background: '#0e131d',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            flex: 1,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                color: '#f8fafc',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+              title={item.name}
+            >
+              {item.name}
+            </div>
+            <div
+              style={{
+                fontSize: '0.75rem',
+                color: '#94a3b8',
+                marginTop: '2px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+              title={item.typeLine}
+            >
+              {item.typeLine}
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '0.75rem',
+              color: '#64748b',
+            }}
+          >
+            <span
+              style={{
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+              title={`${item.setName} (${item.setCode}) #${item.collectorNumber}`}
+            >
+              {item.setCode} • #{item.collectorNumber}
+            </span>
+            {item.power && item.toughness && (
+              <span style={{ fontWeight: 700, color: '#f8fafc', flexShrink: 0 }}>
+                {item.power}/{item.toughness}
+              </span>
+            )}
+          </div>
+
+          {/* Alternative Art Selector + Add to Proxies Buttons */}
+          <div
+            style={{
+              marginTop: 'auto',
+              paddingTop: '6px',
+              display: 'flex',
+              gap: '6px',
+            }}
+          >
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => onSelectArt(item.id)}
+              title="Escolher arte alternativa / edição desta ficha ou utilitário"
+              style={{ padding: '6px 10px', flexShrink: 0 }}
+            >
+              <ImageIcon size={14} /> Artes
+            </button>
+
+            <button
+              type="button"
+              className={`btn btn-sm ${isAdded ? 'btn-secondary' : 'btn-primary'}`}
+              style={{ flex: 1 }}
+              onClick={() => onAddProxy(item)}
+            >
+              {isAdded ? (
+                <>
+                  <Check size={14} className="text-emerald-400" /> Na Fila!
+                </>
+              ) : (
+                <>
+                  <Printer size={14} /> + Proxy
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
 export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxies }) => {
   const [category, setCategory] = useState<UtilityCategory>('tokens');
   const [items, setItems] = useState<TokenCard[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isStreamingMore, setIsStreamingMore] = useState(false);
+  const [visibleLimit, setVisibleLimit] = useState(60);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedChipQuery, setSelectedChipQuery] = useState('__POPULAR_TOKENS__');
+  const [selectedChipQuery, setSelectedChipQuery] = useState('');
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [isMultiOnly, setIsMultiOnly] = useState(false);
   const [isColorlessOnly, setIsColorlessOnly] = useState(false);
@@ -131,6 +321,8 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
   // Alternative Art Selector state for utility cards
   const [artTargetIndex, setArtTargetIndex] = useState<number | null>(null);
   const requestIdRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const [gridCardSize, setGridCardSize] = useState<number>(() => getUiSettings().gridCardSize);
   const [showGridDetails, setShowGridDetails] = useState<boolean>(() => getUiSettings().gridShowDetails);
@@ -187,22 +379,80 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
           ? selectedChipQuery
           : '';
     fetchUtilityData(category, effectiveQuery, category === 'tokens' ? getColorQuery() : 'all');
+
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, [category, selectedChipQuery, selectedColors, isMultiOnly, isColorlessOnly]);
 
   const fetchUtilityData = async (cat: UtilityCategory, query: string, color: string) => {
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     const reqId = ++requestIdRef.current;
     setLoading(true);
+    setIsStreamingMore(false);
+    setVisibleLimit(60);
+
     try {
-      const results = await searchUtilityCards(cat, query, color);
-      if (reqId === requestIdRef.current) {
+      const results = await searchUtilityCards(cat, query, color, {
+        signal: controller.signal,
+        onProgress: (partialItems, isComplete) => {
+          if (reqId !== requestIdRef.current || controller.signal.aborted) return;
+          setItems(partialItems);
+          setLoading(false);
+          setIsStreamingMore(!isComplete);
+        },
+      });
+      if (reqId === requestIdRef.current && !controller.signal.aborted) {
         setItems(results);
+        setIsStreamingMore(false);
       }
     } finally {
       if (reqId === requestIdRef.current) {
         setLoading(false);
+        setIsStreamingMore(false);
       }
     }
   };
+
+  // Instant client-side filtering when typing in the search bar (while Enter submits full Scryfall search)
+  const filteredItems = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return items;
+    // If user typed Scryfall syntax (like t:, o:, c:, !), don't filter client-side with literal substring
+    if (q.includes(':') || q.startsWith('!')) return items;
+    return items.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        (item.typeLine && item.typeLine.toLowerCase().includes(q)) ||
+        (item.setName && item.setName.toLowerCase().includes(q))
+    );
+  }, [items, searchQuery]);
+
+  const visibleItems = useMemo(
+    () => filteredItems.slice(0, visibleLimit),
+    [filteredItems, visibleLimit]
+  );
+
+  // Automatic infinite scroll for remaining chunks
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el || visibleLimit >= filteredItems.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleLimit((prev) => Math.min(prev + 60, filteredItems.length));
+        }
+      },
+      { rootMargin: '600px' }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visibleLimit, filteredItems.length]);
 
   const handleCategoryChange = (nextCategory: UtilityCategory) => {
     setCategory(nextCategory);
@@ -210,11 +460,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
     setSelectedColors([]);
     setIsMultiOnly(false);
     setIsColorlessOnly(false);
-    if (nextCategory === 'tokens') {
-      setSelectedChipQuery('__POPULAR_TOKENS__');
-    } else {
-      setSelectedChipQuery('');
-    }
+    setSelectedChipQuery('');
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -255,13 +501,41 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
     setIsColorlessOnly(false);
   };
 
-  const handleAdd = (item: TokenCard, qty: number = 1) => {
+  const handleAdd = useCallback((item: TokenCard, qty: number = 1) => {
     onAddUtilityToProxies(item, qty);
     setAddedMap((prev) => ({ ...prev, [item.id]: true }));
     setTimeout(() => {
       setAddedMap((prev) => ({ ...prev, [item.id]: false }));
     }, 1200);
-  };
+  }, [onAddUtilityToProxies]);
+
+  const handleHoverStart = useCallback((e: React.MouseEvent, item: TokenCard) => {
+    setMousePos({ x: e.clientX, y: e.clientY });
+    setHoveredPreview({
+      url: item.imageUrlLarge || item.imageUrl,
+      title: item.name,
+      subtitle: `${item.typeLine || ''}${item.setName ? ` (${item.setName})` : ''}`,
+    });
+  }, []);
+
+  const handleHoverMove = useCallback((e: React.MouseEvent) => {
+    setMousePos({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const handleHoverEnd = useCallback(() => {
+    setHoveredPreview(null);
+  }, []);
+
+  const handleSelectArt = useCallback((itemId: string) => {
+    const idx = items.findIndex((i) => i.id === itemId);
+    if (idx !== -1) {
+      setArtTargetIndex(idx);
+    }
+  }, [items]);
+
+  const handleAddProxySingle = useCallback((item: TokenCard) => {
+    handleAdd(item, 1);
+  }, [handleAdd]);
 
   const artModalCard: Card | null =
     artTargetIndex !== null && items[artTargetIndex]
@@ -486,45 +760,74 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
         </div>
       </div>
 
-      {/* Grid Controls: Details Toggle & Scale Zoom Slider */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '-10px', gap: '8px', flexWrap: 'wrap' }}>
-        <button
-          className={`btn btn-sm ${showGridDetails ? 'btn-secondary' : 'btn-primary'}`}
-          onClick={handleToggleGridDetails}
-          title={showGridDetails ? 'Ocultar detalhes (mostrar apenas artes)' : 'Mostrar detalhes completos dos utilitários'}
-          style={{ fontSize: '0.75rem', padding: '4px 10px', height: '32px' }}
-        >
-          {showGridDetails ? <EyeOff size={14} /> : <Eye size={14} />}
-          <span>{showGridDetails ? 'Só Artes' : 'Com Detalhes'}</span>
-        </button>
+      {/* Grid Controls: Count, Streaming Indicator, Details Toggle & Scale Zoom Slider */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '-10px', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.8rem', color: '#94a3b8' }}>
+          {!loading && filteredItems.length > 0 && (
+            <span>
+              Exibindo <strong style={{ color: '#f8fafc' }}>{visibleItems.length}</strong> de{' '}
+              <strong style={{ color: '#f8fafc' }}>{filteredItems.length}</strong>{' '}
+              {filteredItems.length === 1 ? 'item' : 'itens'}
+            </span>
+          )}
+          {isStreamingMore && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#818cf8',
+                fontSize: '0.75rem',
+                background: 'rgba(99, 102, 241, 0.12)',
+                padding: '2px 8px',
+                borderRadius: '12px',
+              }}
+            >
+              <Loader2 size={12} className="animate-spin" />
+              Carregando restante (A–Z)...
+            </span>
+          )}
+        </div>
 
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: 'var(--bg-darkest)',
-            padding: '4px 10px',
-            borderRadius: '8px',
-            border: '1px solid var(--border-subtle)',
-            height: '32px',
-          }}
-          title={`Ajustar escala da grade (${gridCardSize}px)`}
-        >
-          <ZoomOut size={13} style={{ color: '#94a3b8' }} />
-          <input
-            type="range"
-            min={110}
-            max={340}
-            step={10}
-            value={gridCardSize}
-            onChange={(e) => handleGridCardSizeChange(Number(e.target.value))}
-            style={{ width: '85px', accentColor: '#818cf8', cursor: 'pointer' }}
-          />
-          <ZoomIn size={13} style={{ color: '#94a3b8' }} />
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '36px', textAlign: 'right' }}>
-            {gridCardSize}px
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            className={`btn btn-sm ${showGridDetails ? 'btn-secondary' : 'btn-primary'}`}
+            onClick={handleToggleGridDetails}
+            title={showGridDetails ? 'Ocultar detalhes (mostrar apenas artes)' : 'Mostrar detalhes completos dos utilitários'}
+            style={{ fontSize: '0.75rem', padding: '4px 10px', height: '32px' }}
+          >
+            {showGridDetails ? <EyeOff size={14} /> : <Eye size={14} />}
+            <span>{showGridDetails ? 'Só Artes' : 'Com Detalhes'}</span>
+          </button>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'var(--bg-darkest)',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-subtle)',
+              height: '32px',
+            }}
+            title={`Ajustar escala da grade (${gridCardSize}px)`}
+          >
+            <ZoomOut size={13} style={{ color: '#94a3b8' }} />
+            <input
+              type="range"
+              min={110}
+              max={340}
+              step={10}
+              value={gridCardSize}
+              onChange={(e) => handleGridCardSizeChange(Number(e.target.value))}
+              style={{ width: '85px', accentColor: '#818cf8', cursor: 'pointer' }}
+            />
+            <ZoomIn size={13} style={{ color: '#94a3b8' }} />
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '36px', textAlign: 'right' }}>
+              {gridCardSize}px
+            </span>
+          </div>
         </div>
       </div>
 
@@ -544,183 +847,54 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
           <Loader2 className="animate-spin text-indigo-400" size={36} />
           <span>Carregando utilitários oficiais do Scryfall...</span>
         </div>
-      ) : items.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <div className="glass-card" style={{ padding: '60px', textAlign: 'center', color: '#94a3b8' }}>
           Nenhum item encontrado para esta busca. Experimente termos em inglês (ex: "Treasure", "Dominaria", "Teferi", "Monarch").
         </div>
       ) : (
-        <div
-          className="cards-grid"
-          style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardSize}px, 1fr))` }}
-        >
-          {items.map((item, idx) => {
-            const isAdded = !!addedMap[item.id];
-            return (
-              <div key={`${item.id}-${idx}`} className="card-item-container">
-                <div
-                  className="card-image-wrapper"
-                  onMouseEnter={(e) => {
-                    setMousePos({ x: e.clientX, y: e.clientY });
-                    setHoveredPreview({
-                      url: item.imageUrlLarge || item.imageUrl,
-                      title: item.name,
-                      subtitle: `${item.typeLine || ''}${item.setName ? ` (${item.setName})` : ''}`,
-                    });
-                  }}
-                  onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
-                  onMouseLeave={() => setHoveredPreview(null)}
-                >
-                  <CardImage
-                    name={item.name}
-                    imageUrl={item.imageUrl}
-                    imageUrlLarge={item.imageUrlLarge}
-                    setCode={item.setCode}
-                    collectorNumber={item.collectorNumber}
-                    className="card-image"
-                  />
+        <>
+          <div
+            className="cards-grid"
+            style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardSize}px, 1fr))` }}
+          >
+            {visibleItems.map((item) => (
+              <UtilityCardItem
+                key={item.id}
+                item={item}
+                isAdded={!!addedMap[item.id]}
+                showGridDetails={showGridDetails}
+                gridCardSize={gridCardSize}
+                onHoverStart={handleHoverStart}
+                onHoverMove={handleHoverMove}
+                onHoverEnd={handleHoverEnd}
+                onSelectArt={handleSelectArt}
+                onAddProxy={handleAddProxySingle}
+              />
+            ))}
+          </div>
 
-                  {/* Floating quick actions on Art-Only mode */}
-                  {!showGridDetails && (
-                    <div className="card-art-actions-overlay">
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-icon"
-                        style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setHoveredPreview(null);
-                          setArtTargetIndex(idx);
-                        }}
-                        title="Escolher Arte Alternativa"
-                      >
-                        <ImageIcon size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn btn-icon ${isAdded ? 'btn-secondary' : 'btn-primary'}`}
-                        style={{ padding: '6px', background: isAdded ? 'rgba(16, 185, 129, 0.9)' : undefined }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setHoveredPreview(null);
-                          handleAdd(item, 1);
-                        }}
-                        title="Adicionar à Fila de Impressão"
-                      >
-                        {isAdded ? <Check size={15} /> : <Printer size={15} />}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Card Details Footer (Hidden in Art-Only mode) */}
-                {showGridDetails && (
-                  <div
-                    style={{
-                      padding: '12px',
-                      background: '#0e131d',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                      flex: 1,
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          fontWeight: 600,
-                          fontSize: '0.9rem',
-                          color: '#f8fafc',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                        title={item.name}
-                      >
-                        {item.name}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '0.75rem',
-                          color: '#94a3b8',
-                          marginTop: '2px',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                        title={item.typeLine}
-                      >
-                        {item.typeLine}
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontSize: '0.75rem',
-                        color: '#64748b',
-                      }}
-                    >
-                      <span
-                        style={{
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                        title={`${item.setName} (${item.setCode}) #${item.collectorNumber}`}
-                      >
-                        {item.setCode} • #{item.collectorNumber}
-                      </span>
-                      {item.power && item.toughness && (
-                        <span style={{ fontWeight: 700, color: '#f8fafc', flexShrink: 0 }}>
-                          {item.power}/{item.toughness}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Alternative Art Selector + Add to Proxies Buttons */}
-                    <div
-                      style={{
-                        marginTop: 'auto',
-                        paddingTop: '6px',
-                        display: 'flex',
-                        gap: '6px',
-                      }}
-                    >
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => setArtTargetIndex(idx)}
-                        title="Escolher arte alternativa / edição desta ficha ou utilitário"
-                        style={{ padding: '6px 10px', flexShrink: 0 }}
-                      >
-                        <ImageIcon size={14} /> Artes
-                      </button>
-
-                      <button
-                        type="button"
-                        className={`btn btn-sm ${isAdded ? 'btn-secondary' : 'btn-primary'}`}
-                        style={{ flex: 1 }}
-                        onClick={() => handleAdd(item, 1)}
-                      >
-                        {isAdded ? (
-                          <>
-                            <Check size={14} className="text-emerald-400" /> Na Fila!
-                          </>
-                        ) : (
-                          <>
-                            <Printer size={14} /> + Proxy
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+          {/* Infinite scroll sentinel & manual load more */}
+          {visibleLimit < filteredItems.length && (
+            <div
+              ref={loadMoreRef}
+              style={{
+                padding: '24px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setVisibleLimit((prev) => Math.min(prev + 60, filteredItems.length))}
+              >
+                Carregar mais ({filteredItems.length - visibleLimit} restantes)
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Floating Card Zoom Preview */}

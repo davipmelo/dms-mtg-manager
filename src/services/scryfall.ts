@@ -548,15 +548,23 @@ const UTILITY_BASE_QUERIES: Record<UtilityCategory, string> = {
   attractions: '(t:attraction or t:contraption) include:extras',
 };
 
+const utilityCache = new Map<string, TokenCard[]>();
+
 /**
  * Search or browse MTG Utility cards: Tokens, Planechase Planes/Phenomena, Emblems,
  * Dungeons, Official Markers/Helpers (Monarch, Initiative, Day/Night, Ring, etc.),
  * Archenemy Schemes, Conspiracies, and Attractions/Contraptions.
+ * Supports progressive streaming via `onProgress` and full pagination (A-Z) with caching.
  */
 export async function searchUtilityCards(
   category: UtilityCategory,
   query: string = '',
-  color?: string
+  color?: string,
+  options?: {
+    onProgress?: (items: TokenCard[], isComplete: boolean) => void;
+    signal?: AbortSignal;
+    maxPages?: number;
+  }
 ): Promise<TokenCard[]> {
   try {
     let q = UTILITY_BASE_QUERIES[category];
@@ -580,17 +588,51 @@ export async function searchUtilityCards(
       }
     }
 
-    const url = `${API_BASE}/cards/search?q=${encodeURIComponent(q)}&unique=cards&order=name`;
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
-    if (!res.ok) return [];
-    const data = await res.json();
-    if (!data.data || !Array.isArray(data.data)) return [];
+    const cacheKey = `${category}::${q}`;
+    if (utilityCache.has(cacheKey)) {
+      const cached = utilityCache.get(cacheKey)!;
+      options?.onProgress?.(cached, true);
+      return cached;
+    }
 
-    const mapped = data.data
-      .map((raw: any): TokenCard | null => {
+    const maxPages = options?.maxPages ?? 15;
+    let nextUrl: string | null = `${API_BASE}/cards/search?q=${encodeURIComponent(q)}&unique=cards&order=name`;
+    let page = 0;
+    const allMapped: TokenCard[] = [];
+    const seenIds = new Set<string>();
+
+    while (nextUrl && page < maxPages) {
+      if (options?.signal?.aborted) break;
+      if (page > 0) {
+        // Courtesy delay for Scryfall rate limit guidelines
+        await new Promise((r) => setTimeout(r, 75));
+        if (options?.signal?.aborted) break;
+      }
+
+      page++;
+      let res: Response = await fetch(nextUrl, {
+        headers: { Accept: 'application/json' },
+        signal: options?.signal,
+      });
+
+      if (res.status === 429) {
+        await new Promise((r) => setTimeout(r, 350));
+        if (options?.signal?.aborted) break;
+        res = await fetch(nextUrl, {
+          headers: { Accept: 'application/json' },
+          signal: options?.signal,
+        });
+      }
+
+      if (!res.ok) break;
+      const data: any = await res.json();
+      if (!data.data || !Array.isArray(data.data)) break;
+
+      for (const raw of data.data) {
         const parsed = parseScryfallCard(raw);
-        if (!parsed.imageUrl) return null;
-        return {
+        if (!parsed.imageUrl || seenIds.has(parsed.id)) continue;
+        seenIds.add(parsed.id);
+        allMapped.push({
           id: parsed.id,
           oracleId: parsed.oracleId,
           printsSearchUri: parsed.printsSearchUri,
@@ -606,31 +648,47 @@ export async function searchUtilityCards(
           setName: parsed.setName,
           collectorNumber: parsed.collectorNumber,
           cardFaces: parsed.cardFaces,
-        };
-      })
-      .filter((item: TokenCard | null): item is TokenCard => item !== null);
-
-    if (trimmed === '__POPULAR_TOKENS__' && category === 'tokens') {
-      const byName = new Map<string, TokenCard>();
-      for (const item of mapped) {
-        const key = item.name.toLowerCase();
-        if (!byName.has(key)) {
-          byName.set(key, item);
-        }
+        });
       }
-      return Array.from(byName.values()).sort((a, b) => {
-        const idxA = POPULAR_TOKEN_ORDER.findIndex(
-          (n) => n.toLowerCase() === a.name.toLowerCase()
-        );
-        const idxB = POPULAR_TOKEN_ORDER.findIndex(
-          (n) => n.toLowerCase() === b.name.toLowerCase()
-        );
-        return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
-      });
+
+      const hasMore: boolean = Boolean(data.has_more && data.next_page && page < maxPages);
+      nextUrl = hasMore ? (data.next_page as string) : null;
+
+      if (trimmed === '__POPULAR_TOKENS__' && category === 'tokens') {
+        // Popular tokens only need sorting once complete (usually 1 page anyway)
+        if (!hasMore) {
+          const byName = new Map<string, TokenCard>();
+          for (const item of allMapped) {
+            const key = item.name.toLowerCase();
+            if (!byName.has(key)) {
+              byName.set(key, item);
+            }
+          }
+          const sortedPopular = Array.from(byName.values()).sort((a, b) => {
+            const idxA = POPULAR_TOKEN_ORDER.findIndex(
+              (n) => n.toLowerCase() === a.name.toLowerCase()
+            );
+            const idxB = POPULAR_TOKEN_ORDER.findIndex(
+              (n) => n.toLowerCase() === b.name.toLowerCase()
+            );
+            return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+          });
+          utilityCache.set(cacheKey, sortedPopular);
+          options?.onProgress?.(sortedPopular, true);
+          return sortedPopular;
+        }
+      } else {
+        options?.onProgress?.([...allMapped], !hasMore);
+      }
     }
 
-    return mapped;
-  } catch (err) {
+    if (!options?.signal?.aborted && allMapped.length > 0) {
+      utilityCache.set(cacheKey, allMapped);
+    }
+
+    return allMapped;
+  } catch (err: any) {
+    if (err?.name === 'AbortError') return [];
     console.error('Error searching utility cards:', err);
     return [];
   }
