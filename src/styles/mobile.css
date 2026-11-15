@@ -1,0 +1,486 @@
+/* ==========================================================================
+   MOBILE & TOUCH UX/UI OVERHAUL (<= 768px / Touch Devices)
+   Strictly scoped so Desktop (>= 769px & hover-capable) remains 100% unchanged.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Touch Ergonomics & Disable Sticky Hover Tooltips on Touch Devices
+   -------------------------------------------------------------------------- */
+@media (hover: none) and (pointer: coarse) {
+  .card-hover-preview {
+    display: none !important;
+  }
+
+  .card-item-container:hover {
+    transform: none !important;
+  }
+
+  .btn-flip-card {
+    padding: 5px 9px !important;
+    font-size: 0.74rem !important;
+    min-height: 28px;
+  }
+
+  .card-art-actions-overlay {
+    padding: 8px 6px !important;
+    gap: 6px !important;
+  }
+
+  .card-art-actions-overlay .btn-icon {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 6px !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. Art Selector Modal — Keep Current Art Comparison Visible <= 1120px
+      (Overrides display: none on .art-selector-current-preview cleanly)
+   -------------------------------------------------------------------------- */
+@media screen and (max-width: 1120px) {
+  .art-selector-modal-wrapper {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 980px !important;
+    height: 92dvh !important;
+    max-height: 92dvh !important;
+  }
+
+  .art-selector-current-preview {
+    display: grid !important;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: center !important;
+    column-gap: 10px !important;
+    row-gap: 4px !important;
+    width: 100% !important;
+    flex-shrink: 0 !important;
+    padding: 8px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .art-selector-current-preview-img-wrap {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    width: 44px !important;
+    height: 61px !important;
+    aspect-ratio: 5 / 7;
+    border-radius: 6px !important;
+    cursor: default !important;
+  }
+
+  .art-selector-current-preview-top {
+    grid-column: 2;
+    grid-row: 1;
+    padding-bottom: 0 !important;
+    border-bottom: none !important;
+    min-width: 0;
+  }
+
+  .art-selector-current-preview-meta {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    min-width: 0;
+  }
+
+  .art-selector-preview-hint {
+    display: none !important;
+  }
+
+  .art-selector-main-panel {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. Proxy Studio A4 Sheet Scaling on Mobile/Tablet Screens (NEVER on Print)
+   -------------------------------------------------------------------------- */
+@media screen and (max-width: 820px) {
+  .a4-page-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    overflow-x: clip !important;
+    margin-bottom: 18px !important;
+  }
+
+  .a4-page-sheet {
+    zoom: 0.84;
+  }
+}
+
+@media screen and (max-width: 680px) {
+  .a4-page-sheet {
+    zoom: 0.68;
+  }
+}
+
+@media screen and (max-width: 540px) {
+  .a4-page-sheet {
+    zoom: 0.54;
+  }
+}
+
+@media screen and (max-width: 440px) {
+  .a4-page-sheet {
+    zoom: 0.44;
+  }
+}
+
+@media screen and (max-width: 385px) {
+  .a4-page-sheet {
+    zoom: 0.39;
+  }
+}
+
+@media print {
+  .a4-page-sheet {
+    zoom: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4. Core Mobile Layout, Navigation, Toolbars & Bottom-Sheet Modals (<= 768px)
+   -------------------------------------------------------------------------- */
+@media screen and (max-width: 768px) {
+  html,
+  body {
+    overflow-x: clip;
+    overscroll-behavior-y: none;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .app-shell {
+    min-height: 100dvh !important;
+  }
+
+  /* Also disable floating hover zoom at mobile viewport widths */
+  .card-hover-preview {
+    display: none !important;
+  }
+
+  /* Tactile press state */
+  .btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  /* Prevent iOS Safari zoom when focusing inputs/selects */
+  .input-text,
+  .select-field,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Compact 2-Row Sticky App Header */
+  .app-header {
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .app-header-inner {
+    padding: 8px 12px !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .app-header-top {
+    order: 1;
+    width: auto !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    gap: 8px !important;
+  }
+
+  .app-brand {
+    gap: 8px !important;
+    min-width: 0 !important;
+  }
+
+  .app-brand h1 {
+    font-size: 0.98rem !important;
+    line-height: 1.1 !important;
+    letter-spacing: 0.03em !important;
+  }
+
+  /* Hide overflowing nowrap desktop subtitle on mobile */
+  .app-brand p {
+    display: none !important;
+  }
+
+  .app-actions {
+    order: 2;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+  }
+
+  .app-actions .btn {
+    min-height: 34px !important;
+    padding: 6px 8px !important;
+    font-size: 0.76rem !important;
+    border-radius: 9px !important;
+  }
+
+  .user-menu-dropdown {
+    max-width: calc(100dvw - 24px) !important;
+    right: 0 !important;
+  }
+
+  /* Smooth scrollable pill tabs on row 2 */
+  .app-header-nav {
+    order: 3;
+    flex-basis: 100% !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    scroll-snap-type: x proximity;
+    gap: 6px !important;
+    padding: 2px 0 !important;
+  }
+
+  .app-header-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-header-nav .btn {
+    flex-shrink: 0 !important;
+    scroll-snap-align: start;
+    white-space: nowrap !important;
+    min-height: 34px !important;
+    padding: 6px 12px !important;
+    font-size: 0.8rem !important;
+    border-radius: 9px !important;
+  }
+
+  /* Main Container & Panels */
+  .main-content-container {
+    padding: 12px 10px 32px !important;
+  }
+
+  .glass-panel {
+    padding: 14px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  /* DeckBuilder: un-stick docked header so it doesn't eat vertical mobile viewport */
+  .deck-header-panel {
+    position: static !important;
+    top: auto !important;
+    border-radius: 12px !important;
+    padding: 14px 12px !important;
+    box-shadow: none !important;
+  }
+
+  .deck-header-compact-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .deck-header-actions-compact {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .proxy-studio-presets-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  /* Smooth touch horizontal scrolling on tables */
+  .table-responsive-wrapper,
+  .glass-panel[style*="overflowX"] {
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Sleek Full-Width Bottom-Sheet Modals */
+  .modal-backdrop {
+    padding: 0 !important;
+    align-items: flex-end !important;
+    overscroll-behavior: contain !important;
+  }
+
+  .modal-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 94dvh !important;
+    border-radius: 18px 18px 0 0 !important;
+    border-bottom: none !important;
+    overscroll-behavior: contain !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .modal-header {
+    padding: 12px 14px !important;
+    gap: 8px !important;
+  }
+
+  .modal-header h2 {
+    font-size: 1rem !important;
+  }
+
+  .modal-body {
+    padding: 14px !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Art Selector Modal Mobile Sheet Adjustments */
+  .art-selector-backdrop {
+    padding: 6px 6px 0 !important;
+    align-items: flex-end !important;
+  }
+
+  .art-selector-modal-wrapper {
+    height: 96dvh !important;
+    max-height: 96dvh !important;
+    gap: 6px !important;
+  }
+
+  .art-selector-main-panel {
+    border-radius: 16px 16px 0 0 !important;
+  }
+
+  .art-selector-dfc-panel {
+    padding: 10px 12px !important;
+  }
+
+  .art-selector-toolbar {
+    padding: 10px 12px !important;
+  }
+
+  .art-selector-tabs {
+    padding: 0 10px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .art-selector-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .art-selector-tabs .btn {
+    padding: 0 10px !important;
+    font-size: 0.8rem !important;
+    gap: 5px !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. Phone Narrow Viewport Refinements (<= 640px)
+   -------------------------------------------------------------------------- */
+@media screen and (max-width: 640px) {
+  /* Icon-only compact utility actions on phone top row to fit neatly on 1 line */
+  .app-action-label {
+    display: none !important;
+  }
+
+  .app-actions .btn {
+    gap: 0 !important;
+    padding: 6px 9px !important;
+    min-width: 34px;
+    justify-content: center;
+  }
+
+  .user-menu-name {
+    max-width: 72px !important;
+    font-size: 0.76rem !important;
+  }
+
+  /* Balanced 2-Column Card Grids (Collection, DeckBuilder, Utilities, Art Selector) */
+  .cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .art-selector-prints-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  /* Single-column Deck List Cards */
+  .decks-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  /* Clean wrapping footer controls inside 2-column cards */
+  .card-footer-controls {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    justify-content: space-between !important;
+  }
+
+  .card-footer-controls .btn-icon {
+    min-width: 30px;
+    min-height: 30px;
+    padding: 5px !important;
+  }
+
+  /* Collapse Multi-Column Modal Grids cleanly on Phones */
+  .add-card-preview-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    padding: 12px !important;
+  }
+
+  .add-card-preview-grid > div:first-child {
+    max-width: 155px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .export-modal-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .art-selector-custom-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Side-by-side Frente | Verso face boxes without center spacer overflow */
+  .art-selector-dfc-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .art-selector-dfc-grid > button:nth-child(2) {
+    display: none !important;
+  }
+
+  .art-selector-dfc-grid > div {
+    min-width: 0 !important;
+    padding: 7px 8px !important;
+    gap: 8px !important;
+  }
+}

@@ -38,6 +38,7 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ preview, mou
 
   return (
     <div
+      className="card-hover-preview"
       style={{
         position: 'fixed',
         left: `${left}px`,

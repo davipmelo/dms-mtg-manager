@@ -160,6 +160,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
 
         {/* Username */}
         <span
+          className="user-menu-name"
           style={{
             fontWeight: 700,
             fontSize: '0.82rem',
@@ -217,6 +218,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
       {/* Dropdown Menu */}
       {isOpen && (
         <div
+          className="user-menu-dropdown"
           style={{
             position: 'absolute',
             top: 'calc(100% + 8px)',

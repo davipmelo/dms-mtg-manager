@@ -1861,7 +1861,7 @@ export function App() {
             onClick={() => setIsBackupModalOpen(true)}
             title="Exportar ou Restaurar Backup Completo do Sistema (.json)"
           >
-            <Database size={14} /> Backup
+            <Database size={14} /> <span className="app-action-label">Backup</span>
           </button>
 
           <button
@@ -1872,7 +1872,7 @@ export function App() {
             }}
             title="Exportar listas de cartas para MTG Arena, Moxfield, LigaMagic ou formatos de planilha"
           >
-            <Upload size={14} /> Exportar
+            <Upload size={14} /> <span className="app-action-label">Exportar</span>
           </button>
 
           <button
@@ -1883,7 +1883,7 @@ export function App() {
             }}
             title="Importar listas de cartas (Moxfield, LigaMagic, MTG Arena ou texto)"
           >
-            <Download size={14} /> Importar
+            <Download size={14} /> <span className="app-action-label">Importar</span>
           </button>
 
           {/* User Account & Cloud Sync Menu */}

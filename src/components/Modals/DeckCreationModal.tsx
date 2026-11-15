@@ -299,6 +299,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
 
   return (
     <div
+      className="modal-backdrop"
       style={{
         position: 'fixed',
         inset: 0,
@@ -315,7 +316,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
       }}
     >
       <div
-        className="glass-panel"
+        className="modal-container glass-panel"
         style={{
           width: '680px',
           maxWidth: '95vw',
@@ -331,6 +332,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
       >
         {/* Header */}
         <div
+          className="modal-header"
           style={{
             padding: '16px 24px',
             borderBottom: '1px solid var(--border-subtle)',

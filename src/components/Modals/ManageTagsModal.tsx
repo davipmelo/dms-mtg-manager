@@ -130,7 +130,7 @@ export const ManageTagsModal: React.FC<ManageTagsModalProps> = ({
       }}
     >
       <div
-        className="glass-card"
+        className="modal-container glass-card"
         style={{
           width: '100%',
           maxWidth: '540px',
@@ -147,6 +147,7 @@ export const ManageTagsModal: React.FC<ManageTagsModalProps> = ({
       >
         {/* Header */}
         <div
+          className="modal-header"
           style={{
             padding: '18px 22px',
             borderBottom: '1px solid var(--border-subtle)',

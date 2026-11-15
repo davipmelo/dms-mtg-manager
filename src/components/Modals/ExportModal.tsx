@@ -118,6 +118,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   return (
     <div
+      className="modal-backdrop"
       style={{
         position: 'fixed',
         inset: 0,
@@ -134,7 +135,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       }}
     >
       <div
-        className="glass-panel"
+        className="modal-container glass-panel"
         style={{
           width: '780px',
           maxWidth: '95vw',
@@ -150,6 +151,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       >
         {/* Header - Dedicated to Export */}
         <div
+          className="modal-header"
           style={{
             padding: '18px 24px',
             borderBottom: '1px solid var(--border-subtle)',
@@ -183,6 +185,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
         {/* Content */}
         <div
+          className="modal-body"
           style={{
             padding: '24px',
             overflowY: 'auto',
@@ -192,7 +195,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             gap: '16px',
           }}
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div className="export-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             {/* Origin source */}
             <div>
               <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px', display: 'block' }}>

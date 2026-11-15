@@ -1059,6 +1059,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
   return (
     <div
+      className="modal-backdrop art-selector-backdrop"
       style={{
         position: 'fixed',
         inset: 0,
@@ -1092,6 +1093,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           <div className="art-selector-current-preview">
             {/* Header */}
             <div
+              className="art-selector-current-preview-top"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1149,6 +1151,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
             {/* Card Image Display */}
             <div
+              className="art-selector-current-preview-img-wrap"
               onClick={() => {
                 if (isCardDfc) {
                   setActiveFace(activeFace === 'front' ? 'back' : 'front');
@@ -1272,6 +1275,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
             {/* Card Details & Metadata */}
             <div
+              className="art-selector-current-preview-meta"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -1374,6 +1378,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
             {/* Helpful comparison hint */}
             <div
+              className="art-selector-preview-hint"
               style={{
                 marginTop: 'auto',
                 display: 'flex',
@@ -1396,7 +1401,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
         {/* Main Modal Panel */}
         <div
-          className="glass-panel"
+          className="glass-panel art-selector-main-panel"
           style={{
             width: '980px',
             maxWidth: 'calc(96vw - 310px)',
@@ -1413,6 +1418,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
         >
         {/* Header */}
         <div
+          className="modal-header art-selector-modal-header"
           style={{
             flexShrink: 0,
             padding: '16px 24px',
@@ -1544,6 +1550,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
         {/* DFC Dual-Face Visual Switcher */}
         {isCardDfc && (
           <div
+            className="art-selector-dfc-panel"
             style={{
               padding: '12px 24px',
               background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(10, 15, 26, 0.95))',
@@ -1574,6 +1581,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             </div>
 
             <div
+              className="art-selector-dfc-grid"
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr auto 1fr',
@@ -1701,6 +1709,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
         {/* Navigation Tabs (3 Abas solicitadas) */}
         <div
+          className="art-selector-tabs"
           style={{
             flexShrink: 0,
             minHeight: '48px',
@@ -1834,6 +1843,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
             {/* Filter toolbar */}
             <div
+              className="art-selector-toolbar"
               style={{
                 padding: '12px 24px',
                 borderBottom: '1px solid var(--border-subtle)',
@@ -1980,6 +1990,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   });
                 }
               }}
+              className="modal-body"
               style={{ padding: '24px', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}
             >
               {loadingOfficial ? (
@@ -2032,6 +2043,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               ) : (
                 <>
                   <div
+                    className="art-selector-prints-grid"
                     style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))',
@@ -2182,6 +2194,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
             {/* MPCFill Controls & Filter Toolbar */}
             <div
+              className="art-selector-toolbar"
               style={{
                 padding: '12px 24px',
                 borderBottom: '1px solid var(--border-subtle)',
@@ -2529,6 +2542,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   });
                 }
               }}
+              className="modal-body"
               style={{ padding: '24px', overflowY: 'auto', flex: 1, overscrollBehavior: 'contain' }}
             >
               {loadingMpc ? (
@@ -2599,6 +2613,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               ) : (
                 <>
                   <div
+                    className="art-selector-prints-grid"
                     style={{
                       display: 'grid',
                       gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))',
@@ -2797,6 +2812,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
       {activeTab === 'custom' && (
         <div
           ref={customScrollRef}
+          className="modal-body"
           onScroll={() => {
             if (hoveredPreview) setHoveredPreview(null);
           }}
@@ -2811,6 +2827,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
           }}
         >
           <div
+            className="art-selector-custom-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',

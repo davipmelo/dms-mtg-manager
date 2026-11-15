@@ -749,7 +749,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                   </div>
 
                   {/* Action Buttons: Qty control, Change Art, Add to Proxies */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
+                  <div className="card-footer-controls" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '6px' }}>
                     {/* Qty +/- */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <button

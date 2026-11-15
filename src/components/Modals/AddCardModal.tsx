@@ -138,6 +138,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
 
   return (
     <div
+      className="modal-backdrop"
       style={{
         position: 'fixed',
         inset: 0,
@@ -154,7 +155,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
       }}
     >
       <div
-        className="glass-panel"
+        className="modal-container glass-panel"
         style={{
           width: '750px',
           maxWidth: '95vw',
@@ -170,6 +171,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
       >
         {/* Header */}
         <div
+          className="modal-header"
           style={{
             padding: '16px 24px',
             borderBottom: '1px solid var(--border-subtle)',
@@ -266,6 +268,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
           {selectedCard && (
             <>
               <div
+              className="add-card-preview-grid"
               style={{
                 display: 'grid',
                 gridTemplateColumns: '180px 1fr',

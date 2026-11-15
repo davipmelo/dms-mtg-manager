@@ -220,6 +220,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   return (
     <div
+      className="modal-backdrop"
       style={{
         position: 'fixed',
         inset: 0,
@@ -236,7 +237,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       }}
     >
       <div
-        className="glass-panel"
+        className="modal-container glass-panel"
         style={{
           width: '820px',
           maxWidth: '95vw',
@@ -252,6 +253,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       >
         {/* Header - Dedicated to Import */}
         <div
+          className="modal-header"
           style={{
             padding: '18px 24px',
             borderBottom: '1px solid var(--border-subtle)',

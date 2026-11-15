@@ -99,6 +99,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
 
   return (
     <div
+      className="modal-backdrop"
       style={{
         position: 'fixed',
         inset: 0,
@@ -115,7 +116,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
       }}
     >
       <div
-        className="glass-panel"
+        className="modal-container glass-panel"
         style={{
           width: '760px',
           maxWidth: '95vw',
@@ -131,6 +132,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
       >
         {/* Header - Dedicated to Backup */}
         <div
+          className="modal-header"
           style={{
             padding: '18px 24px',
             borderBottom: '1px solid var(--border-subtle)',

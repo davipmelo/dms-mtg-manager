@@ -201,6 +201,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       >
         {/* Header */}
         <div
+          className="modal-header"
           style={{
             padding: '18px 22px',
             borderBottom: '1px solid var(--border-subtle, #292932)',

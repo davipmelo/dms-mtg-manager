@@ -493,7 +493,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
             gap: '14px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="proxy-studio-presets-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <button
               type="button"
               className="btn btn-ghost btn-sm"
@@ -561,7 +561,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
             >
               {/* 1. Bordas de Corte */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="proxy-studio-presets-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Scissors size={15} className="text-amber-400" /> Bordas de Corte das Cartas
                   </label>
@@ -659,7 +659,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
               {/* 2. Marcas de Enquadramento */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="proxy-studio-presets-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <CheckSquare size={15} className="text-amber-400" /> Marcas de Enquadramento (Crop Marks)
                   </label>

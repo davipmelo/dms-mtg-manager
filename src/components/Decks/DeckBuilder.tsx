@@ -832,6 +832,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         {isScrolled ? (
           /* Compact Docked Header (Single slim row without taking much space) */
           <div
+            className="deck-header-compact-row"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -924,7 +925,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             </div>
 
               {/* Right Group: Action buttons */}
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+              <div className="deck-header-actions-compact" style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
                 <button
                   className="btn btn-secondary btn-sm"
                   onClick={() => setIsEditModalOpen(true)}
@@ -1579,6 +1580,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
                   {/* Qty +/- & Controls */}
                   <div
+                    className="card-footer-controls"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
