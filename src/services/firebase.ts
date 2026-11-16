@@ -1,23 +1,6 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  sendPasswordResetEmail,
-  updateProfile,
-  onAuthStateChanged,
-  Auth,
-  User,
-} from 'firebase/auth';
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  onSnapshot,
-  Firestore,
-} from 'firebase/firestore';
+import type { FirebaseApp } from 'firebase/app';
+import type { Auth, User } from 'firebase/auth';
+import type { Firestore } from 'firebase/firestore';
 import { UserProfile, CloudUserData, CollectionItem, Deck, ProxyItem, Card, DeckTag } from '../types';
 import { compressDataUrlIfNeeded } from './imageUtils';
 
@@ -56,25 +39,47 @@ export function isFirebaseConfigured(): boolean {
   return getActiveFirebaseConfig() !== null;
 }
 
-let cachedApp: FirebaseApp | null = null;
-let cachedAuth: Auth | null = null;
-let cachedDb: Firestore | null = null;
+interface FirebaseSdk {
+  app: typeof import('firebase/app');
+  auth: typeof import('firebase/auth');
+  fs: typeof import('firebase/firestore');
+}
+interface FirebaseInstances {
+  app: FirebaseApp;
+  auth: Auth;
+  db: Firestore;
+  sdk: FirebaseSdk;
+}
 
-function getFirebaseInstances(): { app: FirebaseApp; auth: Auth; db: Firestore } | null {
+// O SDK do Firebase (~700 KB) só é baixado quando há configuração e alguém precisa dele.
+let instancesPromise: Promise<FirebaseInstances | null> | null = null;
+
+function getFirebaseInstances(): Promise<FirebaseInstances | null> {
   const config = getActiveFirebaseConfig();
-  if (!config) return null;
-
-  try {
-    if (!cachedApp) {
-      cachedApp = getApps().length > 0 ? getApp() : initializeApp(config);
-      cachedAuth = getAuth(cachedApp);
-      cachedDb = getFirestore(cachedApp);
-    }
-    return { app: cachedApp, auth: cachedAuth!, db: cachedDb! };
-  } catch (err) {
-    console.error('Falha ao inicializar o Firebase SDK:', err);
-    return null;
+  if (!config) return Promise.resolve(null);
+  if (!instancesPromise) {
+    instancesPromise = (async () => {
+      try {
+        const [app, auth, fs] = await Promise.all([
+          import('firebase/app'),
+          import('firebase/auth'),
+          import('firebase/firestore'),
+        ]);
+        const cachedApp = app.getApps().length > 0 ? app.getApp() : app.initializeApp(config);
+        return {
+          app: cachedApp,
+          auth: auth.getAuth(cachedApp),
+          db: fs.getFirestore(cachedApp),
+          sdk: { app, auth, fs },
+        };
+      } catch (err) {
+        console.error('Falha ao inicializar o Firebase SDK:', err);
+        instancesPromise = null;
+        return null;
+      }
+    })();
   }
+  return instancesPromise;
 }
 
 /* =================================================================================
@@ -144,19 +149,19 @@ export async function registerUser(
   if (!cleanEmail || !cleanEmail.includes('@')) throw new Error('Por favor, informe um e-mail válido.');
   if (!password || password.length < 6) throw new Error('A senha deve conter pelo menos 6 caracteres.');
 
-  const instances = getFirebaseInstances();
+  const instances = await getFirebaseInstances();
 
   if (instances) {
     // Real Firebase Auth
-    const userCredential = await createUserWithEmailAndPassword(instances.auth, cleanEmail, password);
+    const userCredential = await instances.sdk.auth.createUserWithEmailAndPassword(instances.auth, cleanEmail, password);
     const user = userCredential.user;
 
     // Set display name to username
-    await updateProfile(user, { displayName: cleanUsername });
+    await instances.sdk.auth.updateProfile(user, { displayName: cleanUsername });
 
     // Note: Email is NOT written to any public Firestore doc. Only username and registration timestamp.
     try {
-      await setDoc(doc(instances.db, 'users', user.uid), {
+      await instances.sdk.fs.setDoc(instances.sdk.fs.doc(instances.db, 'users', user.uid), {
         username: cleanUsername,
         createdAt: new Date().toISOString(),
       });
@@ -208,10 +213,10 @@ export async function loginUser(email: string, password: string): Promise<UserPr
   if (!cleanEmail) throw new Error('Por favor, informe seu e-mail.');
   if (!password) throw new Error('Por favor, digite sua senha.');
 
-  const instances = getFirebaseInstances();
+  const instances = await getFirebaseInstances();
 
   if (instances) {
-    const userCredential = await signInWithEmailAndPassword(instances.auth, cleanEmail, password);
+    const userCredential = await instances.sdk.auth.signInWithEmailAndPassword(instances.auth, cleanEmail, password);
     const user = userCredential.user;
     return {
       uid: user.uid,
@@ -241,9 +246,9 @@ export async function loginUser(email: string, password: string): Promise<UserPr
 }
 
 export async function logoutUser(): Promise<void> {
-  const instances = getFirebaseInstances();
+  const instances = await getFirebaseInstances();
   if (instances) {
-    await signOut(instances.auth);
+    await instances.sdk.auth.signOut(instances.auth);
     return;
   }
 
@@ -262,10 +267,10 @@ export async function sendForgotPasswordEmail(
     throw new Error('Por favor, informe um endereço de e-mail válido.');
   }
 
-  const instances = getFirebaseInstances();
+  const instances = await getFirebaseInstances();
 
   if (instances) {
-    await sendPasswordResetEmail(instances.auth, cleanEmail);
+    await instances.sdk.auth.sendPasswordResetEmail(instances.auth, cleanEmail);
     return {
       success: true,
       message: `Enviamos um link de recuperação para seu e-mail. Verifique sua caixa de entrada (e pasta de spam) para cadastrar sua nova senha com segurança.`,
@@ -312,34 +317,40 @@ function notifyAuthListeners(user: UserProfile | null) {
 export function subscribeToAuth(callback: AuthCallback): () => void {
   authListeners.add(callback);
 
-  const instances = getFirebaseInstances();
+  if (!isFirebaseConfigured()) {
+    // Fallback: Notify with current simulated session
+    callback(getSimulatedSession());
+    return () => {
+      authListeners.delete(callback);
+    };
+  }
 
-  if (instances) {
-    const unsubscribe = onAuthStateChanged(instances.auth, (firebaseUser: User | null) => {
+  let cancelled = false;
+  let unsubscribe: (() => void) | null = null;
+
+  getFirebaseInstances().then((instances) => {
+    if (cancelled) return;
+    if (!instances) {
+      callback(getSimulatedSession());
+      return;
+    }
+    unsubscribe = instances.sdk.auth.onAuthStateChanged(instances.auth, (firebaseUser: User | null) => {
       if (firebaseUser) {
-        const profile: UserProfile = {
+        callback({
           uid: firebaseUser.uid,
           username: firebaseUser.displayName || 'Jogador',
           email: firebaseUser.email || undefined,
-        };
-        callback(profile);
+        });
       } else {
         callback(null);
       }
     });
-
-    return () => {
-      authListeners.delete(callback);
-      unsubscribe();
-    };
-  }
-
-  // Fallback: Notify with current simulated session
-  const current = getSimulatedSession();
-  callback(current);
+  });
 
   return () => {
+    cancelled = true;
     authListeners.delete(callback);
+    unsubscribe?.();
   };
 }
 
@@ -601,15 +612,15 @@ export async function saveUserCloudData(
     syncRevision?: number;
   }
 ): Promise<CloudUserData> {
-  const instances = getFirebaseInstances();
+  const instances = await getFirebaseInstances();
 
   // Compress oversized user-uploaded base64 images and strip bloated cache properties
   // so payloads stay safely well below Firestore's 1MB document limit
   const sanitizedPayload = await buildCloudPayload(data);
 
   if (instances) {
-    const userDocRef = doc(instances.db, 'userData', uid);
-    await setDoc(userDocRef, sanitizedPayload);
+    const userDocRef = instances.sdk.fs.doc(instances.db, 'userData', uid);
+    await instances.sdk.fs.setDoc(userDocRef, sanitizedPayload);
     return sanitizedPayload;
   }
 
@@ -632,11 +643,11 @@ export async function saveUserCloudData(
 }
 
 export async function loadUserCloudData(uid: string): Promise<CloudUserData | null> {
-  const instances = getFirebaseInstances();
+  const instances = await getFirebaseInstances();
 
   if (instances) {
-    const userDocRef = doc(instances.db, 'userData', uid);
-    const snap = await getDoc(userDocRef);
+    const userDocRef = instances.sdk.fs.doc(instances.db, 'userData', uid);
+    const snap = await instances.sdk.fs.getDoc(userDocRef);
     if (!snap.exists()) return null;
     return snap.data() as CloudUserData;
   }
@@ -662,23 +673,29 @@ export function subscribeToUserCloudData(
   onUpdate: (data: CloudUserData) => void,
   onError?: (err: any) => void
 ): () => void {
-  const instances = getFirebaseInstances();
-
-  if (instances) {
-    const userDocRef = doc(instances.db, 'userData', uid);
-    const unsubscribe = onSnapshot(
-      userDocRef,
-      (snap) => {
-        if (snap.exists()) {
-          onUpdate(snap.data() as CloudUserData);
+  if (isFirebaseConfigured()) {
+    let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
+    getFirebaseInstances().then((instances) => {
+      if (cancelled || !instances) return;
+      const userDocRef = instances.sdk.fs.doc(instances.db, 'userData', uid);
+      unsubscribe = instances.sdk.fs.onSnapshot(
+        userDocRef,
+        (snap) => {
+          if (snap.exists()) {
+            onUpdate(snap.data() as CloudUserData);
+          }
+        },
+        (err) => {
+          console.warn('Erro na escuta em tempo real da nuvem:', err);
+          onError?.(err);
         }
-      },
-      (err) => {
-        console.warn('Erro na escuta em tempo real da nuvem:', err);
-        onError?.(err);
-      }
-    );
-    return () => unsubscribe();
+      );
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }
 
   // Fallback: Listen to storage events and custom events for simulated sync

@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { TokenCard, UtilityCategory, Card, CardPrint } from '../../types';
 import { searchUtilityCards } from '../../services/scryfall';
 import { getUiSettings, saveUiSettings } from '../../services/storage';
 import { CardImage } from '../Common/CardImage';
-import { ArtSelectorModal } from '../Modals/ArtSelectorModal';
 import { CardHoverPreview, CardHoverPreviewData } from '../Common/CardHoverPreview';
 import {
   Search,
@@ -28,6 +27,8 @@ import {
   X,
   Check as CheckIcon,
 } from 'lucide-react';
+
+const ArtSelectorModal = lazy(() => import('../Modals/ArtSelectorModal').then((m) => ({ default: m.ArtSelectorModal })));
 
 interface UtilitiesTabProps {
   onAddUtilityToProxies: (item: TokenCard, quantity: number) => void;
@@ -994,12 +995,16 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
       <CardHoverPreview preview={hoveredPreview} mousePos={mousePos} />
 
       {/* Alternative Art Selector Modal for Utilities & Tokens */}
-      <ArtSelectorModal
-        isOpen={artTargetIndex !== null}
-        card={artModalCard}
-        onClose={() => setArtTargetIndex(null)}
-        onSelectPrint={handleSelectUtilityPrint}
-      />
+      {artTargetIndex !== null && (
+        <Suspense fallback={null}>
+          <ArtSelectorModal
+            isOpen={artTargetIndex !== null}
+            card={artModalCard}
+            onClose={() => setArtTargetIndex(null)}
+            onSelectPrint={handleSelectUtilityPrint}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

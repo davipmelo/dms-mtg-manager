@@ -1,5 +1,4 @@
 import { Deck, Card, DeckCard } from '../types';
-import { jsPDF } from 'jspdf';
 import { isMpcCardImage } from './mpcFillService';
 
 export interface DeckImageProgress {
@@ -734,6 +733,7 @@ export async function generateDeckPoster(
   if (options.format === 'pdf') {
     // Generate PDF using jsPDF
     const isLandscape = CANVAS_WIDTH > CANVAS_HEIGHT;
+    const { jsPDF } = await import('jspdf');
     const pdf = new jsPDF({
       orientation: isLandscape ? 'landscape' : 'portrait',
       unit: 'mm',

@@ -1,4 +1,3 @@
-import { jsPDF } from 'jspdf';
 import { Card, TokenCard, ProxyItem } from '../types';
 import { isMpcCardImage } from './mpcFillService';
 
@@ -60,6 +59,7 @@ export async function generateProxiesPdf(
     throw new Error('A lista de proxies está vazia.');
   }
 
+  const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',

@@ -2719,3 +2719,11 @@ tr:hover .row-art-btn,
     opacity: 0.85;
   }
 }
+
+/* Placeholder de carregamento de abas/blocos carregados sob demanda */
+.tab-loading {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-muted, #8b8b8b);
+  font-size: 0.875rem;
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Deck, DeckFormat, Card, CardPrint, isDoubleFacedCard } from '../../types';
 import {
   searchAutocomplete,
@@ -7,9 +7,10 @@ import {
   getCardBySetAndName,
 } from '../../services/scryfall';
 import { translatePtCardName } from '../../services/importer';
-import { ArtSelectorModal } from './ArtSelectorModal';
 import { useModalOverlay } from '../../hooks/useModalOverlay';
 import { Shield, Sparkles, X, Plus, Search, Loader2, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+
+const ArtSelectorModal = lazy(() => import('./ArtSelectorModal').then((m) => ({ default: m.ArtSelectorModal })));
 
 function parseCardQuery(raw: string) {
   let line = raw.trim().replace(/^\d+x?\s+/, '');
@@ -778,12 +779,16 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
       </div>
 
       {/* Art Selector Modal for Commander and Partner */}
-      <ArtSelectorModal
-        isOpen={artSelectorTarget !== null}
-        card={artSelectorTarget === 'commander' ? selectedCommander : selectedPartner}
-        onClose={() => setArtSelectorTarget(null)}
-        onSelectPrint={handleSelectPrintForCommanderOrPartner}
-      />
+      {artSelectorTarget !== null && (
+        <Suspense fallback={null}>
+          <ArtSelectorModal
+            isOpen={artSelectorTarget !== null}
+            card={artSelectorTarget === 'commander' ? selectedCommander : selectedPartner}
+            onClose={() => setArtSelectorTarget(null)}
+            onSelectPrint={handleSelectPrintForCommanderOrPartner}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

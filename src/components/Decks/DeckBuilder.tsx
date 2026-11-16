@@ -1,13 +1,10 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Deck, DeckCard, ViewMode, Card, CollectionItem, CardCategory, isDoubleFacedCard, isSameCardPrint, isCardNameMatch, DeckTag } from '../../types';
 import { resolveCardFaces } from '../../services/scryfall';
 import { normalizeDeck, getUiSettings, saveUiSettings, UiSettings } from '../../services/storage';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
-import { InteractiveCharts } from '../Analytics/InteractiveCharts';
 import { CardHoverPreview, CardHoverPreviewData } from '../Common/CardHoverPreview';
-import { EditDeckModal } from '../Modals/EditDeckModal';
-import { ExportDeckImageModal } from '../Modals/ExportDeckImageModal';
 import {
   ArrowLeft,
   Grid,
@@ -33,6 +30,10 @@ import {
   CheckSquare,
   RotateCw,
 } from 'lucide-react';
+
+const InteractiveCharts = lazy(() => import('../Analytics/InteractiveCharts').then((m) => ({ default: m.InteractiveCharts })));
+const EditDeckModal = lazy(() => import('../Modals/EditDeckModal').then((m) => ({ default: m.EditDeckModal })));
+const ExportDeckImageModal = lazy(() => import('../Modals/ExportDeckImageModal').then((m) => ({ default: m.ExportDeckImageModal })));
 
 interface DeckBuilderProps {
   deck: Deck;
@@ -1152,10 +1153,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
         </div>
 
         {showCharts && (
-          <InteractiveCharts
-            cards={deck.cards.map((c) => ({ card: c.card, quantity: c.quantity }))}
-            showDeckMetrics={true}
-          />
+          <Suspense fallback={<div className="tab-loading">Carregando gráficos…</div>}>
+            <InteractiveCharts
+              cards={deck.cards.map((c) => ({ card: c.card, quantity: c.quantity }))}
+              showDeckMetrics={true}
+            />
+          </Suspense>
         )}
       </div>
 
@@ -2363,6 +2366,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       <CardHoverPreview preview={hoveredPreview} mousePos={mousePos} />
       {/* Edit Deck Modal (Allows renaming, format changes and card list editing) */}
       {isEditModalOpen && (
+        <Suspense fallback={null}>
         <EditDeckModal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
@@ -2374,15 +2378,18 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             onUpdateDeck(updated);
           }}
         />
+        </Suspense>
       )}
 
       {/* Export Deck Poster / Custom Image Modal */}
       {isExportImageModalOpen && (
+        <Suspense fallback={null}>
         <ExportDeckImageModal
           isOpen={isExportImageModalOpen}
           onClose={() => setIsExportImageModalOpen(false)}
           deck={deck}
         />
+        </Suspense>
       )}
     </div>
   );

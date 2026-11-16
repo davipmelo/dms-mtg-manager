@@ -31,10 +31,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          charts: ['chart.js', 'react-chartjs-2'],
           icons: ['lucide-react'],
-          pdf: ['jspdf'],
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
         },
       },
     },

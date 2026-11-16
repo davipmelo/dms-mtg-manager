@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import {
   CollectionItem,
   Deck,
@@ -45,20 +45,8 @@ import { getCardByName, resolveCardFaces } from './services/scryfall';
 
 import { CollectionView } from './components/Collection/CollectionView';
 import { DeckManager } from './components/Decks/DeckManager';
-import { DeckBuilder } from './components/Decks/DeckBuilder';
-import { UtilitiesTab } from './components/Utilities/UtilitiesTab';
-import { ProxyStudio } from './components/Proxies/ProxyStudio';
 
-import { AddCardModal } from './components/Modals/AddCardModal';
-import { DeckCreationModal } from './components/Modals/DeckCreationModal';
-import { ArtSelectorModal } from './components/Modals/ArtSelectorModal';
-import { BackupModal } from './components/Modals/BackupModal';
-import { ExportModal } from './components/Modals/ExportModal';
-import { ImportModal } from './components/Modals/ImportModal';
-import { EditDeckModal } from './components/Modals/EditDeckModal';
-import { ManageTagsModal } from './components/Modals/ManageTagsModal';
 import { MtgLogo } from './components/Common/MtgLogo';
-import { AuthModal } from './components/Auth/AuthModal';
 import { UserMenu } from './components/Auth/UserMenu';
 import { useModalOverlay } from './hooks/useModalOverlay';
 
@@ -71,6 +59,19 @@ import {
   Download,
   Database,
 } from 'lucide-react';
+
+const UtilitiesTab = lazy(() => import('./components/Utilities/UtilitiesTab').then((m) => ({ default: m.UtilitiesTab })));
+const ProxyStudio = lazy(() => import('./components/Proxies/ProxyStudio').then((m) => ({ default: m.ProxyStudio })));
+const DeckBuilder = lazy(() => import('./components/Decks/DeckBuilder').then((m) => ({ default: m.DeckBuilder })));
+const AddCardModal = lazy(() => import('./components/Modals/AddCardModal').then((m) => ({ default: m.AddCardModal })));
+const DeckCreationModal = lazy(() => import('./components/Modals/DeckCreationModal').then((m) => ({ default: m.DeckCreationModal })));
+const ArtSelectorModal = lazy(() => import('./components/Modals/ArtSelectorModal').then((m) => ({ default: m.ArtSelectorModal })));
+const BackupModal = lazy(() => import('./components/Modals/BackupModal').then((m) => ({ default: m.BackupModal })));
+const ExportModal = lazy(() => import('./components/Modals/ExportModal').then((m) => ({ default: m.ExportModal })));
+const ImportModal = lazy(() => import('./components/Modals/ImportModal').then((m) => ({ default: m.ImportModal })));
+const EditDeckModal = lazy(() => import('./components/Modals/EditDeckModal').then((m) => ({ default: m.EditDeckModal })));
+const ManageTagsModal = lazy(() => import('./components/Modals/ManageTagsModal').then((m) => ({ default: m.ManageTagsModal })));
+const AuthModal = lazy(() => import('./components/Auth/AuthModal').then((m) => ({ default: m.AuthModal })));
 
 export function App() {
   const [activeTab, setActiveTab] = useState<
@@ -1907,6 +1908,7 @@ export function App() {
 
       {/* Main App Body */}
       <main className="main-content-container">
+        <Suspense fallback={<div className="tab-loading">Carregando…</div>}>
         <div key={`${activeTab}-${syncedActiveDeck ? syncedActiveDeck.id : 'list'}`} className="page-transition">
         {activeTab === 'collection' && (
           <CollectionView
@@ -1982,7 +1984,9 @@ export function App() {
           ))}
 
         {activeTab === 'utilities' && (
-          <UtilitiesTab onAddUtilityToProxies={handleAddCardToProxies} />
+          <Suspense fallback={<div className="tab-loading">Carregando…</div>}>
+            <UtilitiesTab onAddUtilityToProxies={handleAddCardToProxies} />
+          </Suspense>
         )}
 
         {activeTab === 'proxies' && (
@@ -2038,6 +2042,7 @@ export function App() {
           />
         )}
         </div>
+        </Suspense>
       </main>
 
       <footer className="app-footer print-hide">
@@ -2045,13 +2050,14 @@ export function App() {
       </footer>
 
       {/* Modals */}
-      <AddCardModal
+      <Suspense fallback={null}>
+      {isAddCardModalOpen && <AddCardModal
         isOpen={isAddCardModalOpen}
         onClose={() => setIsAddCardModalOpen(false)}
         onAddCard={handleAddCard}
         decks={decks}
         defaultDeckId={activeDeckId || undefined}
-      />
+      />}
 
       {isCreateDeckModalOpen && (
         <DeckCreationModal
@@ -2061,7 +2067,7 @@ export function App() {
         />
       )}
 
-      <ArtSelectorModal
+      {!!artSelectorCard && <ArtSelectorModal
         isOpen={!!artSelectorCard}
         card={artSelectorCard}
         initialFace={artSelectorContext.face || 'front'}
@@ -2075,9 +2081,9 @@ export function App() {
         cardIndexLabel={artSelectorLabel}
         onNavigatePrev={onArtNavigatePrev}
         onNavigateNext={onArtNavigateNext}
-      />
+      />}
 
-      <BackupModal
+      {isBackupModalOpen && <BackupModal
         isOpen={isBackupModalOpen}
         onClose={() => setIsBackupModalOpen(false)}
         collection={collectionWithUsage}
@@ -2085,25 +2091,25 @@ export function App() {
         proxies={proxies}
         deckTags={deckTags}
         onRestoreSystemBackup={handleRestoreSystemBackup}
-      />
+      />}
 
-      <ExportModal
+      {isExportModalOpen && <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         collection={collectionWithUsage}
         decks={decks}
         proxies={proxies}
         defaultDeckId={exportDefaultDeckId}
-      />
+      />}
 
-      <ImportModal
+      {isImportModalOpen && <ImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         decks={decks}
         defaultDestination={importDefaultDestination}
         defaultDeckId={importDefaultDestination.startsWith('deck-') ? importDefaultDestination : undefined}
         onImportComplete={handleImportComplete}
-      />
+      />}
 
       {editingDeck && (
         <EditDeckModal
@@ -2132,14 +2138,16 @@ export function App() {
       )}
 
       {/* Authentication Modal */}
-      <AuthModal
+      {isAuthModalOpen && <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         initialTab={authModalInitialTab}
         onAuthSuccess={(user) => {
           setCurrentUser(user);
         }}
-      />
+      />}
+
+      </Suspense>
 
       {/* Proxy Deck Sending Progress Modal */}
       {proxyDeckProgress && (

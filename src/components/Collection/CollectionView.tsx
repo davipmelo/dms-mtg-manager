@@ -1,10 +1,9 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { CollectionItem, ViewMode, Card, isDoubleFacedCard } from '../../types';
 import { resolveCardFaces } from '../../services/scryfall';
 import { getUiSettings, saveUiSettings, UiSettings } from '../../services/storage';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
-import { InteractiveCharts } from '../Analytics/InteractiveCharts';
 import { CardHoverPreview, CardHoverPreviewData } from '../Common/CardHoverPreview';
 import {
   Grid,
@@ -26,6 +25,8 @@ import {
   CheckSquare,
   RotateCw,
 } from 'lucide-react';
+
+const InteractiveCharts = lazy(() => import('../Analytics/InteractiveCharts').then((m) => ({ default: m.InteractiveCharts })));
 
 interface CollectionViewProps {
   collection: CollectionItem[];
@@ -414,10 +415,12 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
         </div>
 
         {showCharts && (
-          <InteractiveCharts
-            cards={collection.map((i) => ({ card: i.card, quantity: i.quantity }))}
-            showDeckMetrics={false}
-          />
+          <Suspense fallback={<div className="tab-loading">Carregando gráficos…</div>}>
+            <InteractiveCharts
+              cards={collection.map((i) => ({ card: i.card, quantity: i.quantity }))}
+              showDeckMetrics={false}
+            />
+          </Suspense>
         )}
       </div>
 
