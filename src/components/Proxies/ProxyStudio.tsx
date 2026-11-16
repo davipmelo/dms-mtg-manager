@@ -87,7 +87,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
   const [cropMpcBleed, setCropMpcBleed] = useState<boolean>(true);
 
   // UI state
-  const [isAdvancedControlsOpen, setIsAdvancedControlsOpen] = useState<boolean>(true);
+  const [isAdvancedControlsOpen, setIsAdvancedControlsOpen] = useState<boolean>(false);
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
   const [pdfProgress, setPdfProgress] = useState<{ current: number; total: number; percentage: number } | null>(null);
@@ -270,63 +270,56 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
     }
   };
 
-  // 1-Click Presets
-  const applyPreset = (preset: 'guillotine' | 'hobbyknife' | 'minimal' | 'economical') => {
-    switch (preset) {
-      case 'guillotine':
-        setShowCutLines(false);
-        setCutLinesColor('#000000');
-        setCutLinesThickness(0.25);
-        setCutLinesStyle('solid');
-        setShowCropMarks(true);
-        setCropMarksColor('#52525b');
-        setCropMarksThickness(0.2);
-        setCropMarksLength(12);
-        setShowMarginTicks(true);
-        setShowCornerMarks(true);
-        setCardBleedBg('black');
-        setShowSheetMetadata(true);
-        break;
+  // 1-Click Presets (cada preset define um conjunto de valores; o ativo é derivado do estado atual)
+  type PresetId = 'guillotine' | 'hobbyknife' | 'minimal' | 'economical';
+  const PRESETS: { id: PresetId; label: string; title: string; values: Record<string, string | number | boolean> }[] = [
+    {
+      id: 'guillotine',
+      label: 'Guilhotina',
+      title: 'Sem bordas nas cartas + crop marks 0.2mm cinza escuro + réguas de margem 12mm e cruzes',
+      values: { showCutLines: false, cutLinesColor: '#000000', cutLinesThickness: 0.25, cutLinesStyle: 'solid', showCropMarks: true, cropMarksColor: '#52525b', cropMarksThickness: 0.2, cropMarksLength: 12, showMarginTicks: true, showCornerMarks: true, cardBleedBg: 'black', showSheetMetadata: true },
+    },
+    {
+      id: 'hobbyknife',
+      label: 'Estilete Manual',
+      title: 'Linhas tracejadas cinzas + cruzes nas junções',
+      values: { showCutLines: true, cutLinesColor: '#52525b', cutLinesThickness: 0.2, cutLinesStyle: 'dashed', showCropMarks: true, cropMarksColor: '#000000', cropMarksThickness: 0.35, cropMarksLength: 8, showMarginTicks: true, showCornerMarks: true, cardBleedBg: 'black' },
+    },
+    {
+      id: 'minimal',
+      label: 'Minimalista',
+      title: 'Sem bordas, apenas cruzes finas nas junções e marcas de corte',
+      values: { showCutLines: false, showCropMarks: true, cropMarksColor: '#000000', cropMarksThickness: 0.3, cropMarksLength: 8, showMarginTicks: true, showCornerMarks: false, cardBleedBg: 'black' },
+    },
+    {
+      id: 'economical',
+      label: 'Econômico',
+      title: 'Linhas cinza claro + cantos brancos para economia de tinta',
+      values: { showCutLines: true, cutLinesColor: '#d4d4d8', cutLinesThickness: 0.2, cutLinesStyle: 'solid', showCropMarks: true, cropMarksColor: '#a1a1aa', cropMarksThickness: 0.25, cropMarksLength: 6, showMarginTicks: true, showCornerMarks: true, cardBleedBg: 'white' },
+    },
+  ];
 
-      case 'hobbyknife':
-        setShowCutLines(true);
-        setCutLinesColor('#52525b');
-        setCutLinesThickness(0.2);
-        setCutLinesStyle('dashed');
-        setShowCropMarks(true);
-        setCropMarksColor('#000000');
-        setCropMarksThickness(0.35);
-        setCropMarksLength(8);
-        setShowMarginTicks(true);
-        setShowCornerMarks(true);
-        setCardBleedBg('black');
-        break;
+  const currentControls: Record<string, string | number | boolean> = {
+    showCutLines, cutLinesColor, cutLinesThickness, cutLinesStyle, showCropMarks, cropMarksColor,
+    cropMarksThickness, cropMarksLength, showMarginTicks, showCornerMarks, cardBleedBg, showSheetMetadata,
+  };
+  const activePreset: PresetId | null =
+    PRESETS.find((pr) => Object.entries(pr.values).every(([k, v]) => currentControls[k] === v))?.id ?? null;
 
-      case 'minimal':
-        setShowCutLines(false);
-        setShowCropMarks(true);
-        setCropMarksColor('#000000');
-        setCropMarksThickness(0.3);
-        setCropMarksLength(8);
-        setShowMarginTicks(true);
-        setShowCornerMarks(false);
-        setCardBleedBg('black');
-        break;
-
-      case 'economical':
-        setShowCutLines(true);
-        setCutLinesColor('#d4d4d8');
-        setCutLinesThickness(0.2);
-        setCutLinesStyle('solid');
-        setShowCropMarks(true);
-        setCropMarksColor('#a1a1aa');
-        setCropMarksThickness(0.25);
-        setCropMarksLength(6);
-        setShowMarginTicks(true);
-        setShowCornerMarks(true);
-        setCardBleedBg('white');
-        break;
-    }
+  const applyPreset = (preset: PresetId) => {
+    const v = PRESETS.find((pr) => pr.id === preset)!.values;
+    if ('showCutLines' in v) setShowCutLines(v.showCutLines as boolean);
+    if ('cutLinesColor' in v) setCutLinesColor(v.cutLinesColor as string);
+    if ('cutLinesThickness' in v) setCutLinesThickness(v.cutLinesThickness as number);
+    if ('cutLinesStyle' in v) setCutLinesStyle(v.cutLinesStyle as 'solid' | 'dashed' | 'dotted');
+    if ('showCropMarks' in v) setShowCropMarks(v.showCropMarks as boolean);
+    if ('cropMarksColor' in v) setCropMarksColor(v.cropMarksColor as string);
+    if ('cropMarksThickness' in v) setCropMarksThickness(v.cropMarksThickness as number);
+    if ('cropMarksLength' in v) setCropMarksLength(v.cropMarksLength as number);
+    if ('showMarginTicks' in v) setShowMarginTicks(v.showMarginTicks as boolean);
+    if ('showCornerMarks' in v) setShowCornerMarks(v.showCornerMarks as boolean);
+    if ('cardBleedBg' in v) setCardBleedBg(v.cardBleedBg as 'black' | 'white' | 'none');
+    if ('showSheetMetadata' in v) setShowSheetMetadata(v.showSheetMetadata as boolean);
   };
 
   return (
@@ -484,57 +477,35 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
             gap: '14px',
           }}
         >
-          <div className="proxy-studio-presets-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="proxy-controls-header">
             <button
               type="button"
-              className="btn btn-ghost btn-sm"
+              className={`btn btn-secondary btn-sm proxy-controls-toggle ${isAdvancedControlsOpen ? 'is-open' : ''}`}
               onClick={() => setIsAdvancedControlsOpen(!isAdvancedControlsOpen)}
-              style={{ padding: '4px 8px', color: '#d4d4d8', display: 'flex', alignItems: 'center', gap: '6px' }}
+              aria-expanded={isAdvancedControlsOpen}
             >
               <Sliders size={15} className="text-amber-400" />
-              <span style={{ fontWeight: 600 }}>Controles Avançados de Corte e Enquadramento</span>
+              <span>Controles avançados de corte</span>
               {isAdvancedControlsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
 
-            {/* Quick 1-Click Presets */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.75rem', color: '#a1a1aa' }}>Presets:</span>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => applyPreset('guillotine')}
-                style={{ fontSize: '0.72rem', padding: '3px 8px' }}
-                title="Sem bordas nas cartas + crop marks 0.2mm cinza escuro + réguas de margem 12mm e cruzes"
-              >
-                Guilhotina
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => applyPreset('hobbyknife')}
-                style={{ fontSize: '0.72rem', padding: '3px 8px' }}
-                title="Linhas tracejadas cinzas + cruzes nas junções"
-              >
-                Estilete Manual
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => applyPreset('minimal')}
-                style={{ fontSize: '0.72rem', padding: '3px 8px' }}
-                title="Sem bordas, apenas cruzes finas nas junções e marcas de corte"
-              >
-                Minimalista
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => applyPreset('economical')}
-                style={{ fontSize: '0.72rem', padding: '3px 8px' }}
-                title="Linhas cinza claro + cantos brancos para economia de tinta"
-              >
-                Econômico
-              </button>
+            <div className="proxy-presets">
+              <span className="proxy-presets-label">Preset</span>
+              <div className="proxy-presets-group" role="radiogroup" aria-label="Preset de corte">
+                {PRESETS.map((pr) => (
+                  <button
+                    key={pr.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={activePreset === pr.id}
+                    className={`proxy-preset-btn ${activePreset === pr.id ? 'is-active' : ''}`}
+                    onClick={() => applyPreset(pr.id)}
+                    title={pr.title}
+                  >
+                    {pr.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
