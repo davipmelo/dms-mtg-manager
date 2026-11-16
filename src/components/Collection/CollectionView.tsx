@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { CollectionItem, ViewMode, Card, isDoubleFacedCard } from '../../types';
 import { resolveCardFaces } from '../../services/scryfall';
 import { getUiSettings, saveUiSettings, UiSettings } from '../../services/storage';
-import { Thumb, scryfallSmall } from '../Common/Thumb';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
 import { InteractiveCharts } from '../Analytics/InteractiveCharts';
@@ -905,7 +904,6 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
               <tbody>
                 {sortedItems.slice(0, visibleRows).map((item) => {
                   const isSelected = selectedItemIds.has(item.id);
-                  const thumbSrc = item.card.imageUrlSmall || scryfallSmall(item.card.imageUrl);
                   return (
                     <tr key={item.id} className={isSelected ? 'is-selected' : ''}>
                       <td className="col-check">
@@ -913,7 +911,6 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                       </td>
                       <td className="col-name">
                         <div className="coll-name-cell">
-                          <Thumb className="coll-thumb" src={thumbSrc} fallback={item.card.imageUrlArtCrop} position="50% 28%" />
                           <span className="coll-name-text">
                             <span
                               className="coll-name"

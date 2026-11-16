@@ -2163,3 +2163,98 @@ th {
 .deck-row-thumb.thumb {
   flex-shrink: 0;
 }
+
+/* Coleção: lista compacta (sem miniatura) */
+.coll-table {
+  font-size: 0.82rem;
+}
+.coll-table th {
+  padding: 8px 12px;
+}
+.coll-table td {
+  padding: 4px 12px;
+  height: 34px;
+}
+.coll-table .col-check {
+  width: 34px;
+  padding-left: 10px;
+  padding-right: 2px;
+}
+.coll-table .col-name {
+  min-width: 220px;
+}
+.coll-name-cell {
+  gap: 10px;
+}
+/* tipo na mesma linha do nome, em tom discreto */
+.coll-name-text {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+.coll-name {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+.coll-type {
+  font-size: 0.72rem;
+  max-width: 260px;
+  min-width: 0;
+}
+.coll-stepper {
+  padding: 1px;
+  border-radius: 8px;
+}
+.coll-stepper button {
+  width: 22px;
+  height: 22px;
+}
+.coll-stepper span {
+  min-width: 22px;
+  font-size: 0.82rem;
+}
+.coll-table .badge {
+  padding: 1px 8px;
+  font-size: 0.68rem;
+}
+.coll-table .mana-pip {
+  width: 15px;
+  height: 15px;
+  font-size: 9px;
+}
+.coll-actions .btn-icon {
+  min-height: 28px;
+  min-width: 28px;
+  padding: 0 4px;
+}
+@media (max-width: 900px) {
+  .coll-name-text {
+    flex-direction: column;
+    gap: 0;
+    align-items: flex-start;
+  }
+}
+/* Ações sempre visíveis, mesmo quando a tabela rola na horizontal */
+.coll-table .col-actions {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--bg-card);
+  box-shadow: -8px 0 10px -8px rgba(0, 0, 0, 0.6);
+}
+.coll-table th.col-actions {
+  background: #1b1b1d;
+  z-index: 2;
+}
+.coll-table tbody tr:hover .col-actions {
+  background: #19181a;
+}
+.coll-table tbody tr.is-selected .col-actions {
+  background: #1f1b10;
+}
+@media (max-width: 1100px) {
+  .coll-table .col-set {
+    display: none;
+  }
+}
