@@ -303,7 +303,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 11, 0.8)',
+        backgroundColor: 'rgba(6, 6, 7, 0.8)',
         backdropFilter: 'blur(8px)',
         zIndex: 9999,
         display: 'flex',
@@ -323,7 +323,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#0c0f17',
+          backgroundColor: '#111113',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
           borderRadius: '16px',
@@ -339,16 +339,16 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(18, 23, 34, 0.8)',
+            background: 'rgba(20, 20, 23, 0.8)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Shield className="text-indigo-400" size={20} />
             <div>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f8fafc' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f4f4f5' }}>
                 Criar Novo Deck
               </h2>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+              <p style={{ fontSize: '0.8rem', color: '#a1a1aa' }}>
                 O formulário adapta as regras dinamicamente de acordo com o formato escolhido
               </p>
             </div>
@@ -363,7 +363,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
           <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
             {/* Deck Name */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, color: '#cbd5e1', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, color: '#d4d4d8', marginBottom: '6px' }}>
                 Nome do Deck *
               </label>
               <input
@@ -378,7 +378,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
 
             {/* Format Selector */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, color: '#cbd5e1', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, color: '#d4d4d8', marginBottom: '6px' }}>
                 Formato do Jogo
               </label>
               <select
@@ -403,13 +403,13 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
               style={{
                 padding: '10px 14px',
                 borderRadius: '8px',
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
+                background: 'rgba(255, 187, 0, 0.1)',
+                border: '1px solid rgba(255, 187, 0, 0.25)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
                 fontSize: '0.8rem',
-                color: '#a5b4fc',
+                color: '#ffcc4d',
               }}
             >
               <Sparkles size={16} />
@@ -447,7 +447,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '14px',
-                  background: 'rgba(18, 23, 34, 0.6)',
+                  background: 'rgba(20, 20, 23, 0.6)',
                   padding: '16px',
                   borderRadius: '10px',
                   border: '1px solid var(--border-subtle)',
@@ -456,16 +456,16 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                 {/* Primary Commander Field */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f5' }}>
                       Comandante Principal
                     </label>
-                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#a1a1aa' }}>
                       Aceita nome, ou com edição/número: <em>Nome (SET) NUM</em>
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', position: 'relative' }}>
                     <div style={{ position: 'relative', flex: 1 }}>
-                      <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: '#64748b' }} />
+                      <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: '#71717a' }} />
                       <input
                         type="text"
                         className="input-text"
@@ -493,7 +493,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                             left: 0,
                             right: 0,
                             marginTop: '4px',
-                            background: '#121722',
+                            background: '#151517',
                             border: '1px solid var(--border-medium)',
                             borderRadius: '8px',
                             zIndex: 60,
@@ -511,7 +511,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                                 cursor: 'pointer',
                                 borderBottom: '1px solid rgba(255,255,255,0.05)',
                                 fontSize: '0.85rem',
-                                color: '#f8fafc',
+                                color: '#f4f4f5',
                               }}
                             >
                               {item}
@@ -537,8 +537,8 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                         marginTop: '8px',
                         padding: '8px 12px',
                         borderRadius: '6px',
-                        background: 'rgba(245, 158, 11, 0.1)',
-                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                        background: 'rgba(255, 187, 0, 0.1)',
+                        border: '1px solid rgba(255, 187, 0, 0.3)',
                         fontSize: '0.78rem',
                         color: '#fcd34d',
                         display: 'flex',
@@ -562,7 +562,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                         background: 'rgba(0,0,0,0.3)',
                         padding: '10px 14px',
                         borderRadius: '8px',
-                        border: '1px solid rgba(99, 102, 241, 0.25)',
+                        border: '1px solid rgba(255, 187, 0, 0.25)',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -572,13 +572,13 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                           style={{ width: '42px', height: '58px', objectFit: 'cover', borderRadius: '4px' }}
                         />
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f8fafc' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f4f4f5' }}>
                             {selectedCommander.name}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                          <div style={{ fontSize: '0.75rem', color: '#a1a1aa' }}>
                             {selectedCommander.typeLine}
                           </div>
-                          <div style={{ fontSize: '0.72rem', color: '#818cf8', marginTop: '2px' }}>
+                          <div style={{ fontSize: '0.72rem', color: '#ffbb00', marginTop: '2px' }}>
                             Edição atual: <strong>{selectedCommander.setName} ({selectedCommander.setCode}) #{selectedCommander.collectorNumber}</strong>
                           </div>
                         </div>
@@ -599,16 +599,16 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                 {/* Partner / Background Field */}
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 500, color: '#94a3b8' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 500, color: '#a1a1aa' }}>
                       Parceiro / Segundo Comandante / Background (Opcional)
                     </label>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#71717a' }}>
                       Aceita nome, ou com edição/número: <em>Nome (SET) NUM</em>
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', position: 'relative' }}>
                     <div style={{ position: 'relative', flex: 1 }}>
-                      <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: '#64748b' }} />
+                      <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: '#71717a' }} />
                       <input
                         type="text"
                         className="input-text"
@@ -635,7 +635,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                             left: 0,
                             right: 0,
                             marginTop: '4px',
-                            background: '#121722',
+                            background: '#151517',
                             border: '1px solid var(--border-medium)',
                             borderRadius: '8px',
                             zIndex: 60,
@@ -653,7 +653,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                                 cursor: 'pointer',
                                 borderBottom: '1px solid rgba(255,255,255,0.05)',
                                 fontSize: '0.85rem',
-                                color: '#f8fafc',
+                                color: '#f4f4f5',
                               }}
                             >
                               {item}
@@ -679,8 +679,8 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                         marginTop: '8px',
                         padding: '8px 12px',
                         borderRadius: '6px',
-                        background: 'rgba(245, 158, 11, 0.1)',
-                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                        background: 'rgba(255, 187, 0, 0.1)',
+                        border: '1px solid rgba(255, 187, 0, 0.3)',
                         fontSize: '0.78rem',
                         color: '#fcd34d',
                         display: 'flex',
@@ -704,7 +704,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                         background: 'rgba(0,0,0,0.3)',
                         padding: '10px 14px',
                         borderRadius: '8px',
-                        border: '1px solid rgba(99, 102, 241, 0.25)',
+                        border: '1px solid rgba(255, 187, 0, 0.25)',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -714,13 +714,13 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
                           style={{ width: '42px', height: '58px', objectFit: 'cover', borderRadius: '4px' }}
                         />
                         <div>
-                          <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f8fafc' }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f4f4f5' }}>
                             {selectedPartner.name}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                          <div style={{ fontSize: '0.75rem', color: '#a1a1aa' }}>
                             {selectedPartner.typeLine}
                           </div>
-                          <div style={{ fontSize: '0.72rem', color: '#818cf8', marginTop: '2px' }}>
+                          <div style={{ fontSize: '0.72rem', color: '#ffbb00', marginTop: '2px' }}>
                             Edição atual: <strong>{selectedPartner.setName} ({selectedPartner.setCode}) #{selectedPartner.collectorNumber}</strong>
                           </div>
                         </div>
@@ -742,7 +742,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
 
             {/* Deck Description / Notes */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, color: '#cbd5e1', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 500, color: '#d4d4d8', marginBottom: '6px' }}>
                 Descrição / Notas da Estratégia
               </label>
               <textarea
@@ -764,7 +764,7 @@ export const DeckCreationModal: React.FC<DeckCreationModalProps> = ({
               alignItems: 'center',
               justifyContent: 'flex-end',
               gap: '12px',
-              background: 'rgba(18, 23, 34, 0.8)',
+              background: 'rgba(20, 20, 23, 0.8)',
             }}
           >
             <button type="button" className="btn btn-ghost" onClick={onClose}>

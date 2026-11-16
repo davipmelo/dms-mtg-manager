@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Deck, DeckTag } from '../../types';
 import {
   Shield,
+  Swords,
   Plus,
   Download,
   Trash2,
@@ -218,7 +219,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Top Header Card */}
-      <div className="glass-panel" style={{ padding: '20px' }}>
+      <div className="glass-panel page-header-panel" style={{ padding: '22px 24px' }}>
         <div
           style={{
             display: 'flex',
@@ -229,10 +230,11 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
           }}
         >
           <div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>
-              Meus Decks de Magic: The Gathering
+            <span className="section-eyebrow">Biblioteca</span>
+            <h1 className="page-title">
+              Meus Decks
             </h1>
-            <p style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '4px' }}>
+            <p className="page-subtitle">
               Construa e gerencie seus decks com regras dinâmicas por formato, tags personalizadas e exportação para impressão.
             </p>
           </div>
@@ -285,7 +287,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                   style={{
                     position: 'absolute',
                     left: '12px',
-                    color: '#64748b',
+                    color: '#71717a',
                     pointerEvents: 'none',
                   }}
                 />
@@ -306,7 +308,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                       right: '10px',
                       background: 'none',
                       border: 'none',
-                      color: '#94a3b8',
+                      color: '#a1a1aa',
                       cursor: 'pointer',
                       padding: '2px',
                     }}
@@ -325,7 +327,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                     setSearchQuery('');
                     setActiveTagFilter(null);
                   }}
-                  style={{ fontSize: '0.78rem', color: '#f59e0b', gap: '4px' }}
+                  style={{ fontSize: '0.78rem', color: '#e6a800', gap: '4px' }}
                 >
                   <X size={14} /> Limpar Filtros
                 </button>
@@ -335,25 +337,15 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
             {/* Tag Filters Bar */}
             {deckTags.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#a1a1aa', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <SlidersHorizontal size={13} /> Filtrar por Tag:
                 </span>
 
                 {/* All decks button */}
                 <button
                   type="button"
+                  className={`chip ${activeTagFilter === null ? 'is-active' : ''}`}
                   onClick={() => setActiveTagFilter(null)}
-                  style={{
-                    padding: '3px 10px',
-                    borderRadius: '16px',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    backgroundColor: activeTagFilter === null ? 'var(--primary)' : 'rgba(255, 255, 255, 0.05)',
-                    color: activeTagFilter === null ? '#ffffff' : '#94a3b8',
-                    border: `1px solid ${activeTagFilter === null ? 'var(--primary)' : 'rgba(255, 255, 255, 0.1)'}`,
-                  }}
                 >
                   Todos ({decks.length})
                 </button>
@@ -370,13 +362,8 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                       key={tag.id}
                       type="button"
                       onClick={() => setActiveTagFilter(isActive ? null : tag.id)}
+                      className="chip"
                       style={{
-                        padding: '3px 10px',
-                        borderRadius: '16px',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
@@ -405,18 +392,8 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                 {noTagDecksCount > 0 && (
                   <button
                     type="button"
+                    className={`chip ${activeTagFilter === 'no-tag' ? 'is-active' : ''}`}
                     onClick={() => setActiveTagFilter(activeTagFilter === 'no-tag' ? null : 'no-tag')}
-                    style={{
-                      padding: '3px 10px',
-                      borderRadius: '16px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      backgroundColor: activeTagFilter === 'no-tag' ? '#64748b' : 'rgba(255, 255, 255, 0.05)',
-                      color: activeTagFilter === 'no-tag' ? '#ffffff' : '#64748b',
-                      border: `1px solid ${activeTagFilter === 'no-tag' ? '#94a3b8' : 'rgba(255, 255, 255, 0.1)'}`,
-                    }}
                   >
                     Sem Tags ({noTagDecksCount})
                   </button>
@@ -430,7 +407,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
       {/* Decks Grid */}
       {decks.length === 0 ? (
         <div
-          className="glass-card"
+          className="glass-card empty-state"
           style={{
             padding: '60px 20px',
             textAlign: 'center',
@@ -440,11 +417,11 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
             gap: '16px',
           }}
         >
-          <Shield size={48} className="text-slate-600" />
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#f8fafc' }}>
+          <div className="empty-state-icon"><Swords size={34} /></div>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#f4f4f5' }}>
             Você ainda não cadastrou nenhum deck
           </h3>
-          <p style={{ fontSize: '0.9rem', color: '#94a3b8', maxWidth: '440px' }}>
+          <p style={{ fontSize: '0.9rem', color: '#a1a1aa', maxWidth: '440px' }}>
             Crie seu primeiro deck escolhendo o formato desejado (Commander, Modern, Standard, etc.) ou importe listas de Moxfield, LigaMagic e MTG Arena.
           </p>
           <div style={{ display: 'flex', gap: '12px' }}>
@@ -458,7 +435,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
         </div>
       ) : filteredDecks.length === 0 ? (
         <div
-          className="glass-card"
+          className="glass-card empty-state"
           style={{
             padding: '50px 20px',
             textAlign: 'center',
@@ -468,11 +445,11 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
             gap: '14px',
           }}
         >
-          <Tag size={42} className="text-slate-600" />
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#f8fafc' }}>
+          <div className="empty-state-icon"><Tag size={30} /></div>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#f4f4f5' }}>
             Nenhum deck encontrado com os filtros atuais
           </h3>
-          <p style={{ fontSize: '0.85rem', color: '#94a3b8', maxWidth: '400px' }}>
+          <p style={{ fontSize: '0.85rem', color: '#a1a1aa', maxWidth: '400px' }}>
             Tente buscar por outro termo ou desmarque o filtro de tag ativo.
           </p>
           <button
@@ -512,17 +489,17 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
             return (
               <div
                 key={deck.id}
-                className="glass-card"
+                className="glass-card deck-card"
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   overflow: 'visible',
                   cursor: isRepositioning ? 'default' : 'pointer',
-                  border: isRepositioning ? '1px solid #f59e0b' : '1px solid var(--border-subtle)',
+                  border: isRepositioning ? '1px solid #e6a800' : '1px solid var(--border-subtle)',
                   borderRadius: '14px',
                   position: 'relative',
                   transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-                  boxShadow: isRepositioning ? '0 0 20px rgba(245, 158, 11, 0.2)' : undefined,
+                  boxShadow: isRepositioning ? '0 0 20px rgba(255, 187, 0, 0.2)' : undefined,
                 }}
                 onClick={() => {
                   if (isRepositioning) return;
@@ -531,6 +508,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
               >
                 {/* Cover Art Banner */}
                 <div
+                  className="deck-card-banner"
                   style={{
                     position: 'relative',
                     height: isRepositioning ? '200px' : '140px',
@@ -540,7 +518,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                     borderTopLeftRadius: '13px',
                     borderTopRightRadius: '13px',
                     overflow: 'hidden',
-                    transition: isDragging ? 'none' : 'height 0.2s ease, background-position 0.15s ease',
+                    transition: isDragging ? 'none' : undefined,
                     cursor: isRepositioning ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
                     touchAction: isRepositioning ? 'none' : 'auto',
                     userSelect: 'none',
@@ -555,8 +533,8 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                       position: 'absolute',
                       inset: 0,
                       background: isRepositioning
-                        ? 'linear-gradient(to bottom, rgba(12,15,23,0.15) 0%, rgba(12,15,23,0.7) 100%)'
-                        : 'linear-gradient(to bottom, rgba(12,15,23,0.3) 0%, rgba(12,15,23,0.95) 100%)',
+                        ? 'linear-gradient(to bottom, rgba(14, 14, 16,0.15) 0%, rgba(14, 14, 16,0.7) 100%)'
+                        : 'linear-gradient(to bottom, rgba(14, 14, 16,0.3) 0%, rgba(14, 14, 16,0.95) 100%)',
                       pointerEvents: 'none',
                     }}
                   />
@@ -599,17 +577,17 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                         gap: '6px',
                         padding: '6px 14px',
                         borderRadius: '20px',
-                        background: 'rgba(15, 23, 42, 0.88)',
+                        background: 'rgba(24, 24, 27, 0.88)',
                         backdropFilter: 'blur(8px)',
-                        border: '1px solid rgba(245, 158, 11, 0.6)',
-                        color: '#f8fafc',
+                        border: '1px solid rgba(255, 187, 0, 0.6)',
+                        color: '#f4f4f5',
                         fontSize: '0.75rem',
                         fontWeight: 600,
                         boxShadow: '0 4px 14px rgba(0,0,0,0.6)',
                         userSelect: 'none',
                       }}
                     >
-                      <MoveVertical size={13} color="#f59e0b" />
+                      <MoveVertical size={13} color="#e6a800" />
                       <span>Arraste para ajustar ({tempCoverPosition}%)</span>
                     </div>
                   )}
@@ -635,22 +613,22 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                         fontWeight: 600,
                         padding: '4px 10px',
                         borderRadius: '20px',
-                        background: 'rgba(15, 23, 42, 0.82)',
+                        background: 'rgba(24, 24, 27, 0.82)',
                         backdropFilter: 'blur(8px)',
                         border: '1px solid rgba(255, 255, 255, 0.2)',
-                        color: '#e2e8f0',
+                        color: '#e4e4e7',
                         cursor: 'pointer',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
                         transition: 'all 0.15s ease',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#f59e0b';
+                        e.currentTarget.style.background = '#e6a800';
                         e.currentTarget.style.color = '#000';
-                        e.currentTarget.style.borderColor = '#f59e0b';
+                        e.currentTarget.style.borderColor = '#e6a800';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(15, 23, 42, 0.82)';
-                        e.currentTarget.style.color = '#e2e8f0';
+                        e.currentTarget.style.background = 'rgba(24, 24, 27, 0.82)';
+                        e.currentTarget.style.color = '#e4e4e7';
                         e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                       }}
                     >
@@ -665,8 +643,8 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                   <div
                     style={{
                       padding: '10px 14px',
-                      background: '#0d1322',
-                      borderBottom: '1px solid rgba(245, 158, 11, 0.3)',
+                      background: '#111113',
+                      borderBottom: '1px solid rgba(255, 187, 0, 0.3)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '8px',
@@ -677,7 +655,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                   >
                     {/* Slider fine-tuning */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>
+                      <span style={{ fontSize: '0.72rem', color: '#a1a1aa', fontWeight: 600 }}>
                         Posição:
                       </span>
                       <input
@@ -689,7 +667,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                         onChange={(e) => setTempCoverPosition(Number(e.target.value))}
                         style={{
                           flex: 1,
-                          accentColor: '#f59e0b',
+                          accentColor: '#e6a800',
                           cursor: 'pointer',
                           height: '4px',
                         }}
@@ -698,7 +676,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                         style={{
                           fontSize: '0.75rem',
                           fontWeight: 700,
-                          color: '#fbbf24',
+                          color: '#ffcc33',
                           minWidth: '36px',
                           textAlign: 'right',
                           fontVariantNumeric: 'tabular-nums',
@@ -734,14 +712,14 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                               borderRadius: '6px',
                               background:
                                 tempCoverPosition === preset.val
-                                  ? 'rgba(245, 158, 11, 0.25)'
+                                  ? 'rgba(255, 187, 0, 0.25)'
                                   : 'rgba(255, 255, 255, 0.05)',
                               border: `1px solid ${
                                 tempCoverPosition === preset.val
-                                  ? '#f59e0b'
+                                  ? '#e6a800'
                                   : 'rgba(255, 255, 255, 0.1)'
                               }`,
-                              color: tempCoverPosition === preset.val ? '#fbbf24' : '#94a3b8',
+                              color: tempCoverPosition === preset.val ? '#ffcc33' : '#a1a1aa',
                               cursor: 'pointer',
                               transition: 'all 0.1s ease',
                             }}
@@ -778,7 +756,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '3px',
-                            backgroundColor: '#f59e0b',
+                            backgroundColor: '#e6a800',
                             color: '#000',
                             fontWeight: 700,
                           }}
@@ -800,7 +778,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                     gap: '10px',
                   }}
                 >
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f8fafc' }}>
+                  <h3 className="deck-card-title" style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f4f4f5' }}>
                     {deck.name}
                   </h3>
 
@@ -808,7 +786,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                     <div
                       style={{
                         fontSize: '0.8rem',
-                        color: '#818cf8',
+                        color: '#ffbb00',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
@@ -822,7 +800,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                     <p
                       style={{
                         fontSize: '0.8rem',
-                        color: '#94a3b8',
+                        color: '#a1a1aa',
                         overflow: 'hidden',
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
@@ -889,7 +867,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                         padding: '2px 7px',
                         height: '22px',
                         borderRadius: '12px',
-                        color: isTagMenuOpen ? '#ffbb00' : '#64748b',
+                        color: isTagMenuOpen ? '#ffbb00' : '#71717a',
                         border: '1px dashed rgba(255, 255, 255, 0.15)',
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -911,7 +889,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                           marginBottom: '8px',
                           zIndex: 50,
                           width: '240px',
-                          background: '#0f1422',
+                          background: '#121214',
                           border: '1px solid var(--border-medium)',
                           borderRadius: '12px',
                           padding: '10px',
@@ -932,7 +910,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                             marginBottom: '2px',
                           }}
                         >
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f8fafc' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f4f4f5' }}>
                             Tags deste deck:
                           </span>
                           <button
@@ -941,7 +919,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                             style={{
                               background: 'none',
                               border: 'none',
-                              color: '#94a3b8',
+                              color: '#a1a1aa',
                               cursor: 'pointer',
                               padding: '2px',
                             }}
@@ -969,7 +947,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                                   background: isChecked ? `${t.color}20` : 'transparent',
                                   border: `1px solid ${isChecked ? `${t.color}60` : 'transparent'}`,
                                   cursor: 'pointer',
-                                  color: isChecked ? '#ffffff' : '#cbd5e1',
+                                  color: isChecked ? '#ffffff' : '#d4d4d8',
                                   fontSize: '0.78rem',
                                   fontWeight: isChecked ? 700 : 500,
                                   textAlign: 'left',

@@ -168,7 +168,7 @@ const UtilityCardItem = React.memo<UtilityCardItemProps>(({
             <button
               type="button"
               className="btn btn-secondary btn-icon"
-              style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
+              style={{ padding: '6px', background: 'rgba(14, 14, 16, 0.9)' }}
               onClick={(e) => {
                 e.stopPropagation();
                 onHoverEnd();
@@ -200,7 +200,7 @@ const UtilityCardItem = React.memo<UtilityCardItemProps>(({
         <div
           style={{
             padding: '12px',
-            background: '#0e131d',
+            background: '#111113',
             display: 'flex',
             flexDirection: 'column',
             gap: '8px',
@@ -212,7 +212,7 @@ const UtilityCardItem = React.memo<UtilityCardItemProps>(({
               style={{
                 fontWeight: 600,
                 fontSize: '0.9rem',
-                color: '#f8fafc',
+                color: '#f4f4f5',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -224,7 +224,7 @@ const UtilityCardItem = React.memo<UtilityCardItemProps>(({
             <div
               style={{
                 fontSize: '0.75rem',
-                color: '#94a3b8',
+                color: '#a1a1aa',
                 marginTop: '2px',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -242,7 +242,7 @@ const UtilityCardItem = React.memo<UtilityCardItemProps>(({
               justifyContent: 'space-between',
               alignItems: 'center',
               fontSize: '0.75rem',
-              color: '#64748b',
+              color: '#71717a',
             }}
           >
             <span
@@ -256,7 +256,7 @@ const UtilityCardItem = React.memo<UtilityCardItemProps>(({
               {item.setCode} • #{item.collectorNumber}
             </span>
             {item.power && item.toughness && (
-              <span style={{ fontWeight: 700, color: '#f8fafc', flexShrink: 0 }}>
+              <span style={{ fontWeight: 700, color: '#f4f4f5', flexShrink: 0 }}>
                 {item.power}/{item.toughness}
               </span>
             )}
@@ -607,7 +607,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header, Category Tabs, and Search Filters */}
-      <div className="glass-panel" style={{ padding: '22px' }}>
+      <div className="glass-panel page-header-panel" style={{ padding: '22px 24px' }}>
         <div
           style={{
             display: 'flex',
@@ -618,20 +618,11 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
           }}
         >
           <div>
-            <h2
-              style={{
-                fontSize: '1.35rem',
-                fontWeight: 800,
-                color: '#f8fafc',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-              }}
-            >
-              <Sparkles className="text-amber-400" size={24} />
-              Central de Utilitários de Magic: The Gathering
+            <span className="section-eyebrow"><Sparkles size={12} /> Tokens, emblemas & mais</span>
+            <h2 className="page-title">
+              Central de Utilitários
             </h2>
-            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '4px' }}>
+            <p className="page-subtitle">
               Explore fichas (tokens), planos de Planechase, emblemas, masmorras, marcadores oficiais e escolha artes alternativas para imprimir proxies A4.
             </p>
           </div>
@@ -667,7 +658,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
 
         {/* Active Category Description + Search Bar */}
         <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ fontSize: '0.82rem', color: '#a5b4fc', fontWeight: 500 }}>
+          <div style={{ fontSize: '0.82rem', color: '#ffcc4d', fontWeight: 500 }}>
             {activeCategoryMeta.description}
           </div>
 
@@ -676,7 +667,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
               <div style={{ position: 'relative', flex: 1 }}>
                 <Search
                   size={17}
-                  style={{ position: 'absolute', left: '12px', top: '11px', color: '#64748b' }}
+                  style={{ position: 'absolute', left: '12px', top: '11px', color: '#71717a' }}
                 />
                 <input
                   type="text"
@@ -763,11 +754,11 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
 
       {/* Grid Controls: Count, Streaming Indicator, Details Toggle & Scale Zoom Slider */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '-10px', gap: '8px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.8rem', color: '#94a3b8' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.8rem', color: '#a1a1aa' }}>
           {!loading && filteredItems.length > 0 && (
             <span>
-              Exibindo <strong style={{ color: '#f8fafc' }}>{visibleItems.length}</strong> de{' '}
-              <strong style={{ color: '#f8fafc' }}>{filteredItems.length}</strong>{' '}
+              Exibindo <strong style={{ color: '#f4f4f5' }}>{visibleItems.length}</strong> de{' '}
+              <strong style={{ color: '#f4f4f5' }}>{filteredItems.length}</strong>{' '}
               {filteredItems.length === 1 ? 'item' : 'itens'}
             </span>
           )}
@@ -777,9 +768,9 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                color: '#818cf8',
+                color: '#ffbb00',
                 fontSize: '0.75rem',
-                background: 'rgba(99, 102, 241, 0.12)',
+                background: 'rgba(255, 187, 0, 0.12)',
                 padding: '2px 8px',
                 borderRadius: '12px',
               }}
@@ -814,7 +805,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
             }}
             title={`Ajustar escala da grade (${gridCardSize}px)`}
           >
-            <ZoomOut size={13} style={{ color: '#94a3b8' }} />
+            <ZoomOut size={13} style={{ color: '#a1a1aa' }} />
             <input
               type="range"
               min={110}
@@ -822,10 +813,10 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
               step={10}
               value={gridCardSize}
               onChange={(e) => handleGridCardSizeChange(Number(e.target.value))}
-              style={{ width: '85px', accentColor: '#818cf8', cursor: 'pointer' }}
+              style={{ width: '85px', accentColor: '#ffbb00', cursor: 'pointer' }}
             />
-            <ZoomIn size={13} style={{ color: '#94a3b8' }} />
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '36px', textAlign: 'right' }}>
+            <ZoomIn size={13} style={{ color: '#a1a1aa' }} />
+            <span style={{ fontSize: '0.75rem', color: '#a1a1aa', minWidth: '36px', textAlign: 'right' }}>
               {gridCardSize}px
             </span>
           </div>
@@ -838,7 +829,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
           style={{
             padding: '60px',
             textAlign: 'center',
-            color: '#94a3b8',
+            color: '#a1a1aa',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -849,7 +840,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
           <span>Carregando utilitários oficiais do Scryfall...</span>
         </div>
       ) : filteredItems.length === 0 ? (
-        <div className="glass-card" style={{ padding: '60px', textAlign: 'center', color: '#94a3b8' }}>
+        <div className="glass-card" style={{ padding: '60px', textAlign: 'center', color: '#a1a1aa' }}>
           Nenhum item encontrado para esta busca. Experimente termos em inglês (ex: "Treasure", "Dominaria", "Teferi", "Monarch").
         </div>
       ) : (

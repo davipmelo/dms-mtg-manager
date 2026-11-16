@@ -317,43 +317,37 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Top Header Card */}
-      <div className="glass-panel" style={{ padding: '20px' }}>
+      <div className="glass-panel page-header-panel" style={{ padding: '22px 24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f8fafc' }}>
-              Minha Coleção de Cartas
+            <span className="section-eyebrow">Acervo</span>
+            <h1 className="page-title">
+              Minha Coleção
             </h1>
-            <p style={{ fontSize: '0.875rem', color: '#94a3b8', marginTop: '4px' }}>
+            <p className="page-subtitle">
               Gerencie todas as suas cartas físicas, controle cópias em uso nos decks e monitore seu acervo.
             </p>
           </div>
         </div>
 
-        {/* Quick Requirement 4 Status Bar */}
-        <div
-          style={{
-            marginTop: '18px',
-            paddingTop: '16px',
-            borderTop: '1px solid var(--border-subtle)',
-            display: 'flex',
-            gap: '24px',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ fontSize: '0.85rem' }}>
-            <span style={{ color: '#94a3b8' }}>Total de cartas: </span>
-            <strong style={{ color: '#f8fafc' }}>{totalCardsCount}</strong> ({collection.length} únicas)
+        {/* Stat tiles */}
+        <div className="stat-tiles">
+          <div className="stat-tile">
+            <span className="stat-tile-label">Total de cartas</span>
+            <span className="stat-tile-value">{totalCardsCount}</span>
+            <span className="stat-tile-hint">{collection.length} únicas</span>
           </div>
-
-          <div style={{ fontSize: '0.85rem' }}>
-            <span style={{ color: '#94a3b8' }}>🟢 Disponíveis na pool: </span>
-            <strong style={{ color: '#10b981' }}>{totalAvailableCount}</strong>
+          <div className="stat-tile is-success">
+            <span className="stat-tile-label">Disponíveis na pool</span>
+            <span className="stat-tile-value">{totalAvailableCount}</span>
+            <span className="stat-tile-hint">livres para novos decks</span>
           </div>
-
-          <div style={{ fontSize: '0.85rem' }}>
-            <span style={{ color: '#94a3b8' }}>🟡 Em uso nos decks: </span>
-            <strong style={{ color: '#ffbb00' }}>{totalInUseCount}</strong>
+          <div className="stat-tile is-primary">
+            <span className="stat-tile-label">Em uso nos decks</span>
+            <span className="stat-tile-value">{totalInUseCount}</span>
+            <span className="stat-tile-hint">
+              {totalCardsCount > 0 ? Math.round((totalInUseCount / totalCardsCount) * 100) : 0}% do acervo
+            </span>
           </div>
         </div>
       </div>
@@ -372,7 +366,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
             style={{
               fontSize: '1.15rem',
               fontWeight: 700,
-              color: '#f8fafc',
+              color: '#f4f4f5',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
@@ -400,7 +394,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
           {/* Search */}
           <div style={{ position: 'relative', flex: '1 1 240px', minWidth: '220px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '11px', color: '#64748b' }} />
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '11px', color: '#71717a' }} />
             <input
               type="text"
               className="input-text"
@@ -529,7 +523,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                 }}
                 title={`Ajustar escala da grade (${gridCardSize}px)`}
               >
-                <ZoomOut size={13} style={{ color: '#94a3b8' }} />
+                <ZoomOut size={13} style={{ color: '#a1a1aa' }} />
                 <input
                   type="range"
                   min={110}
@@ -537,10 +531,10 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                   step={10}
                   value={gridCardSize}
                   onChange={(e) => handleGridCardSizeChange(Number(e.target.value))}
-                  style={{ width: '85px', accentColor: '#818cf8', cursor: 'pointer' }}
+                  style={{ width: '85px', accentColor: '#ffbb00', cursor: 'pointer' }}
                 />
-                <ZoomIn size={13} style={{ color: '#94a3b8' }} />
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '36px', textAlign: 'right' }}>
+                <ZoomIn size={13} style={{ color: '#a1a1aa' }} />
+                <span style={{ fontSize: '0.75rem', color: '#a1a1aa', minWidth: '36px', textAlign: 'right' }}>
                   {gridCardSize}px
                 </span>
               </div>
@@ -551,7 +545,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
 
       {/* Main Content Area Based on View Mode */}
       {sortedItems.length === 0 ? (
-        <div className="glass-card" style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8' }}>
+        <div className="glass-card" style={{ padding: '60px 20px', textAlign: 'center', color: '#a1a1aa' }}>
           Nenhuma carta encontrada com os filtros selecionados.
         </div>
       ) : viewMode === 'grid' ? (
@@ -614,13 +608,13 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                       position: 'absolute',
                       bottom: '8px',
                       left: '8px',
-                      background: 'rgba(12, 15, 23, 0.88)',
+                      background: 'rgba(14, 14, 16, 0.88)',
                       border: '1px solid var(--border-medium)',
                       borderRadius: '6px',
                       padding: '2px 8px',
                       fontSize: '0.82rem',
                       fontWeight: 700,
-                      color: '#f8fafc',
+                      color: '#f4f4f5',
                       boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
                       zIndex: 2,
                       pointerEvents: 'none',
@@ -657,7 +651,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     <div className="card-art-actions-overlay">
                       <button
                         className="btn btn-secondary btn-icon"
-                        style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
+                        style={{ padding: '6px', background: 'rgba(14, 14, 16, 0.9)' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setHoveredPreview(null);
@@ -669,7 +663,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                       </button>
                       <button
                         className="btn btn-secondary btn-icon"
-                        style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
+                        style={{ padding: '6px', background: 'rgba(14, 14, 16, 0.9)' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setHoveredPreview(null);
@@ -685,12 +679,12 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
 
                 {/* Card Details & In Use / Available Indicators (Requirement 4) - Hidden in Art-Only mode */}
                 {showGridDetails && (
-                  <div style={{ padding: '12px', background: '#0c0f17', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                  <div style={{ padding: '12px', background: '#111113', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f4f4f5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {displayName}
                         {isFlipped && (
-                          <span style={{ marginLeft: '6px', fontSize: '0.72rem', color: '#a78bfa', fontWeight: 600 }}>
+                          <span style={{ marginLeft: '6px', fontSize: '0.72rem', color: '#ffcc4d', fontWeight: 600 }}>
                             (Verso)
                           </span>
                         )}
@@ -698,7 +692,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                       <ManaCostRenderer manaCost={item.card.manaCost} />
                     </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#71717a' }}>
                     <span>{item.card.setName} ({item.card.setCode})</span>
                     {item.card.priceUsd && (
                       <span style={{ color: '#10b981', fontWeight: 600 }}>
@@ -725,20 +719,20 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
                         Disponíveis:
                       </span>
-                      <strong style={{ color: '#f8fafc' }}>{item.availableQuantity ?? item.quantity}</strong>
+                      <strong style={{ color: '#f4f4f5' }}>{item.availableQuantity ?? item.quantity}</strong>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b' }} />
+                      <span style={{ color: '#e6a800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#e6a800' }} />
                         Em Decks:
                       </span>
-                      <strong style={{ color: '#f8fafc' }}>{item.inUseQuantity ?? 0}</strong>
+                      <strong style={{ color: '#f4f4f5' }}>{item.inUseQuantity ?? 0}</strong>
                     </div>
 
                     {/* Decks usage breakdown */}
                     {item.usedInDecks && item.usedInDecks.length > 0 && (
-                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '4px', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.7rem', color: '#a1a1aa', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '4px', marginTop: '2px' }}>
                         {item.usedInDecks.map((d, i) => (
                           <div key={i} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             • {d.deckName} ({d.count}x)
@@ -832,7 +826,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                 <button
                   className="btn btn-ghost btn-sm"
                   onClick={() => setSelectedItemIds(new Set())}
-                  style={{ fontSize: '0.8rem', color: '#cbd5e1' }}
+                  style={{ fontSize: '0.8rem', color: '#d4d4d8' }}
                 >
                   Limpar Seleção
                 </button>
@@ -862,7 +856,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
           <div className="glass-panel" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#94a3b8' }}>
+                <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#a1a1aa' }}>
                   {/* Select All Checkbox */}
                   <th style={{ width: '40px', padding: '12px 14px', textAlign: 'center' }}>
                     <input
@@ -882,7 +876,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                       padding: '12px 16px',
                       cursor: 'pointer',
                       userSelect: 'none',
-                      color: sortColumn === 'quantity' ? '#ffbb00' : '#94a3b8',
+                      color: sortColumn === 'quantity' ? '#ffbb00' : '#a1a1aa',
                     }}
                     title="Ordenar por Quantidade"
                   >
@@ -899,7 +893,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'available' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'available' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Disponível / Uso"
                 >
@@ -916,7 +910,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'name' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'name' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Nome"
                 >
@@ -933,7 +927,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'cmc' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'cmc' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Custo"
                 >
@@ -950,7 +944,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'type' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'type' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Tipo"
                 >
@@ -967,7 +961,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'set' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'set' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Edição"
                 >
@@ -984,7 +978,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'rarity' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'rarity' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Raridade"
                 >
@@ -1001,7 +995,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'price' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'price' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Preço"
                 >
@@ -1063,20 +1057,20 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     </td>
                     <td style={{ padding: '10px 16px' }}>
                       <span style={{ color: '#10b981', fontWeight: 600 }}>{item.availableQuantity ?? item.quantity}</span>
-                      <span style={{ color: '#64748b' }}> / </span>
-                      <span style={{ color: '#f59e0b', fontWeight: 600 }}>{item.inUseQuantity ?? 0}</span>
+                      <span style={{ color: '#71717a' }}> / </span>
+                      <span style={{ color: '#e6a800', fontWeight: 600 }}>{item.inUseQuantity ?? 0}</span>
                     </td>
-                    <td style={{ padding: '10px 16px', fontWeight: 600, color: '#f8fafc' }}>
+                    <td style={{ padding: '10px 16px', fontWeight: 600, color: '#f4f4f5' }}>
                       <span
                         style={{
                           cursor: 'pointer',
-                          borderBottom: '1px dotted rgba(148, 163, 184, 0.45)',
+                          borderBottom: '1px dotted rgba(161, 161, 170, 0.45)',
                           paddingBottom: '1px',
                           transition: 'color 0.15s ease, border-color 0.15s ease',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#a5b4fc';
-                          e.currentTarget.style.borderColor = '#818cf8';
+                          e.currentTarget.style.color = '#ffcc4d';
+                          e.currentTarget.style.borderColor = '#ffbb00';
                           setMousePos({ x: e.clientX, y: e.clientY });
                           setHoveredPreview({
                             url: item.card.imageUrlLarge || item.card.imageUrl,
@@ -1087,8 +1081,8 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                         }}
                         onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.color = '#f8fafc';
-                          e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.45)';
+                          e.currentTarget.style.color = '#f4f4f5';
+                          e.currentTarget.style.borderColor = 'rgba(161, 161, 170, 0.45)';
                           setHoveredPreview(null);
                         }}
                       >
@@ -1099,10 +1093,10 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     <td style={{ padding: '10px 16px' }}>
                       <ManaCostRenderer manaCost={item.card.manaCost} />
                     </td>
-                    <td style={{ padding: '10px 16px', color: '#94a3b8' }}>
+                    <td style={{ padding: '10px 16px', color: '#a1a1aa' }}>
                       {item.card.typeLine}
                     </td>
-                    <td style={{ padding: '10px 16px', color: '#64748b' }}>
+                    <td style={{ padding: '10px 16px', color: '#71717a' }}>
                       {item.card.setCode}
                     </td>
                     <td style={{ padding: '10px 16px' }}>

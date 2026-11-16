@@ -191,7 +191,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           maxWidth: '440px',
           background: 'var(--bg-card, #18181d)',
           borderRadius: '16px',
-          border: '1px solid var(--border-subtle, #292932)',
+          border: '1px solid var(--border-subtle, #2a2a2f)',
           boxShadow: '0 20px 50px rgba(0, 0, 0, 0.7), 0 0 25px rgba(255, 187, 0, 0.1)',
           overflow: 'hidden',
           display: 'flex',
@@ -204,11 +204,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           className="modal-header"
           style={{
             padding: '18px 22px',
-            borderBottom: '1px solid var(--border-subtle, #292932)',
+            borderBottom: '1px solid var(--border-subtle, #2a2a2f)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'var(--bg-dark, #1a1a20)',
+            background: 'var(--bg-dark, #1a1a1d)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -228,12 +228,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <Cloud size={18} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f4f4f5', margin: 0 }}>
                 {activeTab === 'login' && 'Entrar na Conta'}
                 {activeTab === 'register' && 'Criar Nova Conta'}
                 {activeTab === 'forgot' && 'Recuperar Senha'}
               </h2>
-              <p style={{ fontSize: '0.75rem', color: '#a0a0ab', margin: 0 }}>
+              <p style={{ fontSize: '0.75rem', color: '#a1a1aa', margin: 0 }}>
                 {activeTab === 'login' && 'Sincronize seus decks e coleções em qualquer dispositivo'}
                 {activeTab === 'register' && 'Cadastre-se para sincronizar seus dados com segurança'}
                 {activeTab === 'forgot' && 'Enviaremos um link de recuperação para seu e-mail'}
@@ -256,7 +256,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div
             style={{
               display: 'flex',
-              borderBottom: '1px solid var(--border-subtle, #292932)',
+              borderBottom: '1px solid var(--border-subtle, #2a2a2f)',
               background: 'var(--bg-darkest, #0e0e11)',
             }}
           >
@@ -273,7 +273,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 fontWeight: 600,
                 border: 'none',
                 background: activeTab === 'login' ? 'var(--bg-card, #18181d)' : 'transparent',
-                color: activeTab === 'login' ? '#ffbb00' : '#a0a0ab',
+                color: activeTab === 'login' ? '#ffbb00' : '#a1a1aa',
                 borderBottom: activeTab === 'login' ? '2px solid #ffbb00' : '2px solid transparent',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
@@ -294,7 +294,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 fontWeight: 600,
                 border: 'none',
                 background: activeTab === 'register' ? 'var(--bg-card, #18181d)' : 'transparent',
-                color: activeTab === 'register' ? '#ffbb00' : '#a0a0ab',
+                color: activeTab === 'register' ? '#ffbb00' : '#a1a1aa',
                 borderBottom:
                   activeTab === 'register' ? '2px solid #ffbb00' : '2px solid transparent',
                 cursor: 'pointer',
@@ -360,7 +360,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     display: 'block',
                     fontSize: '0.82rem',
                     fontWeight: 600,
-                    color: '#e2e8f0',
+                    color: '#e4e4e7',
                     marginBottom: '6px',
                   }}
                 >
@@ -374,7 +374,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       left: '12px',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#a0a0ab',
+                      color: '#a1a1aa',
                     }}
                   />
                   <input
@@ -387,10 +387,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     style={{
                       width: '100%',
                       padding: '10px 14px 10px 38px',
-                      background: 'var(--bg-dark, #1a1a20)',
-                      border: '1px solid var(--border-subtle, #292932)',
+                      background: 'var(--bg-dark, #1a1a1d)',
+                      border: '1px solid var(--border-subtle, #2a2a2f)',
                       borderRadius: '8px',
-                      color: '#f8fafc',
+                      color: '#f4f4f5',
                       fontSize: '0.88rem',
                       outline: 'none',
                     }}
@@ -411,7 +411,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     style={{
                       fontSize: '0.82rem',
                       fontWeight: 600,
-                      color: '#e2e8f0',
+                      color: '#e4e4e7',
                     }}
                   >
                     Senha
@@ -444,7 +444,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       left: '12px',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#a0a0ab',
+                      color: '#a1a1aa',
                     }}
                   />
                   <input
@@ -456,10 +456,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     style={{
                       width: '100%',
                       padding: '10px 38px 10px 38px',
-                      background: 'var(--bg-dark, #1a1a20)',
-                      border: '1px solid var(--border-subtle, #292932)',
+                      background: 'var(--bg-dark, #1a1a1d)',
+                      border: '1px solid var(--border-subtle, #2a2a2f)',
                       borderRadius: '8px',
-                      color: '#f8fafc',
+                      color: '#f4f4f5',
                       fontSize: '0.88rem',
                       outline: 'none',
                     }}
@@ -474,7 +474,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       transform: 'translateY(-50%)',
                       background: 'transparent',
                       border: 'none',
-                      color: '#a0a0ab',
+                      color: '#a1a1aa',
                       cursor: 'pointer',
                       padding: 0,
                     }}
@@ -529,7 +529,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     display: 'block',
                     fontSize: '0.82rem',
                     fontWeight: 600,
-                    color: '#e2e8f0',
+                    color: '#e4e4e7',
                     marginBottom: '6px',
                   }}
                 >
@@ -543,7 +543,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       left: '12px',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#a0a0ab',
+                      color: '#a1a1aa',
                     }}
                   />
                   <input
@@ -556,16 +556,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     style={{
                       width: '100%',
                       padding: '10px 14px 10px 38px',
-                      background: 'var(--bg-dark, #1a1a20)',
-                      border: '1px solid var(--border-subtle, #292932)',
+                      background: 'var(--bg-dark, #1a1a1d)',
+                      border: '1px solid var(--border-subtle, #2a2a2f)',
                       borderRadius: '8px',
-                      color: '#f8fafc',
+                      color: '#f4f4f5',
                       fontSize: '0.88rem',
                       outline: 'none',
                     }}
                   />
                 </div>
-                <span style={{ fontSize: '0.72rem', color: '#a0a0ab', marginTop: '4px', display: 'block' }}>
+                <span style={{ fontSize: '0.72rem', color: '#a1a1aa', marginTop: '4px', display: 'block' }}>
                   Este é o único identificador visível no site.
                 </span>
               </div>
@@ -576,7 +576,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     display: 'block',
                     fontSize: '0.82rem',
                     fontWeight: 600,
-                    color: '#e2e8f0',
+                    color: '#e4e4e7',
                     marginBottom: '6px',
                   }}
                 >
@@ -590,7 +590,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       left: '12px',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#a0a0ab',
+                      color: '#a1a1aa',
                     }}
                   />
                   <input
@@ -602,10 +602,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     style={{
                       width: '100%',
                       padding: '10px 14px 10px 38px',
-                      background: 'var(--bg-dark, #1a1a20)',
-                      border: '1px solid var(--border-subtle, #292932)',
+                      background: 'var(--bg-dark, #1a1a1d)',
+                      border: '1px solid var(--border-subtle, #2a2a2f)',
                       borderRadius: '8px',
-                      color: '#f8fafc',
+                      color: '#f4f4f5',
                       fontSize: '0.88rem',
                       outline: 'none',
                     }}
@@ -632,7 +632,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     display: 'block',
                     fontSize: '0.82rem',
                     fontWeight: 600,
-                    color: '#e2e8f0',
+                    color: '#e4e4e7',
                     marginBottom: '6px',
                   }}
                 >
@@ -646,7 +646,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       left: '12px',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#a0a0ab',
+                      color: '#a1a1aa',
                     }}
                   />
                   <input
@@ -658,10 +658,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     style={{
                       width: '100%',
                       padding: '10px 38px 10px 38px',
-                      background: 'var(--bg-dark, #1a1a20)',
-                      border: '1px solid var(--border-subtle, #292932)',
+                      background: 'var(--bg-dark, #1a1a1d)',
+                      border: '1px solid var(--border-subtle, #2a2a2f)',
                       borderRadius: '8px',
-                      color: '#f8fafc',
+                      color: '#f4f4f5',
                       fontSize: '0.88rem',
                       outline: 'none',
                     }}
@@ -676,7 +676,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       transform: 'translateY(-50%)',
                       background: 'transparent',
                       border: 'none',
-                      color: '#a0a0ab',
+                      color: '#a1a1aa',
                       cursor: 'pointer',
                       padding: 0,
                     }}
@@ -690,7 +690,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <div
                       style={{
                         height: '4px',
-                        background: '#292932',
+                        background: '#2a2a2f',
                         borderRadius: '2px',
                         overflow: 'hidden',
                       }}
@@ -717,7 +717,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     display: 'block',
                     fontSize: '0.82rem',
                     fontWeight: 600,
-                    color: '#e2e8f0',
+                    color: '#e4e4e7',
                     marginBottom: '6px',
                   }}
                 >
@@ -731,7 +731,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       left: '12px',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#a0a0ab',
+                      color: '#a1a1aa',
                     }}
                   />
                   <input
@@ -743,13 +743,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     style={{
                       width: '100%',
                       padding: '10px 14px 10px 38px',
-                      background: 'var(--bg-dark, #1a1a20)',
+                      background: 'var(--bg-dark, #1a1a1d)',
                       border:
                         confirmPassword && confirmPassword !== password
                           ? '1px solid #ef4444'
-                          : '1px solid var(--border-subtle, #292932)',
+                          : '1px solid var(--border-subtle, #2a2a2f)',
                       borderRadius: '8px',
-                      color: '#f8fafc',
+                      color: '#f4f4f5',
                       fontSize: '0.88rem',
                       outline: 'none',
                     }}
@@ -816,7 +816,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     display: 'block',
                     fontSize: '0.82rem',
                     fontWeight: 600,
-                    color: '#e2e8f0',
+                    color: '#e4e4e7',
                     marginBottom: '6px',
                   }}
                 >
@@ -830,7 +830,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       left: '12px',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#a0a0ab',
+                      color: '#a1a1aa',
                     }}
                   />
                   <input
@@ -843,10 +843,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     style={{
                       width: '100%',
                       padding: '10px 14px 10px 38px',
-                      background: 'var(--bg-dark, #1a1a20)',
-                      border: '1px solid var(--border-subtle, #292932)',
+                      background: 'var(--bg-dark, #1a1a1d)',
+                      border: '1px solid var(--border-subtle, #2a2a2f)',
                       borderRadius: '8px',
-                      color: '#f8fafc',
+                      color: '#f4f4f5',
                       fontSize: '0.88rem',
                       outline: 'none',
                     }}
@@ -897,7 +897,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '6px',
-                  color: '#a0a0ab',
+                  color: '#a1a1aa',
                 }}
               >
                 <ArrowLeft size={16} /> Voltar para o Login

@@ -6,14 +6,14 @@ import { X, Tag, Plus, Trash2, Edit2, Check, Palette } from 'lucide-react';
 export const TAG_COLOR_PRESETS = [
   { label: 'Vermelho', color: '#ef4444' },
   { label: 'Laranja', color: '#f97316' },
-  { label: 'Âmbar', color: '#f59e0b' },
+  { label: 'Âmbar', color: '#e6a800' },
   { label: 'Esmeralda', color: '#10b981' },
   { label: 'Ciano', color: '#06b6d4' },
   { label: 'Azul', color: '#3b82f6' },
-  { label: 'Roxo', color: '#8b5cf6' },
+  { label: 'Roxo', color: '#ffbb00' },
   { label: 'Rosa', color: '#ec4899' },
   { label: 'Carmesim', color: '#e11d48' },
-  { label: 'Cinza', color: '#64748b' },
+  { label: 'Cinza', color: '#71717a' },
 ];
 
 interface ManageTagsModalProps {
@@ -117,7 +117,7 @@ export const ManageTagsModal: React.FC<ManageTagsModalProps> = ({
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'rgba(5, 7, 12, 0.85)',
+        background: 'rgba(6, 6, 7, 0.85)',
         backdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
@@ -138,7 +138,7 @@ export const ManageTagsModal: React.FC<ManageTagsModalProps> = ({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          background: '#0d111a',
+          background: '#101012',
           border: '1px solid var(--border-medium)',
           borderRadius: '16px',
           boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)',
@@ -173,10 +173,10 @@ export const ManageTagsModal: React.FC<ManageTagsModalProps> = ({
               <Tag size={18} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f4f4f5' }}>
                 Gerenciar Tags de Decks
               </h2>
-              <p style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+              <p style={{ fontSize: '0.78rem', color: '#a1a1aa' }}>
                 Crie e personalize tags com suas cores favoritas para organizar seus decks.
               </p>
             </div>
@@ -214,7 +214,7 @@ export const ManageTagsModal: React.FC<ManageTagsModalProps> = ({
               gap: '12px',
             }}
           >
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Plus size={15} className="text-amber-400" /> Criar Nova Tag
             </span>
 
@@ -261,7 +261,7 @@ export const ManageTagsModal: React.FC<ManageTagsModalProps> = ({
 
             {/* Color Palette Selector */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.74rem', color: '#94a3b8', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.74rem', color: '#a1a1aa', marginBottom: '6px' }}>
                 Escolha a cor da tag:
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -323,12 +323,12 @@ export const ManageTagsModal: React.FC<ManageTagsModalProps> = ({
 
           {/* Existing Tags List */}
           <div>
-            <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc', marginBottom: '10px' }}>
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f4f4f5', marginBottom: '10px' }}>
               Tags Cadastradas ({tags.length})
             </h3>
 
             {tags.length === 0 ? (
-              <p style={{ fontSize: '0.82rem', color: '#64748b', fontStyle: 'italic' }}>
+              <p style={{ fontSize: '0.82rem', color: '#71717a', fontStyle: 'italic' }}>
                 Nenhuma tag cadastrada ainda. Crie sua primeira tag acima!
               </p>
             ) : (
@@ -417,7 +417,7 @@ export const ManageTagsModal: React.FC<ManageTagsModalProps> = ({
                               {tag.name}
                             </div>
 
-                            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                            <span style={{ fontSize: '0.74rem', color: '#71717a' }}>
                               {deckCount} {deckCount === 1 ? 'deck' : 'decks'}
                             </span>
                           </div>

@@ -144,7 +144,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 11, 0.85)',
+        backgroundColor: 'rgba(6, 6, 7, 0.85)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
         zIndex: 9999,
@@ -166,10 +166,10 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
           maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#0c0f17',
+          backgroundColor: '#111113',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           borderRadius: '16px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 30px rgba(99, 102, 241, 0.15)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 30px rgba(255, 187, 0, 0.15)',
           overflow: 'hidden',
         }}
       >
@@ -182,7 +182,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: 'rgba(18, 23, 34, 0.95)',
+            background: 'rgba(20, 20, 23, 0.95)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -191,12 +191,12 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                 width: '40px',
                 height: '40px',
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(168, 85, 247, 0.25))',
-                border: '1px solid rgba(99, 102, 241, 0.4)',
+                background: 'linear-gradient(135deg, rgba(255, 187, 0, 0.25), rgba(255, 120, 0, 0.18))',
+                border: '1px solid rgba(255, 187, 0, 0.4)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#a5b4fc',
+                color: '#ffcc4d',
               }}
             >
               <ImageIcon size={22} />
@@ -206,7 +206,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                 style={{
                   fontSize: '1.2rem',
                   fontWeight: 700,
-                  color: '#f8fafc',
+                  color: '#f4f4f5',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
@@ -217,7 +217,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                   {deck.format.toUpperCase()}
                 </span>
               </h2>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '2px' }}>
+              <p style={{ fontSize: '0.8rem', color: '#a1a1aa', marginTop: '2px' }}>
                 Personalize a resolução, formato, agrupamento e layout do pôster visual.
               </p>
             </div>
@@ -266,7 +266,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
 
           {/* 1. Formato & Qualidade */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FileDown size={16} className="text-indigo-400" /> Formato de Exportação
             </label>
 
@@ -298,10 +298,10 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                     alignItems: 'flex-start',
                     padding: '12px 14px',
                     borderRadius: '10px',
-                    background: options.format === fmt.id ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255, 255, 255, 0.02)',
+                    background: options.format === fmt.id ? 'rgba(255, 187, 0, 0.16)' : 'rgba(255, 255, 255, 0.02)',
                     border:
                       options.format === fmt.id
-                        ? '1.5px solid #818cf8'
+                        ? '1.5px solid #ffbb00'
                         : '1px solid var(--border-subtle)',
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -309,12 +309,12 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: options.format === fmt.id ? '#a5b4fc' : '#f8fafc' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: options.format === fmt.id ? '#ffcc4d' : '#f4f4f5' }}>
                       {fmt.label}
                     </span>
                     {options.format === fmt.id && <Check size={16} className="text-indigo-400" />}
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#a1a1aa', marginTop: '4px' }}>
                     {fmt.desc}
                   </span>
                 </button>
@@ -336,7 +336,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                   fontSize: '0.85rem',
                 }}
               >
-                <span style={{ color: '#94a3b8' }}>Qualidade do JPEG:</span>
+                <span style={{ color: '#a1a1aa' }}>Qualidade do JPEG:</span>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {[
                     { label: 'Máxima (100%)', val: 1.0 },
@@ -360,7 +360,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
 
           {/* 2. Proporção & Orientação */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Layout size={16} className="text-indigo-400" /> Proporção & Layout da Folha
             </label>
 
@@ -397,10 +397,10 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                     alignItems: 'flex-start',
                     padding: '12px 14px',
                     borderRadius: '10px',
-                    background: options.aspectRatio === layout.id ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255, 255, 255, 0.02)',
+                    background: options.aspectRatio === layout.id ? 'rgba(255, 187, 0, 0.16)' : 'rgba(255, 255, 255, 0.02)',
                     border:
                       options.aspectRatio === layout.id
-                        ? '1.5px solid #818cf8'
+                        ? '1.5px solid #ffbb00'
                         : '1px solid var(--border-subtle)',
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -408,12 +408,12 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: options.aspectRatio === layout.id ? '#a5b4fc' : '#f8fafc' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.88rem', color: options.aspectRatio === layout.id ? '#ffcc4d' : '#f4f4f5' }}>
                       {layout.label}
                     </span>
                     {options.aspectRatio === layout.id && <Check size={16} className="text-indigo-400" />}
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#a1a1aa', marginTop: '4px' }}>
                     {layout.sub}
                   </span>
                 </button>
@@ -423,7 +423,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
 
           {/* 3. Resolução & Qualidade de Impressão */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Maximize2 size={16} className="text-indigo-400" /> Resolução de Saída
             </label>
 
@@ -460,10 +460,10 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                     alignItems: 'flex-start',
                     padding: '12px 14px',
                     borderRadius: '10px',
-                    background: options.resolution === res.id ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255, 255, 255, 0.02)',
+                    background: options.resolution === res.id ? 'rgba(255, 187, 0, 0.16)' : 'rgba(255, 255, 255, 0.02)',
                     border:
                       options.resolution === res.id
-                        ? '1.5px solid #818cf8'
+                        ? '1.5px solid #ffbb00'
                         : '1px solid var(--border-subtle)',
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -471,12 +471,12 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.85rem', color: options.resolution === res.id ? '#a5b4fc' : '#f8fafc' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.85rem', color: options.resolution === res.id ? '#ffcc4d' : '#f4f4f5' }}>
                       {res.label}
                     </span>
                     {options.resolution === res.id && <Check size={16} className="text-indigo-400" />}
                   </div>
-                  <span style={{ fontSize: '0.73rem', color: '#94a3b8', marginTop: '4px' }}>
+                  <span style={{ fontSize: '0.73rem', color: '#a1a1aa', marginTop: '4px' }}>
                     {res.desc}
                   </span>
                 </button>
@@ -503,10 +503,10 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Layers className={options.groupByArt ? 'text-emerald-400' : 'text-slate-400'} size={20} />
                 <div>
-                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f8fafc' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#f4f4f5' }}>
                     Agrupar Artes Idênticas (Recomendado)
                   </span>
-                  <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>
+                  <p style={{ fontSize: '0.78rem', color: '#a1a1aa', marginTop: '2px' }}>
                     Condensa cópias com a mesma arte (ex: 20 Ilhas viram 1 carta com badge "20x"), ampliando o tamanho e a visibilidade de todas as mágicas do deck.
                   </p>
                 </div>
@@ -541,7 +541,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                   ✓ Modo Agrupado: ~{uniqueArtsCount} artes únicas renderizadas em tamanho maior.
                 </span>
               ) : (
-                <span style={{ color: '#f59e0b', fontWeight: 600 }}>
+                <span style={{ color: '#e6a800', fontWeight: 600 }}>
                   ⚡ Modo Desagrupado: Todas as {totalCardsCount} cartas serão desenhadas individualmente.
                 </span>
               )}
@@ -552,7 +552,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
             {/* Card Sort */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Sliders size={16} className="text-indigo-400" /> Ordenação das Cartas
               </label>
 
@@ -572,7 +572,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
 
             {/* Background Theme */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Palette size={16} className="text-indigo-400" /> Tema e Cor de Fundo
               </label>
 
@@ -595,7 +595,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
 
           {/* 6. Opções Visuais Extras & Personalização */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Sparkles size={16} className="text-amber-400" /> Detalhes Visuais e Personalização
             </label>
 
@@ -617,9 +617,9 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                   type="checkbox"
                   checked={options.highlightCommander}
                   onChange={(e) => setOptions((prev) => ({ ...prev, highlightCommander: e.target.checked }))}
-                  style={{ accentColor: '#f59e0b', width: '16px', height: '16px' }}
+                  style={{ accentColor: '#e6a800', width: '16px', height: '16px' }}
                 />
-                <span style={{ color: '#f8fafc' }}>Destacar Comandante (Moldura Dourada)</span>
+                <span style={{ color: '#f4f4f5' }}>Destacar Comandante (Moldura Dourada)</span>
               </label>
 
               <label
@@ -639,9 +639,9 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                   type="checkbox"
                   checked={options.showQuantityBadges}
                   onChange={(e) => setOptions((prev) => ({ ...prev, showQuantityBadges: e.target.checked }))}
-                  style={{ accentColor: '#818cf8', width: '16px', height: '16px' }}
+                  style={{ accentColor: '#ffbb00', width: '16px', height: '16px' }}
                 />
-                <span style={{ color: '#f8fafc' }}>Exibir Badges de Quantidade (4x, 15x...)</span>
+                <span style={{ color: '#f4f4f5' }}>Exibir Badges de Quantidade (4x, 15x...)</span>
               </label>
 
               <label
@@ -661,9 +661,9 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                   type="checkbox"
                   checked={options.showHeader}
                   onChange={(e) => setOptions((prev) => ({ ...prev, showHeader: e.target.checked }))}
-                  style={{ accentColor: '#818cf8', width: '16px', height: '16px' }}
+                  style={{ accentColor: '#ffbb00', width: '16px', height: '16px' }}
                 />
-                <span style={{ color: '#f8fafc' }}>Exibir Cabeçalho com Nome e Dados</span>
+                <span style={{ color: '#f4f4f5' }}>Exibir Cabeçalho com Nome e Dados</span>
               </label>
 
               <label
@@ -683,9 +683,9 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                   type="checkbox"
                   checked={options.showCardNames}
                   onChange={(e) => setOptions((prev) => ({ ...prev, showCardNames: e.target.checked }))}
-                  style={{ accentColor: '#818cf8', width: '16px', height: '16px' }}
+                  style={{ accentColor: '#ffbb00', width: '16px', height: '16px' }}
                 />
-                <span style={{ color: '#f8fafc' }}>Legenda com Nome no Rodapé das Cartas</span>
+                <span style={{ color: '#f4f4f5' }}>Legenda com Nome no Rodapé das Cartas</span>
               </label>
 
               {hasSideboard && (
@@ -706,9 +706,9 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                     type="checkbox"
                     checked={options.includeSideboard}
                     onChange={(e) => setOptions((prev) => ({ ...prev, includeSideboard: e.target.checked }))}
-                    style={{ accentColor: '#818cf8', width: '16px', height: '16px' }}
+                    style={{ accentColor: '#ffbb00', width: '16px', height: '16px' }}
                   />
-                  <span style={{ color: '#f8fafc' }}>Incluir cartas do Sideboard</span>
+                  <span style={{ color: '#f4f4f5' }}>Incluir cartas do Sideboard</span>
                 </label>
               )}
             </div>
@@ -717,7 +717,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
             {options.showHeader && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginTop: '4px' }}>
                 <div>
-                  <label style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>
+                  <label style={{ fontSize: '0.78rem', color: '#a1a1aa', marginBottom: '4px', display: 'block' }}>
                     Título personalizado (opcional):
                   </label>
                   <input
@@ -731,7 +731,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.78rem', color: '#94a3b8', marginBottom: '4px', display: 'block' }}>
+                  <label style={{ fontSize: '0.78rem', color: '#a1a1aa', marginBottom: '4px', display: 'block' }}>
                     Nome do Autor / Criador (opcional):
                   </label>
                   <input
@@ -752,15 +752,15 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
             style={{
               padding: '12px 16px',
               borderRadius: '10px',
-              background: 'rgba(99, 102, 241, 0.08)',
-              border: '1px solid rgba(99, 102, 241, 0.25)',
+              background: 'rgba(255, 187, 0, 0.08)',
+              border: '1px solid rgba(255, 187, 0, 0.25)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: '10px',
               fontSize: '0.82rem',
-              color: '#c7d2fe',
+              color: '#ffe08a',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -770,7 +770,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                 <strong>{options.groupByArt ? `${uniqueArtsCount} artes agrupadas` : `${totalCardsCount} cartas individuais`}</strong>
               </span>
             </div>
-            <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+            <span style={{ color: '#a1a1aa', fontSize: '0.75rem' }}>
               Orientação: {options.aspectRatio.replace('-', ' ').toUpperCase()}
             </span>
           </div>
@@ -783,17 +783,17 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                 flexDirection: 'column',
                 gap: '8px',
                 padding: '14px 18px',
-                background: 'rgba(12, 17, 28, 0.95)',
-                border: '1px solid rgba(99, 102, 241, 0.4)',
+                background: 'rgba(17, 17, 19, 0.95)',
+                border: '1px solid rgba(255, 187, 0, 0.4)',
                 borderRadius: '10px',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
-                <span style={{ color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Loader2 size={16} className="animate-spin text-indigo-400" />
                   Carregando artes do Scryfall ({progress.loaded} de {progress.total})...
                 </span>
-                <span style={{ fontWeight: 700, color: '#818cf8' }}>{progress.percentage}%</span>
+                <span style={{ fontWeight: 700, color: '#ffbb00' }}>{progress.percentage}%</span>
               </div>
 
               <div
@@ -809,13 +809,13 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
                   style={{
                     width: `${progress.percentage}%`,
                     height: '100%',
-                    background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                    background: 'linear-gradient(90deg, #ffbb00, #a855f7)',
                     borderRadius: '999px',
                     transition: 'width 0.2s ease',
                   }}
                 />
               </div>
-              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+              <span style={{ fontSize: '0.72rem', color: '#71717a' }}>
                 As imagens são carregadas nas artes exatas escolhidas no seu deck. Aguarde a finalização...
               </span>
             </div>
@@ -830,7 +830,7 @@ export const ExportDeckImageModal: React.FC<ExportDeckImageModalProps> = ({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: 'rgba(18, 23, 34, 0.95)',
+            background: 'rgba(20, 20, 23, 0.95)',
           }}
         >
           <button

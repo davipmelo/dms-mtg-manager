@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   CollectionItem,
   Deck,
@@ -1700,6 +1700,31 @@ export function App() {
   const totalProxyCount = proxies.reduce((sum, p) => sum + p.quantity, 0);
 
   const headerRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const [navIndicator, setNavIndicator] = useState({ left: 0, width: 0 });
+  const [isHeaderScrolled, setIsHeaderScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setIsHeaderScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useLayoutEffect(() => {
+    const updateIndicator = () => {
+      const nav = navRef.current;
+      if (!nav) return;
+      const activeBtn = nav.querySelector<HTMLElement>(`[data-tab="${activeTab}"]`);
+      if (!activeBtn) return;
+      setNavIndicator({ left: activeBtn.offsetLeft, width: activeBtn.offsetWidth });
+    };
+    updateIndicator();
+    const ro = new ResizeObserver(updateIndicator);
+    if (navRef.current) ro.observe(navRef.current);
+    document.fonts?.ready.then(updateIndicator).catch(() => {});
+    return () => ro.disconnect();
+  }, [activeTab, decks.length, totalProxyCount]);
 
   useEffect(() => {
     if (!headerRef.current) return;
@@ -1721,198 +1746,167 @@ export function App() {
     };
   }, []);
 
+  const navTabs: {
+    id: 'decks' | 'collection' | 'utilities' | 'proxies';
+    label: string;
+    shortLabel: string;
+    icon: typeof Swords;
+    count?: number;
+    alert?: boolean;
+  }[] = [
+    { id: 'decks', label: 'Decks', shortLabel: 'Decks', icon: Swords, count: decks.length },
+    { id: 'collection', label: 'Coleção', shortLabel: 'Coleção', icon: FolderArchive },
+    { id: 'utilities', label: 'Utilitários', shortLabel: 'Utilitários', icon: Compass },
+    {
+      id: 'proxies',
+      label: 'Proxy Studio',
+      shortLabel: 'Proxies',
+      icon: Printer,
+      count: totalProxyCount > 0 ? totalProxyCount : undefined,
+      alert: true,
+    },
+  ];
+
+  const handleSelectTab = (tab: 'decks' | 'collection' | 'utilities' | 'proxies') => {
+    if (tab !== 'decks' || activeTab === 'decks') {
+      setActiveDeckId(null);
+    }
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Sleek Top Navigation Bar (Full width, pinned to top of screen) */}
-      <header
-        ref={headerRef}
-        className="print-hide app-header"
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 1000,
-          width: '100%',
-          background: 'rgba(10, 13, 20, 0.95)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.45)',
-        }}
-      >
-        <div
-          className="app-header-inner"
-          style={{
-            maxWidth: '1600px',
-            width: '100%',
-            margin: '0 auto',
-            padding: '10px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '16px',
-          }}
-        >
-          <div className="app-header-top" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* Brand / Logo */}
-          <div className="app-brand" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: '#ffbb00',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 10px rgba(255, 187, 0, 0.3)',
-            }}
-          >
-            <MtgLogo size={22} color="#111114" />
-          </div>
-          <div>
-            <h1
-              style={{
-                fontSize: '1.2rem',
-                fontWeight: 800,
-                letterSpacing: '-0.02em',
-                color: '#f8fafc',
-                lineHeight: 1.1,
-              }}
+    <div className="app-shell">
+      {/* Sticky Top Navigation Bar */}
+      <header ref={headerRef} className={`print-hide app-header ${isHeaderScrolled ? 'is-scrolled' : ''}`}>
+        <div className="app-header-inner">
+          <div className="app-header-top">
+            {/* Brand / Logo */}
+            <button
+              type="button"
+              className="app-brand"
+              onClick={() => handleSelectTab('decks')}
+              title="Ir para Meus Decks"
             >
-              PROLIFERATE
-            </h1>
-            <p
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 500,
-                color: '#94a3b8',
-                lineHeight: 1.2,
-                marginTop: '2px',
-                letterSpacing: '-0.01em',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Um gerenciador de coleções e proxies para Magic: the Gathering®
-            </p>
+              <div className="app-brand-mark">
+                <MtgLogo size={22} color="#111114" />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <h1 className="app-brand-title">
+                  PROLIFERATE
+                </h1>
+                <p className="app-brand-subtitle">
+                  Coleção, decks e proxies para Magic: the Gathering®
+                </p>
+              </div>
+            </button>
           </div>
-        </div>
-        </div>
 
-        {/* Navigation Tabs */}
-        <nav className="app-header-nav" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-          <button
-            className={`btn btn-sm ${activeTab === 'decks' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setActiveTab('decks')}
-          >
-            <Swords size={16} /> Decks ({decks.length})
-          </button>
+          {/* Navigation Tabs (segmented control with sliding indicator) */}
+          <nav className="app-header-nav" ref={navRef} aria-label="Navegação principal">
+            <span
+              className="app-nav-indicator"
+              style={{
+                width: `${navIndicator.width}px`,
+                transform: `translateX(${navIndicator.left}px)`,
+                opacity: navIndicator.width ? 1 : 0,
+              }}
+            />
+            {navTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  data-tab={tab.id}
+                  className={`app-nav-tab ${isActive ? 'is-active' : ''}`}
+                  onClick={() => handleSelectTab(tab.id)}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <Icon size={16} /> {tab.label}
+                  {tab.count !== undefined && (
+                    <span className={`nav-count ${tab.alert ? 'is-alert' : ''}`}>{tab.count}</span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
 
-          <button
-            className={`btn btn-sm ${activeTab === 'collection' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => {
-              setActiveDeckId(null);
-              setActiveTab('collection');
-            }}
-          >
-            <FolderArchive size={16} /> Coleção
-          </button>
+          {/* Global Action Buttons */}
+          <div className="app-actions">
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setIsBackupModalOpen(true)}
+              title="Exportar ou Restaurar Backup Completo do Sistema (.json)"
+            >
+              <Database size={15} /> <span className="app-action-label">Backup</span>
+            </button>
 
-          <button
-            className={`btn btn-sm ${activeTab === 'utilities' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => {
-              setActiveDeckId(null);
-              setActiveTab('utilities');
-            }}
-          >
-            <Compass size={16} /> Utilitários
-          </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => {
+                setExportDefaultDeckId(undefined);
+                setIsExportModalOpen(true);
+              }}
+              title="Exportar listas de cartas para MTG Arena, Moxfield, LigaMagic ou formatos de planilha"
+            >
+              <Upload size={15} /> <span className="app-action-label">Exportar</span>
+            </button>
 
-          <button
-            className={`btn btn-sm ${activeTab === 'proxies' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => {
-              setActiveDeckId(null);
-              setActiveTab('proxies');
-            }}
-          >
-            <Printer size={16} /> Proxy Studio
-            {totalProxyCount > 0 && (
-              <span
-                style={{
-                  background: '#f43f5e',
-                  color: 'white',
-                  borderRadius: '9999px',
-                  padding: '1px 6px',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  marginLeft: '4px',
-                }}
-              >
-                {totalProxyCount}
-              </span>
-            )}
-          </button>
-        </nav>
+            <button
+              className="btn btn-highlight btn-sm"
+              onClick={() => {
+                setImportDefaultDestination('collection');
+                setIsImportModalOpen(true);
+              }}
+              title="Importar listas de cartas (Moxfield, LigaMagic, MTG Arena ou texto)"
+            >
+              <Download size={15} /> <span className="app-action-label">Importar</span>
+            </button>
 
-        {/* Global Action Buttons */}
-        <div className="app-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={() => setIsBackupModalOpen(true)}
-            title="Exportar ou Restaurar Backup Completo do Sistema (.json)"
-          >
-            <Database size={14} /> <span className="app-action-label">Backup</span>
-          </button>
+            <span className="app-actions-divider" aria-hidden="true" />
 
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={() => {
-              setExportDefaultDeckId(undefined);
-              setIsExportModalOpen(true);
-            }}
-            title="Exportar listas de cartas para MTG Arena, Moxfield, LigaMagic ou formatos de planilha"
-          >
-            <Upload size={14} /> <span className="app-action-label">Exportar</span>
-          </button>
-
-          <button
-            className="btn btn-highlight btn-sm"
-            onClick={() => {
-              setImportDefaultDestination('collection');
-              setIsImportModalOpen(true);
-            }}
-            title="Importar listas de cartas (Moxfield, LigaMagic, MTG Arena ou texto)"
-          >
-            <Download size={14} /> <span className="app-action-label">Importar</span>
-          </button>
-
-          {/* User Account & Cloud Sync Menu */}
-          <UserMenu
-            user={currentUser}
-            syncStatus={syncStatus}
-            lastSyncedAt={lastSyncedAt}
-            onOpenAuthModal={(tab) => {
-              setAuthModalInitialTab(tab || 'login');
-              setIsAuthModalOpen(true);
-            }}
-            onLogout={handleLogout}
-            onForceSync={handleForceSync}
-          />
-        </div>
+            {/* User Account & Cloud Sync Menu */}
+            <UserMenu
+              user={currentUser}
+              syncStatus={syncStatus}
+              lastSyncedAt={lastSyncedAt}
+              onOpenAuthModal={(tab) => {
+                setAuthModalInitialTab(tab || 'login');
+                setIsAuthModalOpen(true);
+              }}
+              onLogout={handleLogout}
+              onForceSync={handleForceSync}
+            />
+          </div>
         </div>
       </header>
 
+      {/* Mobile Bottom Tab Bar */}
+      <nav className="mobile-tabbar print-hide" aria-label="Navegação principal (mobile)">
+        {navTabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              className={`mobile-tab ${isActive ? 'is-active' : ''}`}
+              onClick={() => handleSelectTab(tab.id)}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              <Icon size={20} />
+              <span>{tab.shortLabel}</span>
+              {tab.alert && tab.count !== undefined && (
+                <span className="mobile-tab-badge">{tab.count > 99 ? '99+' : tab.count}</span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
       {/* Main App Body */}
-      <main
-        className="main-content-container"
-        style={{
-          flex: 1,
-          padding: '20px 24px',
-          maxWidth: '1600px',
-          width: '100%',
-          margin: '0 auto',
-        }}
-      >
+      <main className="main-content-container">
+        <div key={`${activeTab}-${syncedActiveDeck ? syncedActiveDeck.id : 'list'}`} className="page-transition">
         {activeTab === 'collection' && (
           <CollectionView
             collection={collectionWithUsage}
@@ -2042,7 +2036,12 @@ export function App() {
             decks={decks}
           />
         )}
+        </div>
       </main>
+
+      <footer className="app-footer print-hide">
+        <strong>PROLIFERATE</strong> · Dados de cartas por Scryfall · Magic: the Gathering® é marca registrada da Wizards of the Coast
+      </footer>
 
       {/* Modals */}
       <AddCardModal
@@ -2163,7 +2162,7 @@ export function App() {
               width: '460px',
               maxWidth: '92vw',
               padding: '28px 24px',
-              background: '#0c0f17',
+              background: '#111113',
               borderRadius: '16px',
               border: '1px solid rgba(255, 187, 0, 0.45)',
               boxShadow: '0 25px 60px rgba(0,0,0,0.9), 0 0 35px rgba(255, 187, 0, 0.2)',
@@ -2191,10 +2190,10 @@ export function App() {
             </div>
 
             <div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f4f4f5', margin: 0 }}>
                 Enviando Deck para Impressão
               </h3>
-              <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '6px 0 0' }}>
+              <p style={{ fontSize: '0.85rem', color: '#a1a1aa', margin: '6px 0 0' }}>
                 Preparando cartas do deck <strong>{proxyDeckProgress.deckName}</strong>
               </p>
             </div>
@@ -2214,13 +2213,13 @@ export function App() {
                   style={{
                     width: `${Math.round((proxyDeckProgress.current / Math.max(1, proxyDeckProgress.total)) * 100)}%`,
                     height: '100%',
-                    background: 'linear-gradient(90deg, #ffbb00, #f59e0b)',
+                    background: 'linear-gradient(90deg, #ffbb00, #e6a800)',
                     transition: 'width 0.15s ease',
                     borderRadius: '6px',
                   }}
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#cbd5e1' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#d4d4d8' }}>
                 <span>
                   {proxyDeckProgress.current} de {proxyDeckProgress.total} cartas
                 </span>
@@ -2237,7 +2236,7 @@ export function App() {
                 borderRadius: '8px',
                 border: '1px solid rgba(255,255,255,0.08)',
                 fontSize: '0.82rem',
-                color: '#94a3b8',
+                color: '#a1a1aa',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',

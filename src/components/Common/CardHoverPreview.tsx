@@ -50,9 +50,9 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ preview, mou
         zIndex: 100000,
         borderRadius: '14px',
         overflow: 'hidden',
-        boxShadow: '0 30px 70px rgba(0, 0, 0, 0.98), 0 0 40px rgba(245, 158, 11, 0.3)',
+        boxShadow: '0 30px 70px rgba(0, 0, 0, 0.98), 0 0 40px rgba(255, 187, 0, 0.3)',
         border: '1px solid rgba(255, 187, 0, 0.45)',
-        background: '#070a10',
+        background: '#08080a',
         animation: 'modal-enter 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         display: 'flex',
         flexDirection: 'column',
@@ -80,7 +80,7 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ preview, mou
       <div
         style={{
           padding: '9px 14px',
-          background: 'rgba(10, 14, 23, 0.97)',
+          background: 'rgba(13, 13, 15, 0.97)',
           borderTop: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
@@ -89,7 +89,7 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ preview, mou
             style={{
               fontWeight: 700,
               fontSize: '0.9rem',
-              color: '#f8fafc',
+              color: '#f4f4f5',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -104,10 +104,10 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ preview, mou
                 fontSize: '0.74rem',
                 color: preview.badgeColor || '#ffbb00',
                 fontWeight: 800,
-                background: 'rgba(245, 158, 11, 0.18)',
+                background: 'rgba(255, 187, 0, 0.18)',
                 padding: '2px 7px',
                 borderRadius: '4px',
-                border: '1px solid rgba(245, 158, 11, 0.4)',
+                border: '1px solid rgba(255, 187, 0, 0.4)',
                 flexShrink: 0,
               }}
             >
@@ -119,7 +119,7 @@ export const CardHoverPreview: React.FC<CardHoverPreviewProps> = ({ preview, mou
           <div
             style={{
               fontSize: '0.78rem',
-              color: '#94a3b8',
+              color: '#a1a1aa',
               marginTop: '2px',
               whiteSpace: 'nowrap',
               overflow: 'hidden',

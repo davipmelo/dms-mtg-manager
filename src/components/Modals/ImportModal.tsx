@@ -224,7 +224,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 11, 0.8)',
+        backgroundColor: 'rgba(6, 6, 7, 0.8)',
         backdropFilter: 'blur(8px)',
         zIndex: 9999,
         display: 'flex',
@@ -244,7 +244,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#0c0f17',
+          backgroundColor: '#111113',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
           borderRadius: '16px',
@@ -261,16 +261,16 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '12px',
-            background: 'rgba(18, 23, 34, 0.95)',
+            background: 'rgba(20, 20, 23, 0.95)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Download size={22} className="text-emerald-400" />
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f4f4f5', margin: 0 }}>
                 Importar Cartas ou Decks
               </h2>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '2px 0 0' }}>
+              <p style={{ fontSize: '0.8rem', color: '#a1a1aa', margin: '2px 0 0' }}>
                 Cole listas de cartas de qualquer formato (Moxfield, LigaMagic, MTG Arena ou texto puro)
               </p>
             </div>
@@ -306,17 +306,17 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 gap: '16px',
                 padding: '16px',
                 borderRadius: '12px',
-                background: 'rgba(245, 158, 11, 0.08)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
+                background: 'rgba(255, 187, 0, 0.08)',
+                border: '1px solid rgba(255, 187, 0, 0.3)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <AlertTriangle size={24} className="text-amber-400" />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#fbbf24' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.98rem', color: '#ffcc33' }}>
                     Avisos de Correspondência de Artes ({importWarnings.length})
                   </div>
-                  <div style={{ fontSize: '0.82rem', color: '#cbd5e1' }}>
+                  <div style={{ fontSize: '0.82rem', color: '#d4d4d8' }}>
                     Algumas cartas da sua lista não tinham a edição exata solicitada ou foram encontradas em outra versão:
                   </div>
                 </div>
@@ -338,7 +338,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                     style={{
                       padding: '8px 12px',
                       borderRadius: '6px',
-                      background: 'rgba(12, 15, 23, 0.8)',
+                      background: 'rgba(14, 14, 16, 0.8)',
                       border: '1px solid var(--border-subtle)',
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -347,9 +347,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                     }}
                   >
                     <div>
-                      <strong style={{ color: '#f8fafc' }}>{w.name}</strong>
+                      <strong style={{ color: '#f4f4f5' }}>{w.name}</strong>
                       {w.requested && (
-                        <span style={{ color: '#94a3b8', marginLeft: '6px' }}>
+                        <span style={{ color: '#a1a1aa', marginLeft: '6px' }}>
                           (Solicitada: {w.requested})
                         </span>
                       )}
@@ -408,7 +408,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             <>
               {/* Destination selector */}
               <div>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc', marginBottom: '8px', display: 'block' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f5', marginBottom: '8px', display: 'block' }}>
                   Onde deseja salvar as cartas importadas?
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
@@ -419,12 +419,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       gap: '8px',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      background: importDestination === 'collection' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                      background: importDestination === 'collection' ? 'rgba(255, 187, 0, 0.15)' : 'rgba(255, 255, 255, 0.03)',
                       border: importDestination === 'collection' ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
                       cursor: 'pointer',
                       fontSize: '0.85rem',
                       fontWeight: 600,
-                      color: importDestination === 'collection' ? '#f8fafc' : '#94a3b8',
+                      color: importDestination === 'collection' ? '#f4f4f5' : '#a1a1aa',
                     }}
                   >
                     <input
@@ -444,12 +444,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       gap: '8px',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      background: importDestination === 'new_deck' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                      background: importDestination === 'new_deck' ? 'rgba(255, 187, 0, 0.15)' : 'rgba(255, 255, 255, 0.03)',
                       border: importDestination === 'new_deck' ? '1px solid var(--primary)' : '1px solid var(--border-subtle)',
                       cursor: 'pointer',
                       fontSize: '0.85rem',
                       fontWeight: 600,
-                      color: importDestination === 'new_deck' ? '#f8fafc' : '#94a3b8',
+                      color: importDestination === 'new_deck' ? '#f4f4f5' : '#a1a1aa',
                     }}
                   >
                     <input
@@ -490,15 +490,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   style={{
                     padding: '16px',
                     borderRadius: '10px',
-                    background: 'rgba(99, 102, 241, 0.08)',
-                    border: '1px solid rgba(99, 102, 241, 0.25)',
+                    background: 'rgba(255, 187, 0, 0.08)',
+                    border: '1px solid rgba(255, 187, 0, 0.25)',
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
                     gap: '14px',
                   }}
                 >
                   <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f8fafc', marginBottom: '6px', display: 'block' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f4f4f5', marginBottom: '6px', display: 'block' }}>
                       Nome do Novo Deck:
                     </label>
                     <input
@@ -512,7 +512,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f8fafc', marginBottom: '6px', display: 'block' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f4f4f5', marginBottom: '6px', display: 'block' }}>
                       Formato do Deck:
                     </label>
                     <select
@@ -534,7 +534,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
                   {newDeckFormat === 'commander' && (
                     <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f8fafc', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f4f4f5', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Crown size={14} className="text-amber-400" />
                         Comandante Principal (Opcional - se vazio, tenta detectar da lista):
                       </label>
@@ -554,10 +554,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               {/* Text Area Input */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f5' }}>
                     Cole a Lista de Cartas:
                   </label>
-                  <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#a1a1aa' }}>
                     {parsedPreviewCount > 0 ? (
                       <strong style={{ color: '#38bdf8' }}>{parsedPreviewCount} carta(s) detectada(s)</strong>
                     ) : (
@@ -580,7 +580,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                     fontSize: '0.84rem',
                     lineHeight: '1.4',
                     resize: 'vertical',
-                    background: '#070a10',
+                    background: '#08080a',
                   }}
                 />
               </div>
@@ -594,9 +594,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                     gap: '12px',
                     padding: '12px 16px',
                     borderRadius: '8px',
-                    background: 'rgba(99, 102, 241, 0.12)',
-                    border: '1px solid rgba(99, 102, 241, 0.3)',
-                    color: '#c7d2fe',
+                    background: 'rgba(255, 187, 0, 0.12)',
+                    border: '1px solid rgba(255, 187, 0, 0.3)',
+                    color: '#ffe08a',
                     fontSize: '0.85rem',
                   }}
                 >

@@ -142,7 +142,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 11, 0.8)',
+        backgroundColor: 'rgba(6, 6, 7, 0.8)',
         backdropFilter: 'blur(8px)',
         zIndex: 9999,
         display: 'flex',
@@ -162,7 +162,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#0c0f17',
+          backgroundColor: '#111113',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
           borderRadius: '16px',
@@ -178,12 +178,12 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(18, 23, 34, 0.8)',
+            background: 'rgba(20, 20, 23, 0.8)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Plus className="text-indigo-400" size={20} />
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f8fafc' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f4f4f5' }}>
               Adicionar Carta à Coleção ou Deck
             </h2>
           </div>
@@ -199,7 +199,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
               <Search
                 size={18}
-                style={{ position: 'absolute', left: '12px', color: '#64748b', pointerEvents: 'none' }}
+                style={{ position: 'absolute', left: '12px', color: '#71717a', pointerEvents: 'none' }}
               />
               <input
                 ref={inputRef}
@@ -233,7 +233,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                   left: 0,
                   right: 0,
                   marginTop: '4px',
-                  background: '#121722',
+                  background: '#151517',
                   border: '1px solid var(--border-medium)',
                   borderRadius: '10px',
                   boxShadow: '0 10px 25px rgba(0,0,0,0.7)',
@@ -251,10 +251,10 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                       cursor: 'pointer',
                       borderBottom: idx < suggestions.length - 1 ? '1px solid rgba(255,255,255,0.05)' : undefined,
                       fontSize: '0.875rem',
-                      color: '#f8fafc',
+                      color: '#f4f4f5',
                       transition: 'background 0.15s ease',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#1f2a3e')}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2a2a30')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     {item}
@@ -273,7 +273,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                 display: 'grid',
                 gridTemplateColumns: '180px 1fr',
                 gap: '20px',
-                background: 'rgba(18, 23, 34, 0.6)',
+                background: 'rgba(20, 20, 23, 0.6)',
                 padding: '16px',
                 borderRadius: '12px',
                 border: '1px solid var(--border-subtle)',
@@ -292,20 +292,20 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc' }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f4f4f5' }}>
                     {selectedCard.name}
                   </h3>
                   <ManaCostRenderer manaCost={selectedCard.manaCost} />
                 </div>
 
-                <div style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+                <div style={{ fontSize: '0.85rem', color: '#a1a1aa' }}>
                   {selectedCard.typeLine}
                 </div>
 
                 <div
                   style={{
                     fontSize: '0.8rem',
-                    color: '#cbd5e1',
+                    color: '#d4d4d8',
                     background: 'rgba(0,0,0,0.3)',
                     padding: '10px',
                     borderRadius: '8px',
@@ -317,7 +317,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                   {selectedCard.oracleText || 'Sem texto de regras.'}
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: '#64748b', marginTop: 'auto' }}>
+                <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: '#71717a', marginTop: 'auto' }}>
                   <span>{selectedCard.setName} ({selectedCard.setCode}) #{selectedCard.collectorNumber}</span>
                   {selectedCard.priceUsd && (
                     <span style={{ color: '#10b981', fontWeight: 600 }}>
@@ -334,7 +334,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '10px',
-                background: 'rgba(18, 23, 34, 0.5)',
+                background: 'rgba(20, 20, 23, 0.5)',
                 padding: '14px',
                 borderRadius: '12px',
                 border: '1px solid var(--border-subtle)',
@@ -343,7 +343,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ImageIcon size={16} className="text-primary" />
-                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#f8fafc' }}>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#f4f4f5' }}>
                     Escolher Arte / Edição
                   </span>
                   {!loadingPrints && prints.length > 0 && (
@@ -355,7 +355,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
 
                 {prints.length > 5 && (
                   <div style={{ position: 'relative', width: '180px' }}>
-                    <Search size={13} style={{ position: 'absolute', left: '8px', top: '8px', color: '#64748b' }} />
+                    <Search size={13} style={{ position: 'absolute', left: '8px', top: '8px', color: '#71717a' }} />
                     <input
                       type="text"
                       className="input-text"
@@ -369,7 +369,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
               </div>
 
               {loadingPrints ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '0.8rem', padding: '14px 6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a1a1aa', fontSize: '0.8rem', padding: '14px 6px' }}>
                   <Loader2 size={16} className="animate-spin text-primary" />
                   <span>Carregando todas as ilustrações e edições disponíveis...</span>
                 </div>
@@ -400,7 +400,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                           border: isSelected ? '2px solid #ffbb00' : '1px solid rgba(255, 255, 255, 0.08)',
                           boxShadow: isSelected ? '0 0 12px rgba(255, 187, 0, 0.45)' : undefined,
                           transition: 'all 0.15s ease',
-                          background: '#090c13',
+                          background: '#0b0b0d',
                           display: 'flex',
                           flexDirection: 'column',
                         }}
@@ -419,7 +419,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                           setHoveredPreview(null);
                         }}
                       >
-                        <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b', overflow: 'hidden' }}>
+                        <div style={{ position: 'relative', aspectRatio: '5/7', background: '#09090b', overflow: 'hidden' }}>
                           <CardImage
                             name={selectedCard.name}
                             imageUrl={p.imageUrl}
@@ -453,7 +453,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                           <div
                             style={{
                               fontWeight: 700,
-                              color: isSelected ? '#ffbb00' : '#f1f5f9',
+                              color: isSelected ? '#ffbb00' : '#f4f4f5',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
@@ -464,7 +464,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                           </div>
                           <div
                             style={{
-                              color: '#64748b',
+                              color: '#71717a',
                               fontSize: '0.65rem',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
@@ -485,7 +485,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
                   })}
                 </div>
               ) : (
-                <div style={{ fontSize: '0.8rem', color: '#64748b', padding: '6px' }}>
+                <div style={{ fontSize: '0.8rem', color: '#71717a', padding: '6px' }}>
                   Edição padrão selecionada ({selectedCard.setName}).
                 </div>
               )}
@@ -496,7 +496,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
           {/* Form Options: Qty, Foil, Target Destination */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#a1a1aa', marginBottom: '6px' }}>
                 Quantidade
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -527,7 +527,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#a1a1aa', marginBottom: '6px' }}>
                 Destino
               </label>
               <select
@@ -545,7 +545,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#a1a1aa', marginBottom: '6px' }}>
                 Tratamento
               </label>
               <label
@@ -581,7 +581,7 @@ export const AddCardModal: React.FC<AddCardModalProps> = ({
             alignItems: 'center',
             justifyContent: 'flex-end',
             gap: '12px',
-            background: 'rgba(18, 23, 34, 0.8)',
+            background: 'rgba(20, 20, 23, 0.8)',
           }}
         >
           <button className="btn btn-ghost" onClick={onClose}>

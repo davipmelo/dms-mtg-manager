@@ -103,7 +103,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 11, 0.8)',
+        backgroundColor: 'rgba(6, 6, 7, 0.8)',
         backdropFilter: 'blur(8px)',
         zIndex: 9999,
         display: 'flex',
@@ -123,7 +123,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#0c0f17',
+          backgroundColor: '#111113',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
           borderRadius: '16px',
@@ -140,16 +140,16 @@ export const BackupModal: React.FC<BackupModalProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '12px',
-            background: 'rgba(18, 23, 34, 0.95)',
+            background: 'rgba(20, 20, 23, 0.95)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Database size={22} className="text-amber-400" />
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f4f4f5', margin: 0 }}>
                 Backup do Sistema (.json)
               </h2>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '2px 0 0' }}>
+              <p style={{ fontSize: '0.8rem', color: '#a1a1aa', margin: '2px 0 0' }}>
                 Exporte uma cópia completa dos seus dados ou restaure um arquivo de segurança
               </p>
             </div>
@@ -181,8 +181,8 @@ export const BackupModal: React.FC<BackupModalProps> = ({
               padding: '20px',
               borderRadius: '12px',
               background:
-                'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(18, 23, 34, 0.8) 100%)',
-              border: '1px solid rgba(99, 102, 241, 0.28)',
+                'linear-gradient(135deg, rgba(255, 187, 0, 0.12) 0%, rgba(20, 20, 23, 0.8) 100%)',
+              border: '1px solid rgba(255, 187, 0, 0.28)',
               display: 'flex',
               flexDirection: 'column',
               gap: '14px',
@@ -200,10 +200,10 @@ export const BackupModal: React.FC<BackupModalProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <HardDriveUpload size={22} className="text-indigo-400" />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.96rem', color: '#f8fafc' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.96rem', color: '#f4f4f5' }}>
                     1. Exportar Todos os Meus Dados
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#a1a1aa' }}>
                     Gera um snapshot completo salvo no seu dispositivo
                   </div>
                 </div>
@@ -237,16 +237,16 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                 fontSize: '0.82rem',
               }}
             >
-              <div style={{ color: '#cbd5e1' }}>
-                <span style={{ color: '#94a3b8' }}>Pool / Coleção: </span>
+              <div style={{ color: '#d4d4d8' }}>
+                <span style={{ color: '#a1a1aa' }}>Pool / Coleção: </span>
                 <strong>{totalOwnedCards} cartas</strong> ({collection.length} únicas)
               </div>
-              <div style={{ color: '#cbd5e1' }}>
-                <span style={{ color: '#94a3b8' }}>Decks Salvos: </span>
+              <div style={{ color: '#d4d4d8' }}>
+                <span style={{ color: '#a1a1aa' }}>Decks Salvos: </span>
                 <strong>{decks.length} deck(s)</strong>
               </div>
-              <div style={{ color: '#cbd5e1' }}>
-                <span style={{ color: '#94a3b8' }}>Fila de Proxies: </span>
+              <div style={{ color: '#d4d4d8' }}>
+                <span style={{ color: '#a1a1aa' }}>Fila de Proxies: </span>
                 <strong>{totalProxyCards} carta(s)</strong>
               </div>
             </div>
@@ -257,7 +257,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
             style={{
               padding: '20px',
               borderRadius: '12px',
-              background: 'rgba(18, 23, 34, 0.7)',
+              background: 'rgba(20, 20, 23, 0.7)',
               border: '1px solid var(--border-medium)',
               display: 'flex',
               flexDirection: 'column',
@@ -276,10 +276,10 @@ export const BackupModal: React.FC<BackupModalProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <HardDriveDownload size={22} className="text-emerald-400" />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.96rem', color: '#f8fafc' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.96rem', color: '#f4f4f5' }}>
                     2. Importar / Restaurar Backup de Outra Máquina
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#a1a1aa' }}>
                     Selecione um arquivo <code>.json</code> exportado anteriormente pelo Proliferate
                   </div>
                 </div>
@@ -339,7 +339,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                   <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#34d399' }}>
                     Arquivo Válido: {backupFileName}
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#a1a1aa', marginTop: '2px' }}>
                     Versão do schema: v{pendingBackup.schemaVersion} • Exportado em:{' '}
                     {new Date(pendingBackup.exportedAt).toLocaleString('pt-BR')}
                   </div>
@@ -351,7 +351,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                     gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                     gap: '10px',
                     fontSize: '0.82rem',
-                    color: '#cbd5e1',
+                    color: '#d4d4d8',
                   }}
                 >
                   <div>
@@ -375,7 +375,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                     gap: '10px',
                   }}
                 >
-                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f8fafc' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#f4f4f5' }}>
                     Como deseja restaurar este backup?
                   </label>
 
@@ -410,7 +410,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                         <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#fca5a5' }}>
                           Substituir Tudo (Recomendado ao trocar de computador)
                         </div>
-                        <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '0.78rem', color: '#a1a1aa' }}>
                           Apaga as cartas locais e coloca exatamente o conteúdo deste arquivo.
                         </div>
                       </div>
@@ -446,7 +446,7 @@ export const BackupModal: React.FC<BackupModalProps> = ({
                         <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#6ee7b7' }}>
                           Mesclar Dados (Manter o que já tenho)
                         </div>
-                        <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '0.78rem', color: '#a1a1aa' }}>
                           Soma as quantidades de cartas iguais e preserva artes customizadas diferentes.
                         </div>
                       </div>

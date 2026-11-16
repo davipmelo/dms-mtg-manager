@@ -122,7 +122,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 11, 0.8)',
+        backgroundColor: 'rgba(6, 6, 7, 0.8)',
         backdropFilter: 'blur(8px)',
         zIndex: 9999,
         display: 'flex',
@@ -142,7 +142,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#0c0f17',
+          backgroundColor: '#111113',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
           borderRadius: '16px',
@@ -159,16 +159,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '12px',
-            background: 'rgba(18, 23, 34, 0.95)',
+            background: 'rgba(20, 20, 23, 0.95)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Upload size={22} className="text-blue-400" />
             <div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc', margin: 0 }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f4f4f5', margin: 0 }}>
                 Exportar Listas de Cartas
               </h2>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '2px 0 0' }}>
+              <p style={{ fontSize: '0.8rem', color: '#a1a1aa', margin: '2px 0 0' }}>
                 Exporte sua coleção ou decks para MTG Arena, Moxfield, LigaMagic ou formatos de arquivo
               </p>
             </div>
@@ -198,7 +198,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           <div className="export-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             {/* Origin source */}
             <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px', display: 'block' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#d4d4d8', marginBottom: '6px', display: 'block' }}>
                 Origem das Cartas:
               </label>
               <select
@@ -220,7 +220,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
             {/* Target format */}
             <div>
-              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px', display: 'block' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 600, color: '#d4d4d8', marginBottom: '6px', display: 'block' }}>
                 Formato do Destino:
               </label>
               <select
@@ -267,7 +267,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           {/* Text Area Preview */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+              <span style={{ fontSize: '0.8rem', color: '#a1a1aa' }}>
                 Prévia do Texto Formatado ({exportContent.split('\n').filter(Boolean).length} linhas):
               </span>
             </div>
@@ -279,9 +279,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 height: '320px',
                 padding: '12px',
                 borderRadius: '8px',
-                background: '#070a10',
+                background: '#08080a',
                 border: '1px solid var(--border-medium)',
-                color: '#f8fafc',
+                color: '#f4f4f5',
                 fontFamily: 'monospace',
                 fontSize: '0.84rem',
                 resize: 'none',

@@ -104,18 +104,17 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     return (
       <button
         onClick={() => onOpenAuthModal('login')}
-        className="btn btn-primary btn-sm"
+        className="btn btn-secondary btn-sm"
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
           fontWeight: 700,
-          boxShadow: '0 2px 8px rgba(255, 187, 0, 0.25)',
         }}
         title="Entrar ou criar conta para sincronizar decks e coleção entre dispositivos"
       >
         <Cloud size={15} />
-        <span>Entrar / Sincronizar</span>
+        <span>Entrar<span className="app-action-label"> / Sincronizar</span></span>
       </button>
     );
   }
@@ -134,8 +133,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           alignItems: 'center',
           gap: '8px',
           padding: '4px 10px 4px 6px',
-          background: 'var(--bg-surface, #222228)',
-          border: '1px solid var(--border-subtle, #292932)',
+          background: 'var(--bg-surface, #1f1f23)',
+          border: '1px solid var(--border-subtle, #2a2a2f)',
           borderRadius: '9999px',
           cursor: 'pointer',
         }}
@@ -164,7 +163,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           style={{
             fontWeight: 700,
             fontSize: '0.82rem',
-            color: '#f8fafc',
+            color: '#f4f4f5',
             maxWidth: '120px',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
@@ -212,7 +211,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           )}
         </div>
 
-        <ChevronDown size={14} color="#a0a0ab" />
+        <ChevronDown size={14} color="#a1a1aa" />
       </button>
 
       {/* Dropdown Menu */}
@@ -225,7 +224,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
             right: 0,
             width: '280px',
             background: 'var(--bg-card, #18181d)',
-            border: '1px solid var(--border-subtle, #292932)',
+            border: '1px solid var(--border-subtle, #2a2a2f)',
             borderRadius: '12px',
             boxShadow: '0 12px 35px rgba(0, 0, 0, 0.65), 0 0 20px rgba(0, 0, 0, 0.4)',
             zIndex: 1050,
@@ -237,8 +236,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           <div
             style={{
               padding: '14px 16px',
-              borderBottom: '1px solid var(--border-subtle, #292932)',
-              background: 'var(--bg-dark, #1a1a20)',
+              borderBottom: '1px solid var(--border-subtle, #2a2a2f)',
+              background: 'var(--bg-dark, #1a1a1d)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -263,7 +262,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                   style={{
                     fontWeight: 800,
                     fontSize: '0.92rem',
-                    color: '#f8fafc',
+                    color: '#f4f4f5',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -289,7 +288,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           </div>
 
           {/* Sync Status Card */}
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-subtle, #292932)' }}>
+          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-subtle, #2a2a2f)' }}>
             <div
               style={{
                 display: 'flex',
@@ -304,7 +303,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                 ) : (
                   <Cloud size={14} color="#ffbb00" />
                 )}
-                <span style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.78rem', color: '#d4d4d8', fontWeight: 600 }}>
                   {syncStatus === 'synced'
                     ? 'Nuvem Sincronizada'
                     : syncStatus === 'syncing' || isManualSyncing
@@ -314,7 +313,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                     : 'Modo Offline'}
                 </span>
               </div>
-              <span style={{ fontSize: '0.72rem', color: '#a0a0ab' }}>{formatLastSync()}</span>
+              <span style={{ fontSize: '0.72rem', color: '#a1a1aa' }}>{formatLastSync()}</span>
             </div>
 
             <button
@@ -350,7 +349,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                     ? 'rgba(16, 185, 129, 0.15)'
                     : 'rgba(239, 68, 68, 0.15)',
                 color: feedbackMessage.type === 'success' ? '#86efac' : '#fca5a5',
-                borderBottom: '1px solid var(--border-subtle, #292932)',
+                borderBottom: '1px solid var(--border-subtle, #2a2a2f)',
               }}
             >
               {feedbackMessage.text}
@@ -370,20 +369,20 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                 background: 'transparent',
                 border: 'none',
                 borderRadius: '6px',
-                color: '#e2e8f0',
+                color: '#e4e4e7',
                 fontSize: '0.82rem',
                 cursor: 'pointer',
                 textAlign: 'left',
                 transition: 'background 0.15s',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-surface-hover, #2c2c34)')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-surface-hover, #28282d)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
               <KeyRound size={15} color="#ffbb00" />
               <span>Redefinir Minha Senha</span>
             </button>
 
-            <div style={{ height: '1px', background: 'var(--border-subtle, #292932)', margin: '4px 0' }} />
+            <div style={{ height: '1px', background: 'var(--border-subtle, #2a2a2f)', margin: '4px 0' }} />
 
             <button
               onClick={() => {

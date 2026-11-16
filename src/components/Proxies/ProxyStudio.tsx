@@ -36,8 +36,8 @@ import {
 
 const COLOR_PRESETS = [
   { label: 'Preto', color: '#000000' },
-  { label: 'Cinza Escuro', color: '#475569' },
-  { label: 'Cinza Claro', color: '#cbd5e1' },
+  { label: 'Cinza Escuro', color: '#52525b' },
+  { label: 'Cinza Claro', color: '#d4d4d8' },
   { label: 'Branco', color: '#ffffff' },
   { label: 'Vermelho', color: '#ef4444' },
   { label: 'Azul', color: '#3b82f6' },
@@ -75,7 +75,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
   // Crop marks state
   const [showCropMarks, setShowCropMarks] = useState<boolean>(true);
-  const [cropMarksColor, setCropMarksColor] = useState<string>('#475569');
+  const [cropMarksColor, setCropMarksColor] = useState<string>('#52525b');
   const [cropMarksThickness, setCropMarksThickness] = useState<number>(0.2);
   const [cropMarksLength, setCropMarksLength] = useState<number>(12);
   const [showMarginTicks, setShowMarginTicks] = useState<boolean>(true);
@@ -279,7 +279,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
         setCutLinesThickness(0.25);
         setCutLinesStyle('solid');
         setShowCropMarks(true);
-        setCropMarksColor('#475569');
+        setCropMarksColor('#52525b');
         setCropMarksThickness(0.2);
         setCropMarksLength(12);
         setShowMarginTicks(true);
@@ -290,7 +290,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
       case 'hobbyknife':
         setShowCutLines(true);
-        setCutLinesColor('#475569');
+        setCutLinesColor('#52525b');
         setCutLinesThickness(0.2);
         setCutLinesStyle('dashed');
         setShowCropMarks(true);
@@ -315,11 +315,11 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
       case 'economical':
         setShowCutLines(true);
-        setCutLinesColor('#cbd5e1');
+        setCutLinesColor('#d4d4d8');
         setCutLinesThickness(0.2);
         setCutLinesStyle('solid');
         setShowCropMarks(true);
-        setCropMarksColor('#94a3b8');
+        setCropMarksColor('#a1a1aa');
         setCropMarksThickness(0.25);
         setCropMarksLength(6);
         setShowMarginTicks(true);
@@ -332,7 +332,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Control Panel (Hidden during Print) */}
-      <div className="glass-panel print-hide" style={{ padding: '20px' }}>
+      <div className="glass-panel page-header-panel print-hide" style={{ padding: '22px 24px' }}>
         <div
           style={{
             display: 'flex',
@@ -343,22 +343,13 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
           }}
         >
           <div>
-            <h2
-              style={{
-                fontSize: '1.25rem',
-                fontWeight: 700,
-                color: '#f8fafc',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-              }}
-            >
-              <Printer className="text-amber-400" size={24} />
-              Estúdio de Impressão de Proxies (A4 — 9 cartas por folha)
+            <span className="section-eyebrow"><Printer size={12} /> A4 · 9 cartas por folha</span>
+            <h2 className="page-title">
+              Proxy Studio
             </h2>
-            <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '4px' }}>
+            <p className="page-subtitle">
               Diagramação exata de 63mm × 88mm com guias de corte e sem páginas em branco. Total:{' '}
-              <strong style={{ color: '#f8fafc' }}>{expandedCards.length} cartas</strong> em{' '}
+              <strong style={{ color: '#f4f4f5' }}>{expandedCards.length} cartas</strong> em{' '}
               <strong style={{ color: '#ffbb00' }}>{totalPages} folha(s) A4</strong>.
             </p>
           </div>
@@ -429,7 +420,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '0.85rem', color: '#cbd5e1' }}>
+            <span style={{ fontSize: '0.85rem', color: '#d4d4d8' }}>
               Adicionar Deck Inteiro à Impressão:
             </span>
             <select
@@ -462,7 +453,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
               gap: '8px',
             }}
           >
-            <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+            <span style={{ fontSize: '0.85rem', color: '#a1a1aa' }}>
               Ou importar do MPCFill:
             </span>
             <button
@@ -498,7 +489,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
               type="button"
               className="btn btn-ghost btn-sm"
               onClick={() => setIsAdvancedControlsOpen(!isAdvancedControlsOpen)}
-              style={{ padding: '4px 8px', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}
+              style={{ padding: '4px 8px', color: '#d4d4d8', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <Sliders size={15} className="text-amber-400" />
               <span style={{ fontWeight: 600 }}>Controles Avançados de Corte e Enquadramento</span>
@@ -507,7 +498,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
             {/* Quick 1-Click Presets */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Presets:</span>
+              <span style={{ fontSize: '0.75rem', color: '#a1a1aa' }}>Presets:</span>
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
@@ -562,7 +553,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
               {/* 1. Bordas de Corte */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div className="proxy-studio-presets-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Scissors size={15} className="text-amber-400" /> Bordas de Corte das Cartas
                   </label>
                   <button
@@ -579,7 +570,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                   <>
                     {/* Cut lines color */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                      <span style={{ color: '#94a3b8' }}>Cor da linha:</span>
+                      <span style={{ color: '#a1a1aa' }}>Cor da linha:</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                         {COLOR_PRESETS.map((p) => (
                           <button
@@ -611,7 +602,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
                     {/* Cut lines thickness */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                      <span style={{ color: '#94a3b8' }}>Espessura:</span>
+                      <span style={{ color: '#a1a1aa' }}>Espessura:</span>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         {[
                           { label: '0.15mm (Fina)', val: 0.15 },
@@ -634,7 +625,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
                     {/* Cut lines style */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                      <span style={{ color: '#94a3b8' }}>Estilo de linha:</span>
+                      <span style={{ color: '#a1a1aa' }}>Estilo de linha:</span>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         {[
                           { label: 'Sólida', val: 'solid' as const },
@@ -660,7 +651,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
               {/* 2. Marcas de Enquadramento */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div className="proxy-studio-presets-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <CheckSquare size={15} className="text-amber-400" /> Marcas de Enquadramento (Crop Marks)
                   </label>
                   <button
@@ -677,7 +668,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                   <>
                     {/* Crop marks color */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                      <span style={{ color: '#94a3b8' }}>Cor das marcas:</span>
+                      <span style={{ color: '#a1a1aa' }}>Cor das marcas:</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                         {COLOR_PRESETS.map((p) => (
                           <button
@@ -709,7 +700,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
                     {/* Crop marks thickness */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                      <span style={{ color: '#94a3b8' }}>Espessura:</span>
+                      <span style={{ color: '#a1a1aa' }}>Espessura:</span>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         {[
                           { label: '0.20mm', val: 0.2 },
@@ -732,7 +723,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
                     {/* Crop marks length & toggles */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                      <span style={{ color: '#94a3b8' }}>Comprimento:</span>
+                      <span style={{ color: '#a1a1aa' }}>Comprimento:</span>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         {[
                           { label: '5mm', val: 5 },
@@ -753,7 +744,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '14px', fontSize: '0.76rem', color: '#cbd5e1', paddingTop: '2px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '14px', fontSize: '0.76rem', color: '#d4d4d8', paddingTop: '2px', flexWrap: 'wrap' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
@@ -779,13 +770,13 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
               {/* 3. Acabamento & Sangria */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Palette size={15} className="text-amber-400" /> Acabamento & Sangria
                 </label>
 
                 {/* Card Bleed Background */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-                  <span style={{ color: '#94a3b8' }}>Sangria dos cantos:</span>
+                  <span style={{ color: '#a1a1aa' }}>Sangria dos cantos:</span>
                   <div style={{ display: 'flex', gap: '4px' }}>
                     <button
                       type="button"
@@ -818,7 +809,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                 </div>
 
                 {/* Sheet Metadata Toggle */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#cbd5e1', cursor: 'pointer', marginTop: '4px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#d4d4d8', cursor: 'pointer', marginTop: '4px' }}>
                   <input
                     type="checkbox"
                     checked={showSheetMetadata}
@@ -829,7 +820,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                 </label>
 
                 {/* Crop MPC Bleed Toggle */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#cbd5e1', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#d4d4d8', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={cropMpcBleed}
@@ -872,7 +863,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
             style={{
               fontSize: '0.9rem',
               fontWeight: 600,
-              color: '#94a3b8',
+              color: '#a1a1aa',
               marginBottom: '12px',
             }}
           >
@@ -916,7 +907,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       title: item.card.name,
                       subtitle: `${item.card.setName || ''} (${(item.card.setCode || '').toUpperCase()} #${item.card.collectorNumber || ''})`,
                       badge: item.card.faceLabel ? `Lado: ${item.card.faceLabel.toUpperCase()}` : undefined,
-                      badgeColor: '#818cf8',
+                      badgeColor: '#ffbb00',
                     });
                   }}
                   onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
@@ -1048,10 +1039,10 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
             }}
           >
             <Layers size={48} className="text-slate-600" />
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#f8fafc' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#f4f4f5' }}>
               Sua fila de proxies está vazia
             </h3>
-            <p style={{ fontSize: '0.9rem', color: '#94a3b8', maxWidth: '460px' }}>
+            <p style={{ fontSize: '0.9rem', color: '#a1a1aa', maxWidth: '460px' }}>
               Adicione cartas da sua coleção, de um deck completo, da aba de Utilitários ou carregue um arquivo XML do MPCFill.
             </p>
           </div>
@@ -1063,7 +1054,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                 style={{
                   textAlign: 'center',
                   marginBottom: '8px',
-                  color: '#94a3b8',
+                  color: '#a1a1aa',
                   fontSize: '0.85rem',
                 }}
               >
@@ -1215,7 +1206,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       fontSize: '8px',
-                      color: '#64748b',
+                      color: '#71717a',
                       pointerEvents: 'none',
                       zIndex: 12,
                       letterSpacing: '0.4px',
@@ -1335,7 +1326,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
               maxHeight: '90vh',
               display: 'flex',
               flexDirection: 'column',
-              background: '#0f172a',
+              background: '#18181b',
               border: '1px solid rgba(255, 187, 0, 0.35)',
               borderRadius: '16px',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 187, 0, 0.12)',
@@ -1350,7 +1341,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                background: 'rgba(30, 41, 59, 0.6)',
+                background: 'rgba(39, 39, 42, 0.6)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1369,14 +1360,14 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                   <Sparkles size={22} className="text-amber-400" />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f4f4f5', margin: 0 }}>
                     Importar Cartas Alter do MPCFill
                   </h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                     <span
                       style={{
                         fontSize: '0.75rem',
-                        color: '#94a3b8',
+                        color: '#a1a1aa',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
@@ -1385,7 +1376,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       <FileCode size={12} className="text-amber-400" />
                       {mpcParsedOrder.fileName || 'pedido.xml'}
                     </span>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>•</span>
+                    <span style={{ fontSize: '0.75rem', color: '#71717a' }}>•</span>
                     <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>
                       Google Drive CDN Ativo (Alta Resolução)
                     </span>
@@ -1397,7 +1388,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                 type="button"
                 className="btn btn-ghost btn-icon"
                 onClick={() => setIsMpcModalOpen(false)}
-                style={{ color: '#94a3b8' }}
+                style={{ color: '#a1a1aa' }}
               >
                 <X size={20} />
               </button>
@@ -1423,32 +1414,32 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
               >
                 <div
                   style={{
-                    background: 'rgba(30, 41, 59, 0.5)',
+                    background: 'rgba(39, 39, 42, 0.5)',
                     padding: '12px 14px',
                     borderRadius: '10px',
                     border: '1px solid rgba(255, 255, 255, 0.05)',
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Total de Cartas Alter</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#a1a1aa' }}>Total de Cartas Alter</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f4f4f5', marginTop: '2px' }}>
                     {mpcParsedOrder.fronts.length}
                   </div>
                 </div>
 
                 <div
                   style={{
-                    background: 'rgba(30, 41, 59, 0.5)',
+                    background: 'rgba(39, 39, 42, 0.5)',
                     padding: '12px 14px',
                     borderRadius: '10px',
                     border: '1px solid rgba(255, 255, 255, 0.05)',
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Cartas Dupla-Face</div>
+                  <div style={{ fontSize: '0.75rem', color: '#a1a1aa' }}>Cartas Dupla-Face</div>
                   <div
                     style={{
                       fontSize: '1.25rem',
                       fontWeight: 700,
-                      color: mpcParsedOrder.backs.length > 0 ? '#c084fc' : '#94a3b8',
+                      color: mpcParsedOrder.backs.length > 0 ? '#c084fc' : '#a1a1aa',
                       marginTop: '2px',
                     }}
                   >
@@ -1460,13 +1451,13 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
                 <div
                   style={{
-                    background: 'rgba(30, 41, 59, 0.5)',
+                    background: 'rgba(39, 39, 42, 0.5)',
                     padding: '12px 14px',
                     borderRadius: '10px',
                     border: '1px solid rgba(255, 255, 255, 0.05)',
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Folhas A4 Estimadas</div>
+                  <div style={{ fontSize: '0.75rem', color: '#a1a1aa' }}>Folhas A4 Estimadas</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffbb00', marginTop: '2px' }}>
                     {Math.ceil(
                       (mpcParsedOrder.fronts.length +
@@ -1481,18 +1472,18 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
 
                 <div
                   style={{
-                    background: 'rgba(30, 41, 59, 0.5)',
+                    background: 'rgba(39, 39, 42, 0.5)',
                     padding: '12px 14px',
                     borderRadius: '10px',
                     border: '1px solid rgba(255, 255, 255, 0.05)',
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Estoque / Acabamento</div>
+                  <div style={{ fontSize: '0.75rem', color: '#a1a1aa' }}>Estoque / Acabamento</div>
                   <div
                     style={{
                       fontSize: '0.9rem',
                       fontWeight: 600,
-                      color: '#cbd5e1',
+                      color: '#d4d4d8',
                       marginTop: '4px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -1514,10 +1505,10 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                     marginBottom: '10px',
                   }}
                 >
-                  <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#cbd5e1', margin: 0 }}>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: '#d4d4d8', margin: 0 }}>
                     Prévia das Artes Selecionadas ({mpcParsedOrder.fronts.length} cartas)
                   </h4>
-                  <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#a1a1aa' }}>
                     Role para visualizar todas as cartas
                   </span>
                 </div>
@@ -1549,7 +1540,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                           height: '133px',
                           borderRadius: '6px',
                           overflow: 'hidden',
-                          background: '#1e293b',
+                          background: '#27272a',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
                           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
                         }}
@@ -1569,7 +1560,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       <span
                         style={{
                           fontSize: '0.72rem',
-                          color: '#f8fafc',
+                          color: '#f4f4f5',
                           fontWeight: 600,
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
@@ -1583,7 +1574,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                         <span
                           style={{
                             fontSize: '0.62rem',
-                            color: '#94a3b8',
+                            color: '#a1a1aa',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -1602,12 +1593,12 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                         width: '95px',
                         height: '133px',
                         borderRadius: '6px',
-                        background: 'rgba(30, 41, 59, 0.5)',
+                        background: 'rgba(39, 39, 42, 0.5)',
                         border: '1px dashed rgba(255, 255, 255, 0.15)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#94a3b8',
+                        color: '#a1a1aa',
                         fontSize: '0.8rem',
                         fontWeight: 600,
                         textAlign: 'center',
@@ -1623,7 +1614,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
               {/* Import Options */}
               <div
                 style={{
-                  background: 'rgba(30, 41, 59, 0.4)',
+                  background: 'rgba(39, 39, 42, 0.4)',
                   padding: '16px',
                   borderRadius: '12px',
                   border: '1px solid var(--border-subtle)',
@@ -1639,7 +1630,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       style={{
                         fontSize: '0.85rem',
                         fontWeight: 600,
-                        color: '#f8fafc',
+                        color: '#f4f4f5',
                         marginBottom: '8px',
                         display: 'block',
                       }}
@@ -1654,7 +1645,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                           gap: '8px',
                           cursor: 'pointer',
                           fontSize: '0.85rem',
-                          color: '#cbd5e1',
+                          color: '#d4d4d8',
                         }}
                       >
                         <input
@@ -1674,7 +1665,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                           gap: '8px',
                           cursor: 'pointer',
                           fontSize: '0.85rem',
-                          color: '#cbd5e1',
+                          color: '#d4d4d8',
                         }}
                       >
                         <input
@@ -1698,7 +1689,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       gap: '10px',
                       cursor: 'pointer',
                       fontSize: '0.85rem',
-                      color: '#cbd5e1',
+                      color: '#d4d4d8',
                     }}
                   >
                     <input
@@ -1709,7 +1700,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                     />
                     <div>
                       <strong>Imprimir verso padrão para todas as cartas normais</strong>
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.75rem', color: '#a1a1aa', marginTop: '2px' }}>
                         O arquivo inclui um verso padrão de Magic / sleeve ({mpcParsedOrder.cardbackId}).
                         Se desmarcado, apenas as cartas frente (e os versos de cartas dupla-face) serão impressos,
                         economizando papel caso você use sleeves com cartas reais.
@@ -1728,7 +1719,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                         gap: '10px',
                         cursor: 'pointer',
                         fontSize: '0.85rem',
-                        color: '#cbd5e1',
+                        color: '#d4d4d8',
                       }}
                     >
                       <input
@@ -1746,7 +1737,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                         <label
                           style={{
                             fontSize: '0.75rem',
-                            color: '#94a3b8',
+                            color: '#a1a1aa',
                             display: 'block',
                             marginBottom: '4px',
                           }}
@@ -1777,7 +1768,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                 justifyContent: 'flex-end',
                 alignItems: 'center',
                 gap: '12px',
-                background: 'rgba(30, 41, 59, 0.6)',
+                background: 'rgba(39, 39, 42, 0.6)',
               }}
             >
               <button

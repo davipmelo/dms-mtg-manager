@@ -131,14 +131,14 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
 
   const activeColorItems = useMemo(() => {
     const rawItems = [
-      { label: 'Branco', count: stats.colorsCount.White, bg: '#f8f6d8', border: '#0f141d' },
-      { label: 'Azul', count: stats.colorsCount.Blue, bg: '#38bdf8', border: '#0f141d' },
-      { label: 'Preto', count: stats.colorsCount.Black, bg: '#272a30', border: '#0f141d' },
-      { label: 'Vermelho', count: stats.colorsCount.Red, bg: '#f43f5e', border: '#0f141d' },
-      { label: 'Verde', count: stats.colorsCount.Green, bg: '#22c55e', border: '#0f141d' },
-      { label: 'Incolor', count: stats.colorsCount.Colorless, bg: '#94a3b8', border: '#0f141d' },
-      { label: 'Multicolor', count: stats.colorsCount.Multicolor, bg: '#eab308', border: '#0f141d' },
-      { label: 'Terrenos', count: stats.colorsCount.Lands, bg: '#96603a', border: '#0f141d' },
+      { label: 'Branco', count: stats.colorsCount.White, bg: '#f8f6d8', border: '#141416' },
+      { label: 'Azul', count: stats.colorsCount.Blue, bg: '#38bdf8', border: '#141416' },
+      { label: 'Preto', count: stats.colorsCount.Black, bg: '#272a30', border: '#141416' },
+      { label: 'Vermelho', count: stats.colorsCount.Red, bg: '#f43f5e', border: '#141416' },
+      { label: 'Verde', count: stats.colorsCount.Green, bg: '#22c55e', border: '#141416' },
+      { label: 'Incolor', count: stats.colorsCount.Colorless, bg: '#a1a1aa', border: '#141416' },
+      { label: 'Multicolor', count: stats.colorsCount.Multicolor, bg: '#eab308', border: '#141416' },
+      { label: 'Terrenos', count: stats.colorsCount.Lands, bg: '#96603a', border: '#141416' },
     ];
     return rawItems.filter((item) => item.count > 0);
   }, [stats.colorsCount]);
@@ -151,7 +151,7 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
           {
             data: [1],
             backgroundColor: ['rgba(255, 255, 255, 0.05)'],
-            borderColor: ['#0f141d'],
+            borderColor: ['#141416'],
             borderWidth: 2,
           },
         ],
@@ -201,7 +201,7 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } },
+        labels: { color: '#a1a1aa', font: { family: 'Inter', size: 11 } },
       },
     },
     scales: {
@@ -221,11 +221,11 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
       {/* Metric summary badges */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: '16px' }}>
         <div className="glass-card" style={{ padding: '20px 22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.82rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#a1a1aa', fontSize: '0.82rem' }}>
             <span>Total de Cartas</span>
             <Layers size={16} />
           </div>
-          <div style={{ fontSize: '1.85rem', fontWeight: 700, marginTop: '10px', color: '#f8fafc' }}>
+          <div style={{ fontSize: '1.85rem', fontWeight: 700, marginTop: '10px', color: '#f4f4f5' }}>
             {stats.totalCards}
           </div>
           <div style={{ fontSize: '0.78rem', color: '#71717a', marginTop: '6px' }}>
@@ -235,7 +235,7 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
 
         {showDeckMetrics && (
           <div className="glass-card" style={{ padding: '20px 22px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.82rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#a1a1aa', fontSize: '0.82rem' }}>
               <span>Custo Médio (CMC)</span>
               <Activity size={16} />
             </div>
@@ -249,23 +249,23 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
         )}
 
         <div className="glass-card" style={{ padding: '20px 22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.82rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#a1a1aa', fontSize: '0.82rem' }}>
             <span>Valor Estimado</span>
             <DollarSign size={16} />
           </div>
           <div style={{ fontSize: '1.85rem', fontWeight: 700, marginTop: '10px', color: '#10b981' }}>
             ${stats.totalValueUsd}
           </div>
-          <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '6px' }}>
+          <div style={{ fontSize: '0.78rem', color: '#71717a', marginTop: '6px' }}>
             Aprox. R$ {stats.totalValueBrl}
           </div>
-          <div style={{ fontSize: '0.70rem', color: '#64748b', marginTop: '5px', opacity: 0.85 }}>
+          <div style={{ fontSize: '0.70rem', color: '#71717a', marginTop: '5px', opacity: 0.85 }}>
             Fonte: Cotação de mercado TCGplayer via Scryfall
           </div>
         </div>
 
         <div className="glass-card" style={{ padding: '20px 22px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.82rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#a1a1aa', fontSize: '0.82rem' }}>
             <span>Raridades</span>
             <PieChart size={16} />
           </div>
@@ -282,7 +282,7 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '20px' }}>
         {/* Mana Curve */}
         <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <h3 style={{ fontSize: '0.98rem', fontWeight: 600, marginBottom: '12px', color: '#e2e8f0' }}>
+          <h3 style={{ fontSize: '0.98rem', fontWeight: 600, marginBottom: '12px', color: '#e4e4e7' }}>
             Curva de Mana
           </h3>
           <div style={{ height: '240px', width: '100%' }}>
@@ -301,7 +301,7 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
 
         {/* Color Breakdown */}
         <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <h3 style={{ fontSize: '0.98rem', fontWeight: 600, marginBottom: '12px', color: '#e2e8f0' }}>
+          <h3 style={{ fontSize: '0.98rem', fontWeight: 600, marginBottom: '12px', color: '#e4e4e7' }}>
             Distribuição de Cores
           </h3>
           <div style={{ height: '240px', width: '100%' }}>
@@ -313,7 +313,7 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
                 plugins: {
                   legend: {
                     position: 'right',
-                    labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 }, boxWidth: 14, padding: 14 },
+                    labels: { color: '#a1a1aa', font: { family: 'Inter', size: 11 }, boxWidth: 14, padding: 14 },
                   },
                 },
               }}
@@ -323,7 +323,7 @@ export const InteractiveCharts: React.FC<AnalyticsProps> = ({
 
         {/* Card Types Breakdown */}
         <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <h3 style={{ fontSize: '0.98rem', fontWeight: 600, marginBottom: '12px', color: '#e2e8f0' }}>
+          <h3 style={{ fontSize: '0.98rem', fontWeight: 600, marginBottom: '12px', color: '#e4e4e7' }}>
             Distribuição por Tipos
           </h3>
           <div style={{ height: '240px', width: '100%' }}>

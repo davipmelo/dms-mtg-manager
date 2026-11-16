@@ -407,7 +407,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 11, 0.85)',
+        backgroundColor: 'rgba(6, 6, 7, 0.85)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
         zIndex: 9999,
@@ -428,9 +428,9 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#0c0f17',
+          backgroundColor: '#111113',
           border: '1px solid rgba(255, 255, 255, 0.12)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.15)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 187, 0, 0.15)',
           borderRadius: '16px',
           overflow: 'hidden',
           animation: 'modal-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
@@ -445,7 +445,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: 'rgba(18, 23, 34, 0.8)',
+            background: 'rgba(20, 20, 23, 0.8)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -454,20 +454,20 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
                 width: '36px',
                 height: '36px',
                 borderRadius: '8px',
-                background: 'rgba(99, 102, 241, 0.15)',
+                background: 'rgba(255, 187, 0, 0.15)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#818cf8',
+                color: '#ffbb00',
               }}
             >
               <Edit3 size={18} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f4f4f5' }}>
                 Editar Deck: {deck.name}
               </h2>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+              <p style={{ fontSize: '0.8rem', color: '#a1a1aa' }}>
                 Altere o nome, formato, comandante ou a lista completa de cartas.
               </p>
             </div>
@@ -511,7 +511,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
           {/* Name & Format */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#d4d4d8', marginBottom: '6px' }}>
                 Nome do Deck *
               </label>
               <input
@@ -525,7 +525,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#d4d4d8', marginBottom: '6px' }}>
                 Formato
               </label>
               <select
@@ -549,8 +549,8 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
 
           {/* Commander input if commander format */}
           {(deckFormat === 'commander' || deckFormat === 'brawl') && (
-            <div style={{ background: 'rgba(245, 158, 11, 0.08)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.25)' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700, color: '#fbbf24', marginBottom: '6px' }}>
+            <div style={{ background: 'rgba(255, 187, 0, 0.08)', padding: '12px 14px', borderRadius: '8px', border: '1px solid rgba(255, 187, 0, 0.25)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700, color: '#ffcc33', marginBottom: '6px' }}>
                 <Crown size={15} />
                 Comandante do Deck
               </label>
@@ -584,7 +584,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
           {/* Description */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#cbd5e1' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#d4d4d8' }}>
                 Descrição do Deck (exibida no card)
               </label>
               {description && (
@@ -592,7 +592,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
                   type="button"
                   className="btn btn-ghost btn-sm"
                   onClick={() => setDescription('')}
-                  style={{ fontSize: '0.72rem', padding: '1px 6px', color: '#94a3b8' }}
+                  style={{ fontSize: '0.72rem', padding: '1px 6px', color: '#a1a1aa' }}
                   title="Remover texto da descrição"
                 >
                   Limpar descrição
@@ -613,7 +613,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
           {deckTags && deckTags.length > 0 && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#d4d4d8', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Tag size={14} className="text-amber-400" /> Tags do Deck
                 </label>
                 {onOpenManageTags && (
@@ -677,14 +677,14 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
           {/* Card list textarea */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#cbd5e1' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#d4d4d8' }}>
                 Lista de Cards (1 carta por linha)
               </label>
               <span
                 style={{
                   fontSize: '0.75rem',
                   fontWeight: 600,
-                  color: detectedCount === targetCards ? '#34d399' : '#f59e0b',
+                  color: detectedCount === targetCards ? '#34d399' : '#e6a800',
                 }}
               >
                 {detectedCount} / {targetCards} cartas detectadas
@@ -699,7 +699,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
               placeholder={`Exemplo:\n4 Lightning Bolt (CLB) 187\n1 Sol Ring (C21) 263\n1 Demonic Tutor\n1 Swords to Plowshares`}
               style={{ fontFamily: 'var(--font-mono)', fontSize: '0.84rem' }}
             />
-            <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+            <p style={{ fontSize: '0.75rem', color: '#a1a1aa', marginTop: '4px' }}>
               Dica: Você pode alterar quantidades, adicionar novas cartas ou editar a edição entre parênteses ex: (CMM) 400.
             </p>
           </div>
@@ -712,10 +712,10 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
                 alignItems: 'center',
                 gap: '8px',
                 padding: '10px 14px',
-                background: 'rgba(99, 102, 241, 0.12)',
+                background: 'rgba(255, 187, 0, 0.12)',
                 borderRadius: '8px',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
-                color: '#a5b4fc',
+                border: '1px solid rgba(255, 187, 0, 0.3)',
+                color: '#ffcc4d',
                 fontSize: '0.85rem',
               }}
             >
@@ -733,10 +733,10 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: 'rgba(18, 23, 34, 0.8)',
+            background: 'rgba(20, 20, 23, 0.8)',
           }}
         >
-          <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ fontSize: '0.8rem', color: '#a1a1aa', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <FileText size={15} />
             <span>{detectedCount} cartas no total</span>
           </div>

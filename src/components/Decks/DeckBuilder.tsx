@@ -809,6 +809,12 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const deckHeroArt =
+    deck.coverImageUrl ||
+    deck.commanderCard?.imageUrlArtCrop ||
+    deck.cards.find((c) => c.category === 'commander')?.card.imageUrlArtCrop ||
+    deck.cards[0]?.card.imageUrlArtCrop;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Top Navigation & Deck Header (Sticky & Docks to Main Header on scroll) */}
@@ -818,7 +824,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           position: 'sticky',
           top: 'var(--app-header-height, 58px)',
           zIndex: 900,
-          background: isScrolled ? 'rgba(10, 13, 20, 0.96)' : undefined,
+          background: isScrolled ? 'rgba(10, 10, 12, 0.96)' : undefined,
           backdropFilter: isScrolled ? 'blur(16px)' : undefined,
           WebkitBackdropFilter: isScrolled ? 'blur(16px)' : undefined,
           borderTop: isScrolled ? 'none' : undefined,
@@ -829,6 +835,16 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           transition: 'padding 0.15s ease, border-radius 0.15s ease',
         }}
       >
+        {!isScrolled && deckHeroArt && (
+          <div
+            className="deck-hero-art"
+            aria-hidden="true"
+            style={{
+              backgroundImage: `url(${deckHeroArt})`,
+              backgroundPosition: `center ${deck.coverPosition ?? 35}%`,
+            }}
+          />
+        )}
         {isScrolled ? (
           /* Compact Docked Header (Single slim row without taking much space) */
           <div
@@ -858,7 +874,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 style={{
                   fontSize: '1.05rem',
                   fontWeight: 800,
-                  color: '#f8fafc',
+                  color: '#f4f4f5',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -1039,14 +1055,14 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 }}
               >
                 <div>
-                  <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f8fafc' }}>
+                  <h1 className="page-title" style={{ fontSize: 'clamp(1.5rem, 1.2rem + 1.2vw, 2.2rem)' }}>
                     {deck.name}
                   </h1>
                   {deck.description && (
                     <p
                       style={{
                         fontSize: '0.875rem',
-                        color: '#94a3b8',
+                        color: '#a1a1aa',
                         marginTop: '4px',
                         maxWidth: '640px',
                       }}
@@ -1118,7 +1134,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             style={{
               fontSize: '1.15rem',
               fontWeight: 700,
-              color: '#f8fafc',
+              color: '#f4f4f5',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
@@ -1156,7 +1172,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           <div style={{ position: 'relative', flex: '1 1 240px', minWidth: '220px' }}>
             <Search
               size={16}
-              style={{ position: 'absolute', left: '12px', top: '11px', color: '#64748b' }}
+              style={{ position: 'absolute', left: '12px', top: '11px', color: '#71717a' }}
             />
             <input
               type="text"
@@ -1286,7 +1302,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 }}
                 title={`Ajustar escala da grade (${gridCardSize}px)`}
               >
-                <ZoomOut size={13} style={{ color: '#94a3b8' }} />
+                <ZoomOut size={13} style={{ color: '#a1a1aa' }} />
                 <input
                   type="range"
                   min={110}
@@ -1294,10 +1310,10 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   step={10}
                   value={gridCardSize}
                   onChange={(e) => handleGridCardSizeChange(Number(e.target.value))}
-                  style={{ width: '85px', accentColor: '#818cf8', cursor: 'pointer' }}
+                  style={{ width: '85px', accentColor: '#ffbb00', cursor: 'pointer' }}
                 />
-                <ZoomIn size={13} style={{ color: '#94a3b8' }} />
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8', minWidth: '36px', textAlign: 'right' }}>
+                <ZoomIn size={13} style={{ color: '#a1a1aa' }} />
+                <span style={{ fontSize: '0.75rem', color: '#a1a1aa', minWidth: '36px', textAlign: 'right' }}>
                   {gridCardSize}px
                 </span>
               </div>
@@ -1308,14 +1324,14 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
       {/* Main Cards Section Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px' }}>
-        <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc' }}>
+        <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f4f4f5' }}>
           Baralho Principal ({sortedMainCards.reduce((s, c) => s + c.quantity, 0)} cartas)
         </h3>
       </div>
 
       {/* Main Cards Display Based on View Mode */}
       {sortedMainCards.length === 0 ? (
-        <div className="glass-card" style={{ padding: '60px 20px', textAlign: 'center', color: '#94a3b8' }}>
+        <div className="glass-card" style={{ padding: '60px 20px', textAlign: 'center', color: '#a1a1aa' }}>
           {mainCards.length === 0
             ? 'Este deck ainda não possui cartas. Clique em "Importar Cartas" acima para adicionar sua lista!'
             : 'Nenhuma carta encontrada com os filtros selecionados.'}
@@ -1391,7 +1407,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         position: 'absolute',
                         top: '8px',
                         left: '8px',
-                        background: 'rgba(12, 15, 23, 0.92)',
+                        background: 'rgba(14, 14, 16, 0.92)',
                         border: '1px solid #ffbb00',
                         borderRadius: '6px',
                         padding: '2px 7px',
@@ -1417,13 +1433,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       position: 'absolute',
                       bottom: '8px',
                       left: '8px',
-                      background: 'rgba(12, 15, 23, 0.88)',
+                      background: 'rgba(14, 14, 16, 0.88)',
                       border: '1px solid var(--border-medium)',
                       borderRadius: '6px',
                       padding: '2px 8px',
                       fontSize: '0.82rem',
                       fontWeight: 700,
-                      color: '#f8fafc',
+                      color: '#f4f4f5',
                       boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
                       zIndex: 2,
                       pointerEvents: 'none',
@@ -1460,7 +1476,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     <div className="card-art-actions-overlay">
                       <button
                         className="btn btn-secondary btn-icon"
-                        style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
+                        style={{ padding: '6px', background: 'rgba(14, 14, 16, 0.9)' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setHoveredPreview(null);
@@ -1473,7 +1489,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       {onAddToProxies && (
                         <button
                           className="btn btn-secondary btn-icon"
-                          style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
+                          style={{ padding: '6px', background: 'rgba(14, 14, 16, 0.9)' }}
                           onClick={(e) => {
                             e.stopPropagation();
                             setHoveredPreview(null);
@@ -1486,7 +1502,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       )}
                       <button
                         className="btn btn-secondary btn-icon text-red-400"
-                        style={{ padding: '6px', background: 'rgba(12, 15, 23, 0.9)' }}
+                        style={{ padding: '6px', background: 'rgba(14, 14, 16, 0.9)' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setHoveredPreview(null);
@@ -1505,7 +1521,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 <div
                   style={{
                     padding: '12px',
-                    background: '#0c0f17',
+                    background: '#111113',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
@@ -1524,7 +1540,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       style={{
                         fontWeight: 600,
                         fontSize: '0.9rem',
-                        color: '#f8fafc',
+                        color: '#f4f4f5',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -1532,7 +1548,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     >
                       {displayName}
                       {isFlipped && (
-                        <span style={{ marginLeft: '6px', fontSize: '0.72rem', color: '#a78bfa', fontWeight: 600 }}>
+                        <span style={{ marginLeft: '6px', fontSize: '0.72rem', color: '#ffcc4d', fontWeight: 600 }}>
                           (Verso)
                         </span>
                       )}
@@ -1545,7 +1561,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       display: 'flex',
                       justifyContent: 'space-between',
                       fontSize: '0.75rem',
-                      color: '#64748b',
+                      color: '#71717a',
                     }}
                   >
                     <span>{c.card.typeLine.split('—')[0]}</span>
@@ -1573,7 +1589,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     <span style={{ color: '#10b981' }}>
                       Disp: <strong>{availQty}</strong>
                     </span>
-                    <span style={{ color: '#f59e0b' }}>
+                    <span style={{ color: '#e6a800' }}>
                       Uso: <strong>{inUseQty}</strong>
                     </span>
                   </div>
@@ -1679,7 +1695,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 <button
                   className="btn btn-ghost btn-sm"
                   onClick={() => setSelectedCardIds(new Set())}
-                  style={{ fontSize: '0.8rem', color: '#cbd5e1' }}
+                  style={{ fontSize: '0.8rem', color: '#d4d4d8' }}
                 >
                   Limpar Seleção
                 </button>
@@ -1717,7 +1733,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
               }}
             >
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#94a3b8' }}>
+                <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#a1a1aa' }}>
                   {/* Select All Checkbox */}
                   <th style={{ width: '40px', padding: '12px 14px', textAlign: 'center' }}>
                     <input
@@ -1737,7 +1753,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       padding: '12px 16px',
                       cursor: 'pointer',
                       userSelect: 'none',
-                      color: sortColumn === 'quantity' ? '#ffbb00' : '#94a3b8',
+                      color: sortColumn === 'quantity' ? '#ffbb00' : '#a1a1aa',
                     }}
                     title="Ordenar por Quantidade"
                   >
@@ -1760,7 +1776,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'available' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'available' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Disponível / Uso"
                 >
@@ -1783,7 +1799,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'name' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'name' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Nome"
                 >
@@ -1806,7 +1822,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'cmc' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'cmc' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Custo"
                 >
@@ -1829,7 +1845,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'type' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'type' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Tipo"
                 >
@@ -1852,7 +1868,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'set' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'set' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Edição"
                 >
@@ -1875,7 +1891,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'rarity' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'rarity' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Raridade"
                 >
@@ -1898,7 +1914,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     padding: '12px 16px',
                     cursor: 'pointer',
                     userSelect: 'none',
-                    color: sortColumn === 'price' ? '#ffbb00' : '#94a3b8',
+                    color: sortColumn === 'price' ? '#ffbb00' : '#a1a1aa',
                   }}
                   title="Ordenar por Preço"
                 >
@@ -1987,22 +2003,22 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
                     <td style={{ padding: '10px 16px' }}>
                       <span style={{ color: '#10b981', fontWeight: 600 }}>{availQty}</span>
-                      <span style={{ color: '#64748b' }}> / </span>
-                      <span style={{ color: '#f59e0b', fontWeight: 600 }}>{inUseQty}</span>
+                      <span style={{ color: '#71717a' }}> / </span>
+                      <span style={{ color: '#e6a800', fontWeight: 600 }}>{inUseQty}</span>
                     </td>
 
-                    <td style={{ padding: '10px 16px', fontWeight: 600, color: '#f8fafc' }}>
+                    <td style={{ padding: '10px 16px', fontWeight: 600, color: '#f4f4f5' }}>
                       <span
                         style={{
                           cursor: 'pointer',
-                          borderBottom: '1px dotted rgba(148, 163, 184, 0.45)',
+                          borderBottom: '1px dotted rgba(161, 161, 170, 0.45)',
                           paddingBottom: '1px',
                           transition: 'color 0.15s ease, border-color 0.15s ease',
                           color: isCmd ? '#ffbb00' : undefined,
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#a5b4fc';
-                          e.currentTarget.style.borderColor = '#818cf8';
+                          e.currentTarget.style.color = '#ffcc4d';
+                          e.currentTarget.style.borderColor = '#ffbb00';
                           setMousePos({ x: e.clientX, y: e.clientY });
                           setHoveredPreview({
                             url: c.card.imageUrlLarge || c.card.imageUrl,
@@ -2014,8 +2030,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         }}
                         onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.color = isCmd ? '#ffbb00' : '#f8fafc';
-                          e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.45)';
+                          e.currentTarget.style.color = isCmd ? '#ffbb00' : '#f4f4f5';
+                          e.currentTarget.style.borderColor = 'rgba(161, 161, 170, 0.45)';
                           setHoveredPreview(null);
                         }}
                       >
@@ -2047,11 +2063,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       <ManaCostRenderer manaCost={c.card.manaCost} />
                     </td>
 
-                    <td style={{ padding: '10px 16px', color: '#94a3b8' }}>
+                    <td style={{ padding: '10px 16px', color: '#a1a1aa' }}>
                       {c.card.typeLine}
                     </td>
 
-                    <td style={{ padding: '10px 16px', color: '#64748b' }}>
+                    <td style={{ padding: '10px 16px', color: '#71717a' }}>
                       {c.card.setCode}
                     </td>
 
@@ -2108,7 +2124,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       {sideCards.length > 0 && (
         <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px' }}>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f8fafc' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f4f4f5' }}>
               Sideboard ({sortedSideCards.reduce((s, c) => s + c.quantity, 0)} cartas)
             </h3>
           </div>
@@ -2124,7 +2140,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 }}
               >
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#94a3b8' }}>
+                  <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#a1a1aa' }}>
                     {/* Select All Checkbox for Sideboard */}
                     <th style={{ width: '40px', padding: '12px 14px', textAlign: 'center' }}>
                       <input
@@ -2204,21 +2220,21 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
                         <td style={{ padding: '10px 16px' }}>
                           <span style={{ color: '#10b981', fontWeight: 600 }}>{availQty}</span>
-                          <span style={{ color: '#64748b' }}> / </span>
-                          <span style={{ color: '#f59e0b', fontWeight: 600 }}>{inUseQty}</span>
+                          <span style={{ color: '#71717a' }}> / </span>
+                          <span style={{ color: '#e6a800', fontWeight: 600 }}>{inUseQty}</span>
                         </td>
 
-                        <td style={{ padding: '10px 16px', fontWeight: 600, color: '#f8fafc' }}>
+                        <td style={{ padding: '10px 16px', fontWeight: 600, color: '#f4f4f5' }}>
                           <span
                             style={{
                               cursor: 'pointer',
-                              borderBottom: '1px dotted rgba(148, 163, 184, 0.45)',
+                              borderBottom: '1px dotted rgba(161, 161, 170, 0.45)',
                               paddingBottom: '1px',
                               transition: 'color 0.15s ease, border-color 0.15s ease',
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.color = '#a5b4fc';
-                              e.currentTarget.style.borderColor = '#818cf8';
+                              e.currentTarget.style.color = '#ffcc4d';
+                              e.currentTarget.style.borderColor = '#ffbb00';
                               setMousePos({ x: e.clientX, y: e.clientY });
                               setHoveredPreview({
                                 url: c.card.imageUrlLarge || c.card.imageUrl,
@@ -2229,8 +2245,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                             }}
                             onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.color = '#f8fafc';
-                              e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.45)';
+                              e.currentTarget.style.color = '#f4f4f5';
+                              e.currentTarget.style.borderColor = 'rgba(161, 161, 170, 0.45)';
                               setHoveredPreview(null);
                             }}
                           >
@@ -2243,11 +2259,11 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                           <ManaCostRenderer manaCost={c.card.manaCost} />
                         </td>
 
-                        <td style={{ padding: '10px 16px', color: '#94a3b8' }}>
+                        <td style={{ padding: '10px 16px', color: '#a1a1aa' }}>
                           {c.card.typeLine}
                         </td>
 
-                        <td style={{ padding: '10px 16px', color: '#64748b' }}>
+                        <td style={{ padding: '10px 16px', color: '#71717a' }}>
                           {c.card.setCode}
                         </td>
 
@@ -2335,13 +2351,13 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                           position: 'absolute',
                           bottom: '8px',
                           left: '8px',
-                          background: 'rgba(12, 15, 23, 0.88)',
+                          background: 'rgba(14, 14, 16, 0.88)',
                           border: '1px solid var(--border-medium)',
                           borderRadius: '6px',
                           padding: '2px 8px',
                           fontSize: '0.82rem',
                           fontWeight: 700,
-                          color: '#f8fafc',
+                          color: '#f4f4f5',
                           boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
                           zIndex: 2,
                           pointerEvents: 'none',

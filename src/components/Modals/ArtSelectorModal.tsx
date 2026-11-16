@@ -1063,7 +1063,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(5, 7, 11, 0.85)',
+        backgroundColor: 'rgba(6, 6, 7, 0.85)',
         backdropFilter: 'blur(8px)',
         zIndex: 9999,
         display: 'flex',
@@ -1110,7 +1110,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     fontWeight: 800,
                     textTransform: 'uppercase',
                     letterSpacing: '0.06em',
-                    color: '#e2e8f0',
+                    color: '#e4e4e7',
                   }}
                 >
                   Arte Atual Selecionada
@@ -1125,15 +1125,15 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   style={{
                     fontSize: '0.68rem',
                     padding: '2px 7px',
-                    color: activeFace === 'back' ? '#fbbf24' : '#818cf8',
+                    color: activeFace === 'back' ? '#ffcc33' : '#ffbb00',
                     background:
                       activeFace === 'back'
-                        ? 'rgba(245, 158, 11, 0.15)'
-                        : 'rgba(99, 102, 241, 0.15)',
+                        ? 'rgba(255, 187, 0, 0.15)'
+                        : 'rgba(255, 187, 0, 0.15)',
                     border: `1px solid ${
                       activeFace === 'back'
-                        ? 'rgba(245, 158, 11, 0.3)'
-                        : 'rgba(99, 102, 241, 0.3)'
+                        ? 'rgba(255, 187, 0, 0.3)'
+                        : 'rgba(255, 187, 0, 0.3)'
                     }`,
                     borderRadius: '5px',
                     display: 'flex',
@@ -1205,7 +1205,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 aspectRatio: '5/7',
                 borderRadius: '12px',
                 overflow: 'hidden',
-                background: '#05070b',
+                background: '#09090b',
                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.75)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 cursor: isCardDfc ? 'pointer' : 'zoom-in',
@@ -1260,7 +1260,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     padding: '3px 7px',
                     fontSize: '0.66rem',
                     fontWeight: 700,
-                    color: '#f8fafc',
+                    color: '#f4f4f5',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
@@ -1290,7 +1290,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 style={{
                   fontSize: '0.86rem',
                   fontWeight: 700,
-                  color: '#f8fafc',
+                  color: '#f4f4f5',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -1308,9 +1308,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       fontWeight: 800,
                       padding: '1px 6px',
                       borderRadius: '4px',
-                      background: 'rgba(245, 158, 11, 0.2)',
-                      border: '1px solid rgba(245, 158, 11, 0.4)',
-                      color: '#fbbf24',
+                      background: 'rgba(255, 187, 0, 0.2)',
+                      border: '1px solid rgba(255, 187, 0, 0.4)',
+                      color: '#ffcc33',
                     }}
                   >
                     MPCFill Alter
@@ -1336,9 +1336,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       fontWeight: 700,
                       padding: '1px 6px',
                       borderRadius: '4px',
-                      background: 'rgba(99, 102, 241, 0.2)',
-                      border: '1px solid rgba(99, 102, 241, 0.4)',
-                      color: '#a5b4fc',
+                      background: 'rgba(255, 187, 0, 0.2)',
+                      border: '1px solid rgba(255, 187, 0, 0.4)',
+                      color: '#ffcc4d',
                     }}
                   >
                     {currentPreviewData.setCode?.toUpperCase()} #{currentPreviewData.collectorNumber}
@@ -1348,7 +1348,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 <span
                   style={{
                     fontSize: '0.72rem',
-                    color: '#94a3b8',
+                    color: '#a1a1aa',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -1364,7 +1364,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 <div
                   style={{
                     fontSize: '0.7rem',
-                    color: '#64748b',
+                    color: '#71717a',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -1389,7 +1389,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 background: 'rgba(255, 255, 255, 0.02)',
                 border: '1px solid rgba(255, 255, 255, 0.05)',
                 fontSize: '0.7rem',
-                color: '#94a3b8',
+                color: '#a1a1aa',
                 lineHeight: 1.3,
               }}
             >
@@ -1408,9 +1408,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             maxHeight: '90vh',
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: '#0c0f17',
+            backgroundColor: '#111113',
             border: '1px solid rgba(255, 255, 255, 0.12)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.15)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 187, 0, 0.15)',
             borderRadius: '16px',
             overflow: 'hidden',
             overscrollBehavior: 'contain',
@@ -1428,7 +1428,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             justifyContent: 'space-between',
             gap: '16px',
             flexWrap: 'wrap',
-            background: 'rgba(18, 23, 34, 0.85)',
+            background: 'rgba(20, 20, 23, 0.85)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1437,12 +1437,12 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 width: '36px',
                 height: '36px',
                 borderRadius: '8px',
-                background: 'rgba(99, 102, 241, 0.15)',
-                border: '1px solid rgba(99, 102, 241, 0.35)',
+                background: 'rgba(255, 187, 0, 0.15)',
+                border: '1px solid rgba(255, 187, 0, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#818cf8',
+                color: '#ffbb00',
                 flexShrink: 0,
               }}
             >
@@ -1450,7 +1450,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f8fafc', margin: 0 }}>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#f4f4f5', margin: 0 }}>
                   Trocar Arte — {card.name}
                 </h2>
                 {selectedFeedback && (
@@ -1472,7 +1472,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   </span>
                 )}
               </div>
-              <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '2px 0 0' }}>
+              <p style={{ fontSize: '0.8rem', color: '#a1a1aa', margin: '2px 0 0' }}>
                 {isCardDfc
                   ? `Carta dupla face: escolha a face abaixo para ver e trocar artes separadamente.`
                   : 'Clique em uma arte para selecioná-la. Use as setas para trocar a arte das outras cartas.'}
@@ -1510,7 +1510,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     style={{
                       fontSize: '0.78rem',
                       fontWeight: 600,
-                      color: '#cbd5e1',
+                      color: '#d4d4d8',
                       padding: '0 6px',
                       whiteSpace: 'nowrap',
                     }}
@@ -1553,7 +1553,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             className="art-selector-dfc-panel"
             style={{
               padding: '12px 24px',
-              background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(10, 15, 26, 0.95))',
+              background: 'linear-gradient(180deg, rgba(24, 24, 27, 0.95), rgba(14, 14, 16, 0.95))',
               borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
               display: 'flex',
               flexDirection: 'column',
@@ -1561,7 +1561,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#a1a1aa', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Layers size={14} className="text-amber-400" />
                 Carta Dupla Face: Clique em uma das faces para selecionar e buscar artes para ela:
               </span>
@@ -1569,9 +1569,9 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 style={{
                   fontSize: '0.74rem',
                   fontWeight: 700,
-                  color: activeFace === 'back' ? '#fbbf24' : '#818cf8',
-                  background: activeFace === 'back' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(99, 102, 241, 0.15)',
-                  border: `1px solid ${activeFace === 'back' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(99, 102, 241, 0.35)'}`,
+                  color: activeFace === 'back' ? '#ffcc33' : '#ffbb00',
+                  background: activeFace === 'back' ? 'rgba(255, 187, 0, 0.15)' : 'rgba(255, 187, 0, 0.15)',
+                  border: `1px solid ${activeFace === 'back' ? 'rgba(255, 187, 0, 0.35)' : 'rgba(255, 187, 0, 0.35)'}`,
                   padding: '2px 8px',
                   borderRadius: '6px',
                 }}
@@ -1598,14 +1598,14 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   gap: '12px',
                   padding: '8px 12px',
                   borderRadius: '10px',
-                  background: activeFace === 'front' ? 'rgba(99, 102, 241, 0.18)' : 'rgba(255, 255, 255, 0.03)',
-                  border: activeFace === 'front' ? '2px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.1)',
+                  background: activeFace === 'front' ? 'rgba(255, 187, 0, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                  border: activeFace === 'front' ? '2px solid #ffbb00' : '1px solid rgba(255, 255, 255, 0.1)',
                   cursor: 'pointer',
-                  boxShadow: activeFace === 'front' ? '0 0 16px rgba(99, 102, 241, 0.3)' : 'none',
+                  boxShadow: activeFace === 'front' ? '0 0 16px rgba(255, 187, 0, 0.3)' : 'none',
                   transition: 'all 0.15s ease',
                 }}
               >
-                <div style={{ width: '40px', height: '56px', borderRadius: '5px', overflow: 'hidden', background: '#05070b', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>
+                <div style={{ width: '40px', height: '56px', borderRadius: '5px', overflow: 'hidden', background: '#09090b', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>
                   <img
                     key={currentFrontThumbnail}
                     src={currentFrontThumbnail}
@@ -1617,20 +1617,20 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: activeFace === 'front' ? '#a5b4fc' : '#94a3b8' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: activeFace === 'front' ? '#ffcc4d' : '#a1a1aa' }}>
                       FRENTE
                     </span>
                     {activeFace === 'front' ? (
-                      <span style={{ fontSize: '0.62rem', background: '#6366f1', color: '#fff', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                      <span style={{ fontSize: '0.62rem', background: '#ffbb00', color: '#111114', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
                         Ativa para troca
                       </span>
                     ) : (
-                      <span style={{ fontSize: '0.62rem', color: '#64748b' }}>
+                      <span style={{ fontSize: '0.62rem', color: '#71717a' }}>
                         Clique para selecionar
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f4f4f5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
                     {frontFaceName}
                   </div>
                 </div>
@@ -1666,14 +1666,14 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   gap: '12px',
                   padding: '8px 12px',
                   borderRadius: '10px',
-                  background: activeFace === 'back' ? 'rgba(245, 158, 11, 0.18)' : 'rgba(255, 255, 255, 0.03)',
-                  border: activeFace === 'back' ? '2px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.1)',
+                  background: activeFace === 'back' ? 'rgba(255, 187, 0, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                  border: activeFace === 'back' ? '2px solid #e6a800' : '1px solid rgba(255, 255, 255, 0.1)',
                   cursor: 'pointer',
-                  boxShadow: activeFace === 'back' ? '0 0 16px rgba(245, 158, 11, 0.3)' : 'none',
+                  boxShadow: activeFace === 'back' ? '0 0 16px rgba(255, 187, 0, 0.3)' : 'none',
                   transition: 'all 0.15s ease',
                 }}
               >
-                <div style={{ width: '40px', height: '56px', borderRadius: '5px', overflow: 'hidden', background: '#05070b', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>
+                <div style={{ width: '40px', height: '56px', borderRadius: '5px', overflow: 'hidden', background: '#09090b', flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.5)' }}>
                   <img
                     key={currentBackThumbnail}
                     src={currentBackThumbnail}
@@ -1685,20 +1685,20 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: activeFace === 'back' ? '#fcd34d' : '#94a3b8' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: activeFace === 'back' ? '#fcd34d' : '#a1a1aa' }}>
                       VERSO
                     </span>
                     {activeFace === 'back' ? (
-                      <span style={{ fontSize: '0.62rem', background: '#f59e0b', color: '#000', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                      <span style={{ fontSize: '0.62rem', background: '#e6a800', color: '#000', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
                         Ativa para troca
                       </span>
                     ) : (
-                      <span style={{ fontSize: '0.62rem', color: '#64748b' }}>
+                      <span style={{ fontSize: '0.62rem', color: '#71717a' }}>
                         Clique para selecionar
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.86rem', fontWeight: 700, color: '#f4f4f5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
                     {resolvingFaces && !backFaceName ? 'Identificando verso...' : (backFaceName || `${card.name} (Verso)`)}
                   </div>
                 </div>
@@ -1718,7 +1718,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
             alignItems: 'center',
             padding: '0 24px',
             borderBottom: '1px solid var(--border-subtle)',
-            background: 'rgba(15, 20, 30, 0.98)',
+            background: 'rgba(20, 20, 22, 0.98)',
             gap: '8px',
             overflowX: 'auto',
           }}
@@ -1736,8 +1736,8 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               height: '100%',
               padding: '0 16px',
               borderRadius: '0',
-              borderBottom: activeTab === 'official' ? '3px solid #6366f1' : '3px solid transparent',
-              color: activeTab === 'official' ? '#f8fafc' : '#94a3b8',
+              borderBottom: activeTab === 'official' ? '3px solid #ffbb00' : '3px solid transparent',
+              color: activeTab === 'official' ? '#f4f4f5' : '#a1a1aa',
               fontWeight: activeTab === 'official' ? 700 : 500,
               fontSize: '0.88rem',
               display: 'inline-flex',
@@ -1769,7 +1769,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               padding: '0 16px',
               borderRadius: '0',
               borderBottom: activeTab === 'mpcfill' ? '3px solid #ffbb00' : '3px solid transparent',
-              color: activeTab === 'mpcfill' ? '#ffbb00' : '#94a3b8',
+              color: activeTab === 'mpcfill' ? '#ffbb00' : '#a1a1aa',
               fontWeight: activeTab === 'mpcfill' ? 700 : 500,
               fontSize: '0.88rem',
               display: 'inline-flex',
@@ -1810,7 +1810,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               padding: '0 16px',
               borderRadius: '0',
               borderBottom: activeTab === 'custom' ? '3px solid #10b981' : '3px solid transparent',
-              color: activeTab === 'custom' ? '#10b981' : '#94a3b8',
+              color: activeTab === 'custom' ? '#10b981' : '#a1a1aa',
               fontWeight: activeTab === 'custom' ? 700 : 500,
               fontSize: '0.88rem',
               display: 'inline-flex',
@@ -1847,7 +1847,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               style={{
                 padding: '12px 24px',
                 borderBottom: '1px solid var(--border-subtle)',
-                background: 'rgba(18, 23, 34, 0.4)',
+                background: 'rgba(20, 20, 23, 0.4)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -1859,7 +1859,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 <div style={{ position: 'relative', width: '250px', minWidth: '180px' }}>
                   <Search
                     size={15}
-                    style={{ position: 'absolute', left: '10px', top: '10px', color: '#64748b' }}
+                    style={{ position: 'absolute', left: '10px', top: '10px', color: '#71717a' }}
                   />
                   <input
                     type="text"
@@ -1879,7 +1879,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                         top: '9px',
                         background: 'none',
                         border: 'none',
-                        color: '#94a3b8',
+                        color: '#a1a1aa',
                         cursor: 'pointer',
                         padding: 0,
                         display: 'flex',
@@ -1949,7 +1949,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                <span style={{ fontSize: '0.8rem', color: '#a1a1aa' }}>
                   Exibindo <strong>{displayedOfficialPrints.length}</strong> de <strong>{filteredOfficialPrints.length}</strong> ilustrações oficiais
                 </span>
                 {(filterOfficialQuery || officialTypeFilter !== 'all') && (
@@ -1962,7 +1962,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     style={{
                       background: 'none',
                       border: 'none',
-                      color: '#818cf8',
+                      color: '#ffbb00',
                       fontSize: '0.75rem',
                       cursor: 'pointer',
                       textDecoration: 'underline',
@@ -2002,14 +2002,14 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     justifyContent: 'center',
                     minHeight: '260px',
                     gap: '12px',
-                    color: '#94a3b8',
+                    color: '#a1a1aa',
                   }}
                 >
                   <Loader2 className="animate-spin text-indigo-400" size={32} />
                   <span>Buscando edições oficiais no Scryfall...</span>
                 </div>
               ) : filteredOfficialPrints.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <div style={{ textAlign: 'center', padding: '40px', color: '#a1a1aa' }}>
                   <p style={{ marginBottom: '16px' }}>
                     {officialPrints.length > 0
                       ? 'Nenhuma edição corresponde aos filtros selecionados.'
@@ -2110,12 +2110,12 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                             display: 'flex',
                             flexDirection: 'column',
                             borderColor: isSelected ? 'var(--primary)' : 'var(--border-subtle)',
-                            boxShadow: isSelected ? '0 0 16px rgba(99, 102, 241, 0.4)' : undefined,
+                            boxShadow: isSelected ? '0 0 16px rgba(255, 187, 0, 0.4)' : undefined,
                             transform: isSelected ? 'scale(1.02)' : undefined,
                             transition: 'all 0.15s ease',
                           }}
                         >
-                          <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b', overflow: 'hidden' }}>
+                          <div style={{ position: 'relative', aspectRatio: '5/7', background: '#09090b', overflow: 'hidden' }}>
                             <CardImage
                               name={printFaceName}
                               imageUrl={printImg}
@@ -2135,7 +2135,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                                   background: 'var(--primary)',
                                   borderRadius: '50%',
                                   padding: '4px',
-                                  color: 'white',
+                                  color: '#111114',
                                   display: 'flex',
                                   boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
                                 }}
@@ -2144,11 +2144,11 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                               </div>
                             )}
                           </div>
-                          <div style={{ padding: '8px 10px', fontSize: '0.75rem', background: '#0f141d' }}>
+                          <div style={{ padding: '8px 10px', fontSize: '0.75rem', background: '#141416' }}>
                             <div
                               style={{
                                 fontWeight: 600,
-                                color: '#f1f5f9',
+                                color: '#f4f4f5',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -2161,7 +2161,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                               style={{
                                 display: 'flex',
                                 justifyContent: 'space-between',
-                                color: '#64748b',
+                                color: '#71717a',
                                 marginTop: '2px',
                               }}
                             >
@@ -2179,7 +2179,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     })}
                   </div>
                   {displayedOfficialPrints.length < filteredOfficialPrints.length && (
-                    <div style={{ textAlign: 'center', padding: '24px 0 8px 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                    <div style={{ textAlign: 'center', padding: '24px 0 8px 0', color: '#a1a1aa', fontSize: '0.85rem' }}>
                       Mostrando {displayedOfficialPrints.length} de {filteredOfficialPrints.length} ilustrações oficiais. Role para carregar mais...
                     </div>
                   )}
@@ -2198,7 +2198,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               style={{
                 padding: '12px 24px',
                 borderBottom: '1px solid var(--border-subtle)',
-                background: 'rgba(18, 23, 34, 0.6)',
+                background: 'rgba(20, 20, 23, 0.6)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '10px',
@@ -2217,7 +2217,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 <div style={{ position: 'relative', width: '260px', minWidth: '200px' }}>
                   <Search
                     size={15}
-                    style={{ position: 'absolute', left: '10px', top: '10px', color: '#64748b' }}
+                    style={{ position: 'absolute', left: '10px', top: '10px', color: '#71717a' }}
                   />
                   <input
                     type="text"
@@ -2237,7 +2237,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                         top: '9px',
                         background: 'none',
                         border: 'none',
-                        color: '#94a3b8',
+                        color: '#a1a1aa',
                         cursor: 'pointer',
                         padding: 0,
                         display: 'flex',
@@ -2424,7 +2424,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     type="button"
                     className="btn btn-ghost btn-sm"
                     onClick={() => mpcXmlInputRef.current?.click()}
-                    style={{ height: '30px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px', color: '#cbd5e1' }}
+                    style={{ height: '30px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px', color: '#d4d4d8' }}
                     title="Carregar um arquivo XML exportado do MPCFill para buscar as artes desta carta"
                   >
                     <FileCode size={13} className="text-amber-400" />
@@ -2436,7 +2436,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     target="_blank"
                     rel="noreferrer"
                     className="btn btn-ghost btn-sm"
-                    style={{ height: '30px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px', color: '#94a3b8' }}
+                    style={{ height: '30px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px', color: '#a1a1aa' }}
                     title="Abrir página de seleção no MPCFill.com em uma nova aba"
                   >
                     <ExternalLink size={13} />
@@ -2450,11 +2450,11 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 <div
                   style={{
                     fontSize: '0.8rem',
-                    background: 'rgba(245, 158, 11, 0.1)',
-                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    background: 'rgba(255, 187, 0, 0.1)',
+                    border: '1px solid rgba(255, 187, 0, 0.3)',
                     borderRadius: '6px',
                     padding: '8px 12px',
-                    color: '#f59e0b',
+                    color: '#e6a800',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -2491,7 +2491,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 </div>
               ) : (
                 !loadingMpc && mpcPrints.length > 0 && (
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#a1a1aa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span>
                         Exibindo <strong>{displayedMpcPrints.length}</strong> de <strong>{filteredMpcPrints.length}</strong> artes de {mpcCardType === 'TOKEN' ? 'ficha/token' : 'carta'} com {mpcMinDpi}+ DPI
@@ -2554,7 +2554,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     justifyContent: 'center',
                     minHeight: '260px',
                     gap: '12px',
-                    color: '#94a3b8',
+                    color: '#a1a1aa',
                   }}
                 >
                   <Loader2 className="animate-spin text-amber-400" size={32} />
@@ -2567,7 +2567,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   style={{
                     textAlign: 'center',
                     padding: '40px 20px',
-                    color: '#94a3b8',
+                    color: '#a1a1aa',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -2634,11 +2634,11 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     // Color code for DPI badge
                     let dpiBadgeBg = 'rgba(217, 119, 6, 0.2)';
                     let dpiBadgeBorder = 'rgba(217, 119, 6, 0.4)';
-                    let dpiBadgeColor = '#fbbf24';
+                    let dpiBadgeColor = '#ffcc33';
                     let dpiLabel = `${dpiVal} DPI`;
 
                     if (dpiVal >= 1200) {
-                      dpiBadgeBg = 'linear-gradient(135deg, rgba(147, 51, 234, 0.3), rgba(245, 158, 11, 0.3))';
+                      dpiBadgeBg = 'linear-gradient(135deg, rgba(147, 51, 234, 0.3), rgba(255, 187, 0, 0.3))';
                       dpiBadgeBorder = 'rgba(168, 85, 247, 0.5)';
                       dpiBadgeColor = '#e9d5ff';
                       dpiLabel = `${dpiVal} DPI ★`;
@@ -2685,10 +2685,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                           boxShadow: isSelected ? '0 0 18px rgba(255, 187, 0, 0.45)' : undefined,
                           transform: isSelected ? 'scale(1.02)' : undefined,
                           transition: 'all 0.15s ease',
-                          background: '#0a0d14',
+                          background: '#0b0b0d',
                         }}
                       >
-                        <div style={{ position: 'relative', aspectRatio: '5/7', background: '#05070b', overflow: 'hidden' }}>
+                        <div style={{ position: 'relative', aspectRatio: '5/7', background: '#09090b', overflow: 'hidden' }}>
                           <CardImage
                             name={p.setName}
                             imageUrl={p.imageUrl}
@@ -2741,12 +2741,12 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                         </div>
 
                         {/* Card Info Details */}
-                        <div style={{ padding: '8px 10px', fontSize: '0.75rem', background: '#0f141d', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div style={{ padding: '8px 10px', fontSize: '0.75rem', background: '#141416', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                           <div>
                             <div
                               style={{
                                 fontWeight: 600,
-                                color: '#f1f5f9',
+                                color: '#f4f4f5',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
@@ -2761,12 +2761,12 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '4px',
-                                color: '#cbd5e1',
+                                color: '#d4d4d8',
                                 marginTop: '3px',
                                 fontSize: '0.72rem',
                               }}
                             >
-                              <span style={{ color: '#94a3b8' }}>Autor:</span>
+                              <span style={{ color: '#a1a1aa' }}>Autor:</span>
                               <strong style={{ color: '#ffbb00', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {p.sourceName || p.artist || 'Comunidade'}
                               </strong>
@@ -2784,7 +2784,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                                     padding: '1px 5px',
                                     borderRadius: '3px',
                                     background: 'rgba(255, 255, 255, 0.07)',
-                                    color: '#94a3b8',
+                                    color: '#a1a1aa',
                                   }}
                                 >
                                   {t}
@@ -2798,7 +2798,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   })}
                 </div>
                 {displayedMpcPrints.length < filteredMpcPrints.length && (
-                  <div style={{ textAlign: 'center', padding: '24px 0 8px 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                  <div style={{ textAlign: 'center', padding: '24px 0 8px 0', color: '#a1a1aa', fontSize: '0.85rem' }}>
                     Mostrando {displayedMpcPrints.length} de {filteredMpcPrints.length} artes do MPCFill. Role para carregar mais...
                   </div>
                 )}
@@ -2840,12 +2840,12 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
               {isCardDfc && (
                 <div
                   style={{
-                    background: activeFace === 'back' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(99, 102, 241, 0.12)',
-                    border: `1px solid ${activeFace === 'back' ? 'rgba(245, 158, 11, 0.35)' : 'rgba(99, 102, 241, 0.35)'}`,
+                    background: activeFace === 'back' ? 'rgba(255, 187, 0, 0.12)' : 'rgba(255, 187, 0, 0.12)',
+                    border: `1px solid ${activeFace === 'back' ? 'rgba(255, 187, 0, 0.35)' : 'rgba(255, 187, 0, 0.35)'}`,
                     padding: '8px 14px',
                     borderRadius: '8px',
                     fontSize: '0.8rem',
-                    color: activeFace === 'back' ? '#fbbf24' : '#a5b4fc',
+                    color: activeFace === 'back' ? '#ffcc33' : '#ffcc4d',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
@@ -2861,7 +2861,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
                 {/* File Dropzone */}
                 <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc', marginBottom: '6px', display: 'block' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f5', marginBottom: '6px', display: 'block' }}>
                     1. Enviar arquivo de imagem do computador:
                   </label>
                   <input
@@ -2890,10 +2890,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     {isCompressingCustomImage ? (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                         <Loader2 size={32} className="animate-spin text-amber-400" />
-                        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f8fafc' }}>
+                        <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f4f4f5' }}>
                           Otimizando imagem para nuvem...
                         </span>
-                        <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>
+                        <p style={{ fontSize: '0.75rem', color: '#a1a1aa', margin: 0 }}>
                           Compactando com alta resolução para sincronização instantânea
                         </p>
                       </div>
@@ -2901,10 +2901,10 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       <>
                         <Upload size={32} className="text-emerald-400" />
                         <div>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f8fafc' }}>
+                          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f4f4f5' }}>
                             Clique para escolher a imagem
                           </span>
-                          <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '4px 0 0' }}>
+                          <p style={{ fontSize: '0.75rem', color: '#a1a1aa', margin: '4px 0 0' }}>
                             Suporta PNG, JPG, JPEG ou WEBP (otimização e sincronização automática)
                           </p>
                         </div>
@@ -2915,7 +2915,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
 
                 {/* Or Direct Image URL */}
                 <div>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f8fafc', marginBottom: '6px', display: 'block' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f4f4f5', marginBottom: '6px', display: 'block' }}>
                     2. Ou insira o link direto de uma imagem online:
                   </label>
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -2944,7 +2944,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 {/* Metadata Fields (Optional) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
                   <div>
-                    <label style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '0.78rem', color: '#a1a1aa', display: 'block', marginBottom: '4px' }}>
                       Título / Versão da Arte (opcional):
                     </label>
                     <input
@@ -2957,7 +2957,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.78rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '0.78rem', color: '#a1a1aa', display: 'block', marginBottom: '4px' }}>
                       Nome do Ilustrador / Autor (opcional):
                     </label>
                     <input
@@ -2978,14 +2978,14 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  background: 'rgba(30, 41, 59, 0.4)',
+                  background: 'rgba(39, 39, 42, 0.4)',
                   padding: '20px',
                   borderRadius: '12px',
                   border: '1px solid var(--border-subtle)',
                   gap: '16px',
                 }}
               >
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#d4d4d8' }}>
                   Prévia da Carta Personalizada
                 </span>
 
@@ -2995,7 +2995,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     aspectRatio: '5/7',
                     borderRadius: '10px',
                     overflow: 'hidden',
-                    background: '#05070b',
+                    background: '#09090b',
                     border: '1px solid rgba(255, 255, 255, 0.15)',
                     boxShadow: '0 12px 24px -6px rgba(0, 0, 0, 0.6)',
                     display: 'flex',
@@ -3017,7 +3017,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       style={{
                         padding: '16px',
                         textAlign: 'center',
-                        color: '#64748b',
+                        color: '#71717a',
                         fontSize: '0.75rem',
                         display: 'flex',
                         flexDirection: 'column',

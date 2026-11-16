@@ -189,100 +189,12 @@
     font-size: 16px !important;
   }
 
-  /* Compact 2-Row Sticky App Header */
-  .app-header {
-    border-radius: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-  }
-
-  .app-header-inner {
-    padding: 8px 12px !important;
-    gap: 8px !important;
-    flex-wrap: wrap !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-  }
-
-  .app-header-top {
-    order: 1;
-    width: auto !important;
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    gap: 8px !important;
-  }
-
-  .app-brand {
-    gap: 8px !important;
-    min-width: 0 !important;
-  }
-
-  .app-brand h1 {
-    font-size: 0.98rem !important;
-    line-height: 1.1 !important;
-    letter-spacing: 0.03em !important;
-  }
-
-  /* Hide overflowing nowrap desktop subtitle on mobile */
-  .app-brand p {
-    display: none !important;
-  }
-
-  .app-actions {
-    order: 2;
-    flex-shrink: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 5px !important;
-  }
-
-  .app-actions .btn {
-    min-height: 34px !important;
-    padding: 6px 8px !important;
-    font-size: 0.76rem !important;
-    border-radius: 9px !important;
-  }
-
   .user-menu-dropdown {
     max-width: calc(100dvw - 24px) !important;
     right: 0 !important;
   }
 
-  /* Smooth scrollable pill tabs on row 2 */
-  .app-header-nav {
-    order: 3;
-    flex-basis: 100% !important;
-    width: 100% !important;
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    scrollbar-width: none !important;
-    -webkit-overflow-scrolling: touch !important;
-    scroll-snap-type: x proximity;
-    gap: 6px !important;
-    padding: 2px 0 !important;
-  }
-
-  .app-header-nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .app-header-nav .btn {
-    flex-shrink: 0 !important;
-    scroll-snap-align: start;
-    white-space: nowrap !important;
-    min-height: 34px !important;
-    padding: 6px 12px !important;
-    font-size: 0.8rem !important;
-    border-radius: 9px !important;
-  }
-
   /* Main Container & Panels */
-  .main-content-container {
-    padding: 12px 10px 32px !important;
-  }
-
   .glass-panel {
     padding: 14px 12px !important;
     border-radius: 12px !important;
@@ -321,6 +233,7 @@
 
   /* Sleek Full-Width Bottom-Sheet Modals */
   .modal-backdrop {
+    z-index: 10050 !important;
     padding: 0 !important;
     align-items: flex-end !important;
     overscroll-behavior: contain !important;
@@ -334,6 +247,12 @@
     border-bottom: none !important;
     overscroll-behavior: contain !important;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+    animation: sheet-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+  }
+
+  @keyframes sheet-enter {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: none; opacity: 1; }
   }
 
   .modal-header {
@@ -428,7 +347,7 @@
 
   /* Single-column Deck List Cards */
   .decks-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: minmax(0, 1fr) !important;
     gap: 14px !important;
   }
 

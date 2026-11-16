@@ -179,7 +179,7 @@ export const CardImage: React.FC<CardImageProps> = ({
         style={{
           width: '100%',
           height: '100%',
-          background: '#131722',
+          background: '#151517',
           border: '1px solid rgba(255, 187, 0, 0.35)',
           borderRadius: '6px',
           display: 'flex',
@@ -189,7 +189,7 @@ export const CardImage: React.FC<CardImageProps> = ({
           padding: '12px',
           textAlign: 'center',
           gap: '6px',
-          color: '#f4f4f6',
+          color: '#f4f4f5',
           boxSizing: 'border-box',
           ...style,
         }}
@@ -213,7 +213,7 @@ export const CardImage: React.FC<CardImageProps> = ({
         </div>
         <div style={{ fontWeight: 700, fontSize: '0.78rem', lineHeight: 1.25 }}>{name}</div>
         {setCode && (
-          <div style={{ fontSize: '0.65rem', color: '#94a3b8' }}>
+          <div style={{ fontSize: '0.65rem', color: '#a1a1aa' }}>
             {setCode.toUpperCase()} {collectorNumber ? `#${collectorNumber}` : ''}
           </div>
         )}
@@ -233,7 +233,7 @@ export const CardImage: React.FC<CardImageProps> = ({
         width: '100%',
         height: '100%',
         overflow: 'hidden',
-        background: '#0d1117',
+        background: '#101012',
       }}
     >
       {/* Visual Shimmer Loading Skeleton while the image is loading or waiting to be visible */}
