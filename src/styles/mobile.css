@@ -323,9 +323,10 @@
   }
 
   .app-actions .btn {
-    gap: 0 !important;
-    padding: 6px 9px !important;
-    min-width: 34px;
+    gap: 6px !important;
+    padding: 0 10px !important;
+    min-width: 36px;
+    min-height: 36px;
     justify-content: center;
   }
 

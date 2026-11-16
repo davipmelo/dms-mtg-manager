@@ -244,7 +244,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             onClick={onClose}
             className="btn btn-ghost btn-sm"
-            style={{ padding: '6px', borderRadius: '8px' }}
+            style={{ borderRadius: '8px' }}
             title="Fechar"
           >
             <X size={18} />
@@ -491,10 +491,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className="btn btn-primary"
                 style={{
                   width: '100%',
-                  padding: '11px',
                   borderRadius: '8px',
                   fontWeight: 700,
-                  fontSize: '0.92rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -763,10 +761,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className="btn btn-primary"
                 style={{
                   width: '100%',
-                  padding: '11px',
                   borderRadius: '8px',
                   fontWeight: 700,
-                  fontSize: '0.92rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -860,10 +856,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className="btn btn-primary"
                 style={{
                   width: '100%',
-                  padding: '11px',
                   borderRadius: '8px',
                   fontWeight: 700,
-                  fontSize: '0.92rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

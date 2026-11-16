@@ -168,7 +168,7 @@ const UtilityCardItem = React.memo<UtilityCardItemProps>(({
             <button
               type="button"
               className="btn btn-secondary btn-icon"
-              style={{ padding: '6px', background: 'rgba(14, 14, 16, 0.9)' }}
+              style={{ background: 'rgba(14, 14, 16, 0.9)' }}
               onClick={(e) => {
                 e.stopPropagation();
                 onHoverEnd();
@@ -181,7 +181,7 @@ const UtilityCardItem = React.memo<UtilityCardItemProps>(({
             <button
               type="button"
               className={`btn btn-icon ${isAdded ? 'btn-secondary' : 'btn-primary'}`}
-              style={{ padding: '6px', background: isAdded ? 'rgba(16, 185, 129, 0.9)' : undefined }}
+              style={{ background: isAdded ? 'rgba(16, 185, 129, 0.9)' : undefined }}
               onClick={(e) => {
                 e.stopPropagation();
                 onHoverEnd();
@@ -685,7 +685,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
 
             {/* Color Filter for Tokens */}
             {category === 'tokens' && (
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   className={`btn btn-sm ${!isColorlessOnly && !isMultiOnly && selectedColors.length === 0 ? 'btn-primary' : 'btn-ghost'}`}
@@ -786,7 +786,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
             className={`btn btn-sm ${showGridDetails ? 'btn-secondary' : 'btn-primary'}`}
             onClick={handleToggleGridDetails}
             title={showGridDetails ? 'Ocultar detalhes (mostrar apenas artes)' : 'Mostrar detalhes completos dos utilitários'}
-            style={{ fontSize: '0.75rem', padding: '4px 10px', height: '32px' }}
+            style={{ height: '32px' }}
           >
             {showGridDetails ? <EyeOff size={14} /> : <Eye size={14} />}
             <span>{showGridDetails ? 'Só Artes' : 'Com Detalhes'}</span>

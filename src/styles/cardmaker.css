@@ -1751,3 +1751,56 @@
     display: none;
   }
 }
+
+/* ---------- Fontes e frames do usuário ---------- */
+.cm-asset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.cm-asset-wide {
+  grid-column: 1 / -1;
+}
+.cm-asset-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+.cm-asset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.cm-asset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-medium);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.74rem;
+  color: var(--text-soft);
+}
+.cm-asset-chip button {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+.cm-asset-chip button:hover {
+  background: var(--danger);
+  color: #fff;
+}
+@media (max-width: 640px) {
+  .cm-asset-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

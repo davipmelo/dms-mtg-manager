@@ -864,7 +864,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 className="btn btn-ghost btn-sm"
                 onClick={onBack}
                 title="Voltar aos Decks"
-                style={{ padding: '4px 8px', height: '32px', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
+                style={{ height: '32px', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
               >
                 <ArrowLeft size={15} />
                 <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Decks</span>
@@ -1234,7 +1234,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             {selectedColors.length > 1 && !isMultiOnly && (
               <button
                 className="btn btn-xs btn-secondary"
-                style={{ fontSize: '0.72rem', padding: '3px 8px', marginLeft: '4px' }}
+                style={{ marginLeft: '4px' }}
                 onClick={() => setColorMatchMode((m) => (m === 'exact' ? 'pool' : 'exact'))}
                 title="Alternar entre modo Exato e modo Pool de Identidade"
               >
@@ -1283,7 +1283,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                 className={`btn btn-sm ${showGridDetails ? 'btn-secondary' : 'btn-primary'}`}
                 onClick={handleToggleGridDetails}
                 title={showGridDetails ? 'Ocultar detalhes (mostrar apenas artes)' : 'Mostrar detalhes completos das cartas'}
-                style={{ fontSize: '0.75rem', padding: '4px 10px', height: '32px' }}
+                style={{ height: '32px' }}
               >
                 {showGridDetails ? <EyeOff size={14} /> : <Eye size={14} />}
                 <span>{showGridDetails ? 'Só Artes' : 'Com Detalhes'}</span>
@@ -1476,7 +1476,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     <div className="card-art-actions-overlay">
                       <button
                         className="btn btn-secondary btn-icon"
-                        style={{ padding: '6px', background: 'rgba(14, 14, 16, 0.9)' }}
+                        style={{ background: 'rgba(14, 14, 16, 0.9)' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setHoveredPreview(null);
@@ -1489,7 +1489,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       {onAddToProxies && (
                         <button
                           className="btn btn-secondary btn-icon"
-                          style={{ padding: '6px', background: 'rgba(14, 14, 16, 0.9)' }}
+                          style={{ background: 'rgba(14, 14, 16, 0.9)' }}
                           onClick={(e) => {
                             e.stopPropagation();
                             setHoveredPreview(null);
@@ -1502,7 +1502,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       )}
                       <button
                         className="btn btn-secondary btn-icon text-red-400"
-                        style={{ padding: '6px', background: 'rgba(14, 14, 16, 0.9)' }}
+                        style={{ background: 'rgba(14, 14, 16, 0.9)' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setHoveredPreview(null);
@@ -1607,8 +1607,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <button
-                        className="btn btn-ghost btn-icon"
-                        style={{ padding: '3px' }}
+                        className="btn btn-ghost btn-icon" 
                         onClick={() => handleUpdateCardQuantity(c, c.quantity - 1)}
                       >
                         <Minus size={13} />
@@ -1624,8 +1623,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         {c.quantity}
                       </span>
                       <button
-                        className="btn btn-ghost btn-icon"
-                        style={{ padding: '3px' }}
+                        className="btn btn-ghost btn-icon" 
                         onClick={() => handleUpdateCardQuantity(c, c.quantity + 1)}
                       >
                         <Plus size={13} />
@@ -1634,8 +1632,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
                     <div style={{ display: 'flex', gap: '4px' }}>
                       <button
-                        className="btn btn-ghost btn-icon"
-                        style={{ padding: '5px' }}
+                        className="btn btn-ghost btn-icon" 
                         onClick={() => onOpenArtSelector(c.card, findDeckCardIndex(c), isFlipped ? 'back' : 'front', c.instanceId, c.category)}
                         title={isFlipped ? 'Trocar Arte do Verso' : 'Trocar Arte / Edição'}
                       >
@@ -1643,8 +1640,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                       </button>
                       {onAddToProxies && (
                         <button
-                          className="btn btn-ghost btn-icon"
-                          style={{ padding: '5px' }}
+                          className="btn btn-ghost btn-icon" 
                           onClick={() => onAddToProxies(c.card, c.quantity)}
                           title="Imprimir Proxies desta Carta"
                         >
@@ -1652,8 +1648,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         </button>
                       )}
                       <button
-                        className="btn btn-ghost btn-icon text-red-400"
-                        style={{ padding: '5px' }}
+                        className="btn btn-ghost btn-icon text-red-400" 
                         onClick={() => handleRemoveCard(c)}
                         title="Remover do Deck"
                       >
@@ -1708,8 +1703,6 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     alignItems: 'center',
                     gap: '6px',
                     fontWeight: 700,
-                    fontSize: '0.82rem',
-                    padding: '6px 14px',
                     borderRadius: '6px',
                     border: 'none',
                     cursor: 'pointer',
@@ -1984,16 +1977,14 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     <td style={{ padding: '10px 16px', fontWeight: 700 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <button
-                          className="btn btn-ghost btn-icon"
-                          style={{ padding: '2px' }}
+                          className="btn btn-ghost btn-icon" 
                           onClick={() => handleUpdateCardQuantity(c, c.quantity - 1)}
                         >
                           <Minus size={12} />
                         </button>
                         <span>{c.quantity}</span>
                         <button
-                          className="btn btn-ghost btn-icon"
-                          style={{ padding: '2px' }}
+                          className="btn btn-ghost btn-icon" 
                           onClick={() => handleUpdateCardQuantity(c, c.quantity + 1)}
                         >
                           <Plus size={12} />
@@ -2084,8 +2075,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                     <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
                         <button
-                          className="btn btn-ghost btn-icon"
-                          style={{ padding: '4px' }}
+                          className="btn btn-ghost btn-icon" 
                           onClick={() => onOpenArtSelector(c.card, findDeckCardIndex(c), undefined, c.instanceId, c.category)}
                           title="Trocar Arte"
                         >
@@ -2093,8 +2083,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         </button>
                         {onAddToProxies && (
                           <button
-                            className="btn btn-ghost btn-icon"
-                            style={{ padding: '4px' }}
+                            className="btn btn-ghost btn-icon" 
                             onClick={() => onAddToProxies(c.card, c.quantity)}
                             title="Imprimir Proxies desta Carta"
                           >
@@ -2102,8 +2091,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                           </button>
                         )}
                         <button
-                          className="btn btn-ghost btn-icon text-red-400"
-                          style={{ padding: '4px' }}
+                          className="btn btn-ghost btn-icon text-red-400" 
                           onClick={() => handleRemoveCard(c)}
                           title="Remover do Deck"
                         >
@@ -2201,16 +2189,14 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         <td style={{ padding: '10px 16px', fontWeight: 700 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <button
-                              className="btn btn-ghost btn-icon"
-                              style={{ padding: '2px' }}
+                              className="btn btn-ghost btn-icon" 
                               onClick={() => handleUpdateCardQuantity(c, c.quantity - 1)}
                             >
                               <Minus size={12} />
                             </button>
                             <span>{c.quantity}</span>
                             <button
-                              className="btn btn-ghost btn-icon"
-                              style={{ padding: '2px' }}
+                              className="btn btn-ghost btn-icon" 
                               onClick={() => handleUpdateCardQuantity(c, c.quantity + 1)}
                             >
                               <Plus size={12} />
@@ -2280,8 +2266,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                         <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                           <div style={{ display: 'inline-flex', gap: '6px' }}>
                             <button
-                              className="btn btn-ghost btn-icon"
-                              style={{ padding: '4px' }}
+                              className="btn btn-ghost btn-icon" 
                               onClick={() => onOpenArtSelector(c.card, findDeckCardIndex(c), undefined, c.instanceId, c.category)}
                               title="Trocar Arte"
                             >
@@ -2289,8 +2274,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                             </button>
                             {onAddToProxies && (
                               <button
-                                className="btn btn-ghost btn-icon"
-                                style={{ padding: '4px' }}
+                                className="btn btn-ghost btn-icon" 
                                 onClick={() => onAddToProxies(c.card, c.quantity)}
                                 title="Imprimir Proxies desta Carta"
                               >
@@ -2298,8 +2282,7 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
                               </button>
                             )}
                             <button
-                              className="btn btn-ghost btn-icon text-red-400"
-                              style={{ padding: '4px' }}
+                              className="btn btn-ghost btn-icon text-red-400" 
                               onClick={() => handleRemoveCard(c)}
                               title="Remover do Deck"
                             >

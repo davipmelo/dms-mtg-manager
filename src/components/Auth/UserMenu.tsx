@@ -105,12 +105,6 @@ export const UserMenu: React.FC<UserMenuProps> = ({
       <button
         onClick={() => onOpenAuthModal('login')}
         className="btn btn-secondary btn-sm"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          fontWeight: 700,
-        }}
         title="Entrar ou criar conta para sincronizar decks e coleção entre dispositivos"
       >
         <Cloud size={15} />
@@ -326,8 +320,6 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
-                fontSize: '0.78rem',
-                padding: '6px 10px',
               }}
             >
               <RefreshCw

@@ -621,7 +621,7 @@ export const EditDeckModal: React.FC<EditDeckModalProps> = ({
                     type="button"
                     className="btn btn-ghost btn-sm"
                     onClick={onOpenManageTags}
-                    style={{ fontSize: '0.72rem', padding: '2px 8px', color: '#ffbb00' }}
+                    style={{ color: '#ffbb00' }}
                   >
                     + Gerenciar Tags
                   </button>

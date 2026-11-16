@@ -1497,7 +1497,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 <button
                   type="button"
                   className="btn btn-ghost btn-icon"
-                  style={{ padding: '4px', opacity: hasPrev ? 1 : 0.3 }}
+                  style={{ opacity: hasPrev ? 1 : 0.3 }}
                   disabled={!hasPrev}
                   onClick={onNavigatePrev}
                   title="Carta Anterior (Seta Esquerda ou Tecla A)"
@@ -1522,7 +1522,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                 <button
                   type="button"
                   className="btn btn-ghost btn-icon"
-                  style={{ padding: '4px', opacity: hasNext ? 1 : 0.3 }}
+                  style={{ opacity: hasNext ? 1 : 0.3 }}
                   disabled={!hasNext}
                   onClick={onNavigateNext}
                   title="Próxima Carta (Seta Direita ou Tecla D)"
@@ -1938,8 +1938,6 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    fontSize: '0.8rem',
-                    padding: '6px 12px',
                     height: '34px',
                   }}
                 >
@@ -2033,7 +2031,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                       className="btn btn-primary"
                       onClick={handleReloadOfficialPrints}
                       disabled={loadingOfficial}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px',}}
                     >
                       <RotateCw size={15} className={loadingOfficial ? 'animate-spin' : ''} />
                       Tentar Novamente
@@ -2406,7 +2404,7 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     className="btn btn-secondary btn-sm"
                     onClick={handleApplyDriveId}
                     disabled={!mpcDriveInput.trim()}
-                    style={{ height: '30px', fontSize: '0.75rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ height: '30px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     <Plus size={13} /> Aplicar ID
                   </button>
@@ -3042,7 +3040,6 @@ export const ArtSelectorModal: React.FC<ArtSelectorModalProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
-                    padding: '10px 16px',
                   }}
                 >
                   <Check size={16} />

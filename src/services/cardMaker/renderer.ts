@@ -19,6 +19,7 @@ import {
   resolveFrameColors,
 } from './model';
 import { LaidBlock, Measurer, layoutParagraphs, tokenizeRules } from './richText';
+import { getAsset } from './storage';
 
 export const CARD_W = 744;
 export const CARD_H = 1039;
@@ -41,6 +42,11 @@ export interface RenderOptions {
 export interface RenderAssets {
   art: HTMLImageElement | null;
   icon: HTMLImageElement | null;
+  /** imagem de frame do usuário (sobrepõe o frame procedural) */
+  frame: HTMLImageElement | null;
+  /** famílias CSS das fontes do usuário (vazio = padrão do estilo) */
+  titleFamily: string;
+  bodyFamily: string;
 }
 
 export interface RenderReport {
@@ -399,6 +405,19 @@ function drawGlyph(ctx: Ctx, key: string, cx: number, cy: number, size: number, 
 /** Desenha um símbolo de mana/habilidade centrado em (cx, cy) com raio r. */
 export function drawManaSymbol(ctx: Ctx, symRaw: string, cx: number, cy: number, r: number, withShadow = true): void {
   const sym = symRaw.toUpperCase();
+  const official = symbolImages.get(symbolFileName(sym));
+  if (official) {
+    ctx.save();
+    if (withShadow) {
+      ctx.shadowColor = 'rgba(0,0,0,0.55)';
+      ctx.shadowBlur = r * 0.2;
+      ctx.shadowOffsetX = -r * 0.1;
+      ctx.shadowOffsetY = r * 0.14;
+    }
+    ctx.drawImage(official, cx - r, cy - r, r * 2, r * 2);
+    ctx.restore();
+    return;
+  }
   ctx.save();
   if (withShadow) {
     ctx.shadowColor = 'rgba(0,0,0,0.55)';
@@ -672,6 +691,104 @@ async function loadTintedSvg(url: string, fill: string, stroke: string | null): 
   return p;
 }
 
+/* ------------------------------------------------------------------ */
+/* Ativos do usuário (fontes e frames originais)                        */
+/* ------------------------------------------------------------------ */
+
+const userFontPromises = new Map<string, Promise<string>>();
+
+/** Registra a fonte do usuário e devolve o nome da família CSS ('' se falhar). */
+async function ensureUserFont(id: string): Promise<string> {
+  if (!id) return '';
+  const cached = userFontPromises.get(id);
+  if (cached) return cached;
+  const p = (async () => {
+    try {
+      const asset = await getAsset(id);
+      if (!asset) return '';
+      const family = `cm-user-${id}`;
+      const face = new FontFace(family, `url(${asset.data})`);
+      await face.load();
+      document.fonts.add(face);
+      return family;
+    } catch {
+      return '';
+    }
+  })();
+  userFontPromises.set(id, p);
+  p.then((f) => {
+    if (!f) userFontPromises.delete(id);
+  });
+  return p;
+}
+
+async function loadUserFrame(id: string): Promise<HTMLImageElement | null> {
+  if (!id) return null;
+  try {
+    const asset = await getAsset(id);
+    return asset ? await loadImage(asset.data) : null;
+  } catch {
+    return null;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Símbolos oficiais (SVGs do Scryfall)                                 */
+/* ------------------------------------------------------------------ */
+
+const symbolImages = new Map<string, HTMLImageElement>();
+const symbolPending = new Map<string, Promise<void>>();
+const symbolFailed = new Set<string>();
+
+function symbolFileName(sym: string): string {
+  return sym.toUpperCase().replace(/\//g, '').replace('½', 'HALF');
+}
+
+function loadSymbol(sym: string): Promise<void> {
+  const key = symbolFileName(sym);
+  if (!key || symbolImages.has(key) || symbolFailed.has(key)) return Promise.resolve();
+  const pending = symbolPending.get(key);
+  if (pending) return pending;
+  const p = (async () => {
+    try {
+      const res = await fetch(`https://svgs.scryfall.io/card-symbols/${encodeURIComponent(key)}.svg`);
+      if (!res.ok) throw new Error('símbolo não encontrado');
+      const text = (await res.text()).replace(/<svg([^>]*)>/, (_m, attrs: string) => `<svg${attrs} width="200" height="200">`);
+      const url = URL.createObjectURL(new Blob([text], { type: 'image/svg+xml' }));
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const im = new Image();
+        im.onload = () => resolve(im);
+        im.onerror = () => reject(new Error('falha ao decodificar'));
+        im.src = url;
+      });
+      symbolImages.set(key, img);
+    } catch {
+      symbolFailed.add(key);
+    } finally {
+      symbolPending.delete(key);
+    }
+  })();
+  symbolPending.set(key, p);
+  return p;
+}
+
+function collectSymbols(card: CustomCard, face: CardFaceData): string[] {
+  const found = new Set<string>(parseManaCost(face.manaCost));
+  const texts = [face.rulesText, face.flavorText, ...face.abilities.map((a) => a.text), ...face.chapters.map((c) => c.text)];
+  const re = /\{([^}]+)\}/g;
+  for (const t of texts) {
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(t)) !== null) found.add(m[1].toUpperCase());
+  }
+  void card;
+  return [...found];
+}
+
+/** Pré-carrega símbolos (útil para a paleta do editor e miniaturas). */
+export function preloadSymbols(symbols: string[]): Promise<void[]> {
+  return Promise.all(symbols.map(loadSymbol));
+}
+
 export async function loadRenderAssets(card: CustomCard, faceIndex: number): Promise<RenderAssets> {
   const face = card.faces[faceIndex] || card.faces[0];
   const theme = THEMES[card.meta.frameStyle];
@@ -681,8 +798,16 @@ export async function loadRenderAssets(card: CustomCard, faceIndex: number): Pro
     const { fill, stroke } = rarityFill(card.meta.rarity, theme.boxDark || card.meta.frameStyle === 'showcase' || card.meta.frameStyle === 'neon');
     iconP = loadTintedSvg(card.meta.setIconUri, fill, stroke);
   }
-  const [art, icon] = await Promise.all([artP, iconP, ensureCardFonts()]);
-  return { art, icon };
+  const [art, icon, frame, titleFamily, bodyFamily] = await Promise.all([
+    artP,
+    iconP,
+    loadUserFrame(card.meta.customFrameId),
+    ensureUserFont(card.meta.titleFontId),
+    ensureUserFont(card.meta.bodyFontId),
+    ensureCardFonts(),
+    ...collectSymbols(card, face).map(loadSymbol),
+  ]).then((r) => [r[0], r[1], r[2], r[3], r[4]] as const);
+  return { art, icon, frame, titleFamily, bodyFamily };
 }
 
 /* ------------------------------------------------------------------ */
@@ -1842,8 +1967,20 @@ export function drawCard(
 ): RenderReport {
   const face = card.faces[faceIndex] || card.faces[0];
   const meta = card.meta;
-  const theme = THEMES[meta.frameStyle];
-  const g = getGeometry(meta.frameStyle, face);
+  const baseTheme = THEMES[meta.frameStyle];
+  const customFrame = assets.frame && face.layout !== 'saga' && face.layout !== 'planeswalker' ? assets.frame : null;
+  const geoStyle: FrameStyle = customFrame ? 'modern' : meta.frameStyle;
+  const theme: Theme = {
+    ...baseTheme,
+    titleFont: assets.titleFamily ? `'${assets.titleFamily}', ${baseTheme.titleFont}` : baseTheme.titleFont,
+    bodyFont: assets.bodyFamily ? `'${assets.bodyFamily}', ${baseTheme.bodyFont}` : baseTheme.bodyFont,
+    ...(customFrame
+      ? meta.frameTextLight
+        ? { plateText: '#f4f1e8', boxText: '#f4f1e8', boxDark: true }
+        : { plateText: '#0f0d0b', boxText: '#0f0d0b', boxDark: false }
+      : {}),
+  };
+  const g = getGeometry(geoStyle, face);
   const colors = resolveFrameColors(face, meta);
   const pal = buildPal(colors);
   const borderHex = BORDER_COLORS.find((b) => b.id === meta.borderColor)?.hex || '#0b0b0c';
@@ -1851,7 +1988,8 @@ export function drawCard(
   const legend =
     meta.legendCrown &&
     isLegendary(face.typeLine) &&
-    (meta.frameStyle === 'modern') &&
+    meta.frameStyle === 'modern' &&
+    !customFrame &&
     face.layout !== 'saga';
 
   const totalW = CARD_W + opts.bleed * 2;
@@ -1860,7 +1998,7 @@ export function drawCard(
   ctx.clearRect(0, 0, totalW * opts.scale, totalH * opts.scale);
   ctx.setTransform(opts.scale, 0, 0, opts.scale, opts.bleed * opts.scale, opts.bleed * opts.scale);
 
-  const f: FrameCtx = { ctx, g, pal, meta, face, border, legend };
+  const f: FrameCtx = { ctx, g, pal, meta: customFrame ? { ...meta, frameStyle: 'modern' } : meta, face, border, legend };
   const radius = theme.cornerRadius;
 
   if (opts.bleed > 0) {
@@ -1874,15 +2012,24 @@ export function drawCard(
     ctx.clip();
   }
 
-  const drawers = FRAME_DRAWERS[meta.frameStyle];
-  drawers.base(f);
+  const drawers = FRAME_DRAWERS[geoStyle];
+  if (customFrame) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, CARD_W, CARD_H);
+  } else {
+    drawers.base(f);
+  }
 
   // Arte
-  const chamfer = meta.frameStyle === 'neon' ? 18 : 0;
-  const artRadius = g.borderless ? 0 : meta.frameStyle === 'showcase' ? 6 : meta.frameStyle === 'parchment' ? 3 : 4;
+  const chamfer = geoStyle === 'neon' ? 18 : 0;
+  const artRadius = g.borderless ? 0 : geoStyle === 'showcase' ? 6 : geoStyle === 'parchment' ? 3 : 4;
   const upscale = drawArt(ctx, g.art, face.art, assets.art, pal, artRadius, chamfer);
 
-  drawers.plates(f);
+  if (customFrame) {
+    ctx.drawImage(customFrame, 0, 0, CARD_W, CARD_H);
+  } else {
+    drawers.plates(f);
+  }
 
   // Textos
   drawTextOnPlate(f, theme);

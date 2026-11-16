@@ -452,7 +452,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
             {selectedColors.length > 1 && !isMultiOnly && (
               <button
                 className="btn btn-xs btn-secondary"
-                style={{ fontSize: '0.72rem', padding: '3px 8px', marginLeft: '4px' }}
+                style={{ marginLeft: '4px' }}
                 onClick={() => setColorMatchMode((m) => (m === 'exact' ? 'pool' : 'exact'))}
                 title="Alternar entre modo Exato e modo Pool de Identidade"
               >
@@ -504,7 +504,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                 className={`btn btn-sm ${showGridDetails ? 'btn-secondary' : 'btn-primary'}`}
                 onClick={handleToggleGridDetails}
                 title={showGridDetails ? 'Ocultar detalhes (mostrar apenas artes)' : 'Mostrar detalhes completos das cartas'}
-                style={{ fontSize: '0.75rem', padding: '4px 10px', height: '32px' }}
+                style={{ height: '32px' }}
               >
                 {showGridDetails ? <EyeOff size={14} /> : <Eye size={14} />}
                 <span>{showGridDetails ? 'Só Artes' : 'Com Detalhes'}</span>
@@ -651,7 +651,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     <div className="card-art-actions-overlay">
                       <button
                         className="btn btn-secondary btn-icon"
-                        style={{ padding: '6px', background: 'rgba(14, 14, 16, 0.9)' }}
+                        style={{ background: 'rgba(14, 14, 16, 0.9)' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setHoveredPreview(null);
@@ -663,7 +663,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                       </button>
                       <button
                         className="btn btn-secondary btn-icon"
-                        style={{ padding: '6px', background: 'rgba(14, 14, 16, 0.9)' }}
+                        style={{ background: 'rgba(14, 14, 16, 0.9)' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setHoveredPreview(null);
@@ -747,8 +747,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     {/* Qty +/- */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <button
-                        className="btn btn-ghost btn-icon"
-                        style={{ padding: '3px' }}
+                        className="btn btn-ghost btn-icon" 
                         onClick={() => onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
                       >
                         <Minus size={13} />
@@ -757,8 +756,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                         {item.quantity}
                       </span>
                       <button
-                        className="btn btn-ghost btn-icon"
-                        style={{ padding: '3px' }}
+                        className="btn btn-ghost btn-icon" 
                         onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
                       >
                         <Plus size={13} />
@@ -767,16 +765,14 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
 
                     <div style={{ display: 'flex', gap: '4px' }}>
                       <button
-                        className="btn btn-ghost btn-icon"
-                        style={{ padding: '5px' }}
+                        className="btn btn-ghost btn-icon" 
                         onClick={() => onOpenArtSelector(item.card, item.id, isFlipped ? 'back' : 'front')}
                         title={isFlipped ? 'Mudar Arte do Verso (Scryfall)' : 'Mudar Arte / Edição (Scryfall)'}
                       >
                         <ImageIcon size={15} />
                       </button>
                       <button
-                        className="btn btn-ghost btn-icon"
-                        style={{ padding: '5px' }}
+                        className="btn btn-ghost btn-icon" 
                         onClick={() => onAddToProxies(item.card, 1)}
                         title="Adicionar à Fila de Impressão (Proxy)"
                       >
@@ -784,7 +780,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                       </button>
                       <button
                         className="btn btn-ghost btn-icon"
-                        style={{ padding: '5px', color: '#f43f5e' }}
+                        style={{ color: '#f43f5e' }}
                         onClick={() => onRemoveItem(item.id)}
                         title="Remover carta da coleção"
                       >
@@ -839,8 +835,6 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     alignItems: 'center',
                     gap: '6px',
                     fontWeight: 700,
-                    fontSize: '0.82rem',
-                    padding: '6px 14px',
                     borderRadius: '6px',
                     border: 'none',
                     cursor: 'pointer',
@@ -1039,16 +1033,14 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     <td style={{ padding: '10px 16px', fontWeight: 700 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <button
-                          className="btn btn-ghost btn-icon"
-                          style={{ padding: '2px' }}
+                          className="btn btn-ghost btn-icon" 
                           onClick={() => onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
                         >
                           <Minus size={12} />
                         </button>
                         <span>{item.quantity}</span>
                         <button
-                          className="btn btn-ghost btn-icon"
-                          style={{ padding: '2px' }}
+                          className="btn btn-ghost btn-icon" 
                           onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
                         >
                           <Plus size={12} />
@@ -1110,16 +1102,14 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                     <td style={{ padding: '10px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: '6px' }}>
                         <button
-                          className="btn btn-ghost btn-icon"
-                          style={{ padding: '4px' }}
+                          className="btn btn-ghost btn-icon" 
                           onClick={() => onOpenArtSelector(item.card, item.id)}
                           title="Trocar Arte"
                         >
                           <ImageIcon size={15} />
                         </button>
                         <button
-                          className="btn btn-ghost btn-icon"
-                          style={{ padding: '4px' }}
+                          className="btn btn-ghost btn-icon" 
                           onClick={() => onAddToProxies(item.card, 1)}
                           title="Adicionar à Impressão"
                         >
@@ -1127,7 +1117,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                         </button>
                         <button
                           className="btn btn-ghost btn-icon"
-                          style={{ padding: '4px', color: '#f43f5e' }}
+                          style={{ color: '#f43f5e' }}
                           onClick={() => onRemoveItem(item.id)}
                           title="Remover carta da coleção"
                         >

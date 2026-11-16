@@ -26,7 +26,7 @@ interface CardPreviewProps {
 export const CardPreview: React.FC<CardPreviewProps> = ({ card, faceIndex, artAdjust, onArtChange, onReport, onClick, className = '' }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const assetsRef = useRef<RenderAssets>({ art: null, icon: null });
+  const assetsRef = useRef<RenderAssets>({ art: null, icon: null, frame: null, titleFamily: '', bodyFamily: '' });
   const deferred = useDeferredValue(card);
   const [ready, setReady] = useState(false);
   const cardRef = useRef(card);

@@ -89,6 +89,12 @@ export interface CardMeta {
   holoStamp: boolean;
   /** coroa de lendária (auto = quando o tipo contém "Lendária/Legendary") */
   legendCrown: boolean;
+  /** ids de ativos do usuário (biblioteca de fontes/frames); vazio = padrão */
+  titleFontId: string;
+  bodyFontId: string;
+  customFrameId: string;
+  /** texto claro sobre o frame personalizado (frames escuros) */
+  frameTextLight: boolean;
 }
 
 export interface CustomCard {
@@ -375,6 +381,10 @@ export function createDefaultMeta(): CardMeta {
     foil: 'none',
     holoStamp: true,
     legendCrown: true,
+    titleFontId: '',
+    bodyFontId: '',
+    customFrameId: '',
+    frameTextLight: false,
   };
 }
 

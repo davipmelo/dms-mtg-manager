@@ -975,8 +975,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                   >
                     <button
                       type="button"
-                      className="btn btn-ghost btn-icon"
-                      style={{ padding: '2px' }}
+                      className="btn btn-ghost btn-icon" 
                       onClick={() => onUpdateQuantity(item.id, Math.max(1, item.quantity - 1))}
                     >
                       <Minus size={12} />
@@ -984,8 +983,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                     <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{item.quantity}x</span>
                     <button
                       type="button"
-                      className="btn btn-ghost btn-icon"
-                      style={{ padding: '2px' }}
+                      className="btn btn-ghost btn-icon" 
                       onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
                     >
                       <Plus size={12} />
@@ -995,7 +993,7 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       <button
                         type="button"
                         className="btn btn-ghost btn-icon"
-                        style={{ padding: '2px', marginLeft: 'auto' }}
+                        style={{ marginLeft: 'auto' }}
                         onClick={() => onOpenArtSelector(item.card, item.id)}
                         title="Trocar Arte desta Proxy"
                       >
@@ -1007,7 +1005,6 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                       type="button"
                       className="btn btn-ghost btn-icon"
                       style={{
-                        padding: '2px',
                         marginLeft: onOpenArtSelector ? undefined : 'auto',
                         color: '#ef4444',
                       }}
@@ -1787,7 +1784,6 @@ export const ProxyStudio: React.FC<ProxyStudioProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: '10px 24px',
                 }}
               >
                 <Sparkles size={16} />

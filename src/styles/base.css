@@ -1131,8 +1131,8 @@ img.is-mpc-bleed-crop {
   }
 
   .app-brand-title {
-    font-size: 0.95rem;
-    letter-spacing: 0.05em;
+    font-size: 0.82rem;
+    letter-spacing: 0.03em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1552,5 +1552,95 @@ th {
 
   .page-transition {
     animation: none !important;
+  }
+}
+
+/* ==========================================================================
+   CONSISTÊNCIA DE CONTROLES (alturas, ícones e alvos de toque)
+   ========================================================================== */
+.btn {
+  min-height: 38px;
+  white-space: nowrap;
+}
+.btn-sm {
+  min-height: 32px;
+}
+.btn-xs {
+  min-height: 26px;
+}
+.btn svg {
+  flex-shrink: 0;
+}
+.btn-icon {
+  min-width: 38px;
+  padding: 0 8px;
+}
+.btn-sm.btn-icon {
+  min-width: 32px;
+  padding: 0 6px;
+}
+.btn-xs.btn-icon {
+  min-width: 26px;
+  padding: 0 4px;
+}
+.btn-ghost {
+  border-color: transparent;
+}
+/* Filtros em linha: ghost pequeno ganha contorno sutil para ficar coerente com os demais chips */
+.btn-ghost.btn-sm:not(.btn-icon) {
+  border-color: var(--border-subtle);
+}
+.input-text,
+.input-field,
+.select-field {
+  min-height: 40px;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .btn {
+    min-height: 42px;
+  }
+  .btn-sm {
+    min-height: 36px;
+  }
+  .btn-xs {
+    min-height: 30px;
+  }
+  .btn-icon {
+    min-width: 42px;
+  }
+  .btn-sm.btn-icon {
+    min-width: 36px;
+  }
+}
+
+/* Mobile: respiro e alinhamento consistentes entre telas */
+@media (max-width: 768px) {
+  .page-header-panel {
+    padding: 16px 14px !important;
+  }
+  .page-header-panel .btn {
+    flex: 0 1 auto;
+  }
+  .stat-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .stat-tile {
+    padding: 10px 12px;
+  }
+  .stat-tile-value {
+    font-size: 1.4rem;
+  }
+  .stat-tile:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  .glass-panel > div > select.select-field,
+  .glass-panel > div > .select-field {
+    width: 100% !important;
+  }
+  .main-content-container > .page-transition > div {
+    min-width: 0;
   }
 }

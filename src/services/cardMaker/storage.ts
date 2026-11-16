@@ -6,9 +6,10 @@
 import { CardIndexEntry, CustomCard, cloneCard, createBlankCard, toIndexEntry } from './model';
 
 const DB_NAME = 'proliferate-card-maker';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_CARDS = 'cards';
 const STORE_INDEX = 'index';
+const STORE_ASSETS = 'assets';
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -24,6 +25,7 @@ function openDb(): Promise<IDBDatabase> {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE_CARDS)) db.createObjectStore(STORE_CARDS, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(STORE_INDEX)) db.createObjectStore(STORE_INDEX, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(STORE_ASSETS)) db.createObjectStore(STORE_ASSETS, { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error || new Error('Falha ao abrir o banco local'));
@@ -143,4 +145,45 @@ export function parseProjectFile(text: string): CustomCard[] {
   else if (obj && Array.isArray((obj as { faces?: unknown }).faces)) cards = [obj as CustomCard];
   else throw new Error('Arquivo não reconhecido como projeto do Card Maker.');
   return cards.map((c) => cloneCard(normalizeCard(c), true));
+}
+
+/* ------------------------------------------------------------------ */
+/* Biblioteca de fontes e frames próprios do usuário                    */
+/* ------------------------------------------------------------------ */
+
+export type AssetKind = 'font' | 'frame';
+
+export interface UserAsset {
+  id: string;
+  kind: AssetKind;
+  name: string;
+  /** data: URL do arquivo (fonte ou imagem) */
+  data: string;
+  createdAt: string;
+}
+
+export async function listAssets(kind?: AssetKind): Promise<UserAsset[]> {
+  const db = await openDb();
+  const all = await wrap<UserAsset[]>(db.transaction(STORE_ASSETS, 'readonly').objectStore(STORE_ASSETS).getAll());
+  return all.filter((a) => !kind || a.kind === kind).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+}
+
+export async function getAsset(id: string): Promise<UserAsset | null> {
+  const db = await openDb();
+  const a = await wrap<UserAsset | undefined>(db.transaction(STORE_ASSETS, 'readonly').objectStore(STORE_ASSETS).get(id));
+  return a || null;
+}
+
+export async function saveAsset(asset: UserAsset): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(STORE_ASSETS, 'readwrite');
+  tx.objectStore(STORE_ASSETS).put(asset);
+  await txDone(tx);
+}
+
+export async function deleteAsset(id: string): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(STORE_ASSETS, 'readwrite');
+  tx.objectStore(STORE_ASSETS).delete(id);
+  await txDone(tx);
 }

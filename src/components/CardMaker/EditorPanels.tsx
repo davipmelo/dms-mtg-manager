@@ -47,6 +47,7 @@ import {
 } from '../../services/cardMaker/model';
 import { RenderReport, renderThumb } from '../../services/cardMaker/renderer';
 import { compressImageFile } from '../../services/imageUtils';
+import { UserAsset, deleteAsset, listAssets, saveAsset } from '../../services/cardMaker/storage';
 import { Field, Segmented, SymbolButton, Toggle, useDebounced } from './ui';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 
@@ -777,7 +778,133 @@ const FrameThumb: React.FC<{ card: CustomCard; faceIndex: number; styleId: CardM
   );
 };
 
-export const VisualPanel: React.FC<PanelProps> = ({ card, faceIndex, updateMeta }) => {
+
+/* ------------------------------------------------------------------ */
+/* Fontes e frames próprios (arquivos do usuário)                       */
+/* ------------------------------------------------------------------ */
+
+const FONT_EXT = /\.(ttf|otf|woff2?)$/i;
+
+const readAsDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Falha ao ler o arquivo.'));
+    reader.readAsDataURL(file);
+  });
+
+const AssetsSection: React.FC<{ card: CustomCard; updateMeta: PanelProps['updateMeta']; onToast: PanelProps['onToast'] }> = ({ card, updateMeta, onToast }) => {
+  const [assets, setAssets] = useState<UserAsset[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const m = card.meta;
+
+  const refresh = () => listAssets().then(setAssets).catch(() => undefined);
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  const fonts = assets.filter((a) => a.kind === 'font');
+  const frames = assets.filter((a) => a.kind === 'frame');
+
+  const onFiles = async (files: FileList | null) => {
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      try {
+        const isFont = FONT_EXT.test(file.name);
+        if (!isFont && !file.type.startsWith('image/')) throw new Error(`“${file.name}” não é fonte (.ttf, .otf, .woff) nem imagem.`);
+        const data = await readAsDataUrl(file);
+        const asset: UserAsset = {
+          id: uid('asset'),
+          kind: isFont ? 'font' : 'frame',
+          name: file.name.replace(/\.[^.]+$/, ''),
+          data,
+          createdAt: new Date().toISOString(),
+        };
+        await saveAsset(asset);
+        onToast(`${isFont ? 'Fonte' : 'Frame'} “${asset.name}” adicionado.`, 'success');
+      } catch (e) {
+        onToast((e as Error).message, 'error');
+      }
+    }
+    void refresh();
+  };
+
+  const remove = async (a: UserAsset) => {
+    await deleteAsset(a.id);
+    const patch: Partial<CardMeta> = {};
+    if (m.titleFontId === a.id) patch.titleFontId = '';
+    if (m.bodyFontId === a.id) patch.bodyFontId = '';
+    if (m.customFrameId === a.id) patch.customFrameId = '';
+    if (Object.keys(patch).length) updateMeta(patch);
+    void refresh();
+  };
+
+  return (
+    <Field
+      label="Fontes e frames originais"
+      hint="Use arquivos que você já possui (por exemplo fontes como Beleren e MPlantin, ou imagens de frame com janela transparente para a arte). Ficam guardados só neste navegador e não são incluídos no projeto .json."
+    >
+      <div className="cm-asset-grid">
+        <label className="cm-asset-pick">
+          <span>Fonte do título</span>
+          <select className="select-field" value={m.titleFontId} onChange={(e) => updateMeta({ titleFontId: e.target.value })}>
+            <option value="">Padrão do estilo</option>
+            {fonts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="cm-asset-pick">
+          <span>Fonte do texto</span>
+          <select className="select-field" value={m.bodyFontId} onChange={(e) => updateMeta({ bodyFontId: e.target.value })}>
+            <option value="">Padrão do estilo</option>
+            {fonts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="cm-asset-pick cm-asset-wide">
+          <span>Frame personalizado (imagem sobre a carta)</span>
+          <select className="select-field" value={m.customFrameId} onChange={(e) => updateMeta({ customFrameId: e.target.value })}>
+            <option value="">Nenhum — usar o estilo acima</option>
+            {frames.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {m.customFrameId && (
+        <Toggle checked={m.frameTextLight} onChange={(v) => updateMeta({ frameTextLight: v })} label="Texto claro no frame" hint="Ative para frames escuros. O texto segue o layout Moderno (arte 628×458 em 744×1039)." />
+      )}
+      <div className="cm-chip-row" style={{ marginTop: 8 }}>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => fileRef.current?.click()}>
+          <Upload size={14} /> Adicionar fonte ou frame
+        </button>
+        <input ref={fileRef} type="file" hidden multiple accept=".ttf,.otf,.woff,.woff2,image/*" onChange={(e) => { void onFiles(e.target.files); e.target.value = ''; }} />
+      </div>
+      {assets.length > 0 && (
+        <div className="cm-asset-list">
+          {assets.map((a) => (
+            <span key={a.id} className="cm-asset-chip">
+              {a.kind === 'font' ? 'Aa' : '▭'} {a.name}
+              <button type="button" aria-label={`Remover ${a.name}`} onClick={() => remove(a)}>
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </Field>
+  );
+};
+
+export const VisualPanel: React.FC<PanelProps> = ({ card, faceIndex, updateMeta, onToast }) => {
   const m = card.meta;
   return (
     <div className="cm-panel-stack">
@@ -813,6 +940,8 @@ export const VisualPanel: React.FC<PanelProps> = ({ card, faceIndex, updateMeta 
           ]}
         />
       </Field>
+
+      <AssetsSection card={card} updateMeta={updateMeta} onToast={onToast} />
 
       <div className="cm-toggle-stack">
         <Toggle checked={m.holoStamp} onChange={(v) => updateMeta({ holoStamp: v })} label="Selo holográfico" hint="Aparece em cartas raras, míticas e especiais" />

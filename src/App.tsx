@@ -1863,7 +1863,7 @@ export function App() {
           {/* Global Action Buttons */}
           <div className="app-actions">
             <button
-              className="btn btn-ghost btn-sm"
+              className="btn btn-secondary btn-sm"
               onClick={() => setIsBackupModalOpen(true)}
               title="Exportar ou Restaurar Backup Completo do Sistema (.json)"
             >
@@ -1871,7 +1871,7 @@ export function App() {
             </button>
 
             <button
-              className="btn btn-ghost btn-sm"
+              className="btn btn-secondary btn-sm"
               onClick={() => {
                 setExportDefaultDeckId(undefined);
                 setIsExportModalOpen(true);
@@ -1882,7 +1882,7 @@ export function App() {
             </button>
 
             <button
-              className="btn btn-highlight btn-sm"
+              className="btn btn-secondary btn-sm"
               onClick={() => {
                 setImportDefaultDestination('collection');
                 setIsImportModalOpen(true);

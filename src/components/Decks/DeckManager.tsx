@@ -250,7 +250,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                 <Tag size={15} className="text-amber-400" /> Gerenciar Tags
               </button>
             )}
-            <button className="btn btn-highlight btn-sm" onClick={onOpenImportModal}>
+            <button className="btn btn-secondary btn-sm" onClick={onOpenImportModal}>
               <Download size={15} /> Importar Deck
             </button>
             <button className="btn btn-primary btn-sm" onClick={onOpenCreateModal}>
@@ -425,7 +425,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
             Crie seu primeiro deck escolhendo o formato desejado (Commander, Modern, Standard, etc.) ou importe listas de Moxfield, LigaMagic e MTG Arena.
           </p>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button className="btn btn-highlight" onClick={onOpenImportModal}>
+            <button className="btn btn-secondary" onClick={onOpenImportModal}>
               <Download size={16} /> Importar Lista
             </button>
             <button className="btn btn-primary" onClick={onOpenCreateModal}>
@@ -735,8 +735,6 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                           onClick={handleCancelReposition}
                           className="btn btn-secondary btn-sm"
                           style={{
-                            fontSize: '0.72rem',
-                            padding: '2px 8px',
                             height: '24px',
                             display: 'inline-flex',
                             alignItems: 'center',
