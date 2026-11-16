@@ -2527,7 +2527,7 @@ th {
 .util-list-head,
 .util-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) 130px 56px 160px;
+  grid-template-columns: 24px minmax(0, 1.4fr) minmax(0, 1.2fr) 130px 56px 120px;
   align-items: center;
   gap: 14px;
   padding: 0 14px;
@@ -2607,7 +2607,7 @@ th {
     display: none;
   }
   .util-row {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 24px minmax(0, 1fr) auto;
     padding: 8px 12px;
   }
   .util-row .hide-sm {
@@ -2643,5 +2643,79 @@ th {
   }
   .util-search {
     flex-basis: 100%;
+  }
+}
+
+/* Botão de trocar arte junto ao nome (listas) */
+.row-art-btn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dim);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+tr:hover .row-art-btn,
+.util-row:hover .row-art-btn,
+.row-art-btn:focus-visible {
+  opacity: 1;
+}
+.row-art-btn:hover {
+  background: var(--primary);
+  color: var(--primary-text);
+  border-color: var(--primary);
+}
+.coll-name-text {
+  align-items: center;
+}
+
+/* Utilitários: caixa de seleção, nome + arte e barra de seleção */
+.util-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.util-check input {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+.util-row-namecell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.util-row-namecell .util-row-name {
+  min-width: 0;
+}
+.util-row.is-selected {
+  background: var(--primary-soft);
+}
+.select-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  background: var(--primary-soft);
+  border: 1px solid rgba(255, 187, 0, 0.3);
+  border-radius: var(--radius-lg);
+  font-size: 0.84rem;
+}
+.select-bar-spacer {
+  flex: 1;
+}
+@media (hover: none) {
+  .row-art-btn {
+    opacity: 0.85;
   }
 }

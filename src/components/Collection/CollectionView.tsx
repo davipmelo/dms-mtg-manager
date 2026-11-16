@@ -954,6 +954,18 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                               {item.card.name}
                               {item.isFoil && <Sparkles size={12} className="text-amber-400" />}
                             </span>
+                            <button
+                              type="button"
+                              className="row-art-btn"
+                              onClick={() => {
+                                setHoveredPreview(null);
+                                onOpenArtSelector(item.card, item.id);
+                              }}
+                              title="Trocar arte"
+                              aria-label={`Trocar arte de ${item.card.name}`}
+                            >
+                              <ImageIcon size={13} />
+                            </button>
                             <span className="coll-type">{item.card.typeLine}</span>
                           </span>
                         </div>
@@ -990,9 +1002,6 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                       </td>
                       <td className="col-actions">
                         <div className="coll-actions">
-                          <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={() => onOpenArtSelector(item.card, item.id)} title="Trocar Arte" aria-label="Trocar Arte">
-                            <ImageIcon size={15} />
-                          </button>
                           <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={() => onAddToProxies(item.card, 1)} title="Adicionar à Impressão" aria-label="Adicionar à Impressão">
                             <Printer size={15} />
                           </button>

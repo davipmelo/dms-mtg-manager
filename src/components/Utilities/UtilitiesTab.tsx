@@ -345,6 +345,10 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
     }
   };
 
+  // Seleção em lote na lista (Shift seleciona intervalo)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const lastSelectedRef = useRef<string | null>(null);
+
   const [gridCardSize, setGridCardSize] = useState<number>(() => getUiSettings().gridCardSize);
   const [showGridDetails, setShowGridDetails] = useState<boolean>(() => getUiSettings().gridShowDetails);
 
@@ -477,6 +481,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
 
   const handleCategoryChange = (nextCategory: UtilityCategory) => {
     setCategory(nextCategory);
+    setSelectedIds(new Set());
     setSearchQuery('');
     setSelectedColors([]);
     setIsMultiOnly(false);
@@ -546,6 +551,61 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
   const handleHoverEnd = useCallback(() => {
     setHoveredPreview(null);
   }, []);
+
+  const handleToggleSelect = (id: string, shiftKey: boolean) => {
+    const anchor = lastSelectedRef.current;
+    lastSelectedRef.current = id;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const willSelect = !prev.has(id);
+      if (shiftKey && anchor && anchor !== id) {
+        const ids = visibleItems.map((i) => i.id);
+        const a = ids.indexOf(anchor);
+        const b = ids.indexOf(id);
+        if (a !== -1 && b !== -1) {
+          const [from, to] = a < b ? [a, b] : [b, a];
+          for (let i = from; i <= to; i++) {
+            if (willSelect) next.add(ids[i]);
+            else next.delete(ids[i]);
+          }
+          return next;
+        }
+      }
+      if (willSelect) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const allVisibleSelected = visibleItems.length > 0 && visibleItems.every((i) => selectedIds.has(i.id));
+  const someVisibleSelected = visibleItems.some((i) => selectedIds.has(i.id));
+
+  const handleToggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) visibleItems.forEach((i) => next.delete(i.id));
+      else visibleItems.forEach((i) => next.add(i.id));
+      return next;
+    });
+  };
+
+  const handleAddSelected = () => {
+    const chosen = items.filter((i) => selectedIds.has(i.id));
+    chosen.forEach((item) => onAddUtilityToProxies(item, 1));
+    setAddedMap((prev) => {
+      const next = { ...prev };
+      chosen.forEach((i) => (next[i.id] = true));
+      return next;
+    });
+    setTimeout(() => {
+      setAddedMap((prev) => {
+        const next = { ...prev };
+        chosen.forEach((i) => (next[i.id] = false));
+        return next;
+      });
+    }, 1200);
+    setSelectedIds(new Set());
+  };
 
   const handleSelectArt = useCallback((itemId: string) => {
     const idx = items.findIndex((i) => i.id === itemId);
@@ -823,8 +883,34 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
               ))}
             </div>
           ) : (
+            <>
+            {selectedIds.size > 0 && (
+              <div className="select-bar">
+                <span>
+                  <strong>{selectedIds.size}</strong> {selectedIds.size === 1 ? 'selecionado' : 'selecionados'}
+                </span>
+                <span className="select-bar-spacer" />
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelectedIds(new Set())}>
+                  Limpar seleção
+                </button>
+                <button type="button" className="btn btn-primary btn-sm" onClick={handleAddSelected}>
+                  <Printer size={14} /> Imprimir selecionados
+                </button>
+              </div>
+            )}
             <div className="util-list">
               <div className="util-list-head">
+                <span className="util-check">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = !allVisibleSelected && someVisibleSelected;
+                    }}
+                    onChange={handleToggleSelectAll}
+                    title={allVisibleSelected ? 'Desmarcar todos' : 'Selecionar todos os itens da lista'}
+                  />
+                </span>
                 <span>Nome</span>
                 <span className="hide-sm">Tipo</span>
                 <span className="hide-sm">Edição</span>
@@ -834,16 +920,39 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
               {visibleItems.map((item) => {
                 const isAdded = !!addedMap[item.id];
                 return (
-                  <div key={item.id} className="util-row">
-                    <span
-                      className="util-row-name"
-                      onMouseEnter={(e) => handleHoverStart(e, item)}
-                      onMouseMove={handleHoverMove}
-                      onMouseLeave={handleHoverEnd}
-                      title={item.name}
-                    >
-                      {item.name}
-                      <span className="util-row-type-sm">{item.typeLine}</span>
+                  <div key={item.id} className={`util-row ${selectedIds.has(item.id) ? 'is-selected' : ''}`}>
+                    <span className="util-check">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(item.id)}
+                        onChange={() => undefined}
+                        onClick={(e) => handleToggleSelect(item.id, e.shiftKey)}
+                        title="Segure Shift para selecionar um intervalo"
+                      />
+                    </span>
+                    <span className="util-row-namecell">
+                      <span
+                        className="util-row-name"
+                        onMouseEnter={(e) => handleHoverStart(e, item)}
+                        onMouseMove={handleHoverMove}
+                        onMouseLeave={handleHoverEnd}
+                        title={item.name}
+                      >
+                        {item.name}
+                        <span className="util-row-type-sm">{item.typeLine}</span>
+                      </span>
+                      <button
+                        type="button"
+                        className="row-art-btn"
+                        onClick={() => {
+                          handleHoverEnd();
+                          handleSelectArt(item.id);
+                        }}
+                        title="Escolher arte alternativa"
+                        aria-label={`Escolher arte alternativa de ${item.name}`}
+                      >
+                        <ImageIcon size={13} />
+                      </button>
                     </span>
                     <span className="util-row-type hide-sm" title={item.typeLine}>{item.typeLine}</span>
                     <span className="util-row-set hide-sm" title={`${item.setName} #${item.collectorNumber}`}>
@@ -852,18 +961,6 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
                     </span>
                     <span className="util-pt-col util-row-pt hide-sm">{item.power && item.toughness ? `${item.power}/${item.toughness}` : ''}</span>
                     <span className="util-row-actions">
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-icon btn-sm"
-                        onClick={() => {
-                          handleHoverEnd();
-                          handleSelectArt(item.id);
-                        }}
-                        title="Escolher arte alternativa"
-                        aria-label="Escolher arte alternativa"
-                      >
-                        <ImageIcon size={15} />
-                      </button>
                       <button
                         type="button"
                         className={`btn btn-sm ${isAdded ? 'btn-ghost' : 'btn-secondary'}`}
@@ -880,6 +977,7 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
                 );
               })}
             </div>
+            </>
           )}
 
           {visibleLimit < filteredItems.length && (
