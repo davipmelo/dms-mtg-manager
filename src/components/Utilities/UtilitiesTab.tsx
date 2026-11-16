@@ -23,6 +23,10 @@ import {
   Cog,
   ZoomIn,
   ZoomOut,
+  LayoutGrid,
+  List,
+  X,
+  Check as CheckIcon,
 } from 'lucide-react';
 
 interface UtilitiesTabProps {
@@ -289,11 +293,11 @@ const UtilityCardItem = React.memo<UtilityCardItemProps>(({
             >
               {isAdded ? (
                 <>
-                  <Check size={14} className="text-emerald-400" /> Na Fila!
+                  <Check size={14} className="text-emerald-400" /> Na fila
                 </>
               ) : (
                 <>
-                  <Printer size={14} /> + Proxy
+                  <Printer size={14} /> Imprimir
                 </>
               )}
             </button>
@@ -324,6 +328,22 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
   const requestIdRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    try {
+      return localStorage.getItem('dms_utilities_view') === 'list' ? 'list' : 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
+  const changeViewMode = (mode: 'grid' | 'list') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('dms_utilities_view', mode);
+    } catch {
+      // ignore
+    }
+  };
 
   const [gridCardSize, setGridCardSize] = useState<number>(() => getUiSettings().gridCardSize);
   const [showGridDetails, setShowGridDetails] = useState<boolean>(() => getUiSettings().gridShowDetails);
@@ -604,284 +624,267 @@ export const UtilitiesTab: React.FC<UtilitiesTabProps> = ({ onAddUtilityToProxie
     );
   };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Header, Category Tabs, and Search Filters */}
-      <div className="glass-panel page-header-panel" style={{ padding: '22px 24px' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: '16px',
-          }}
-        >
-          <div>
-            <span className="section-eyebrow"><Sparkles size={12} /> Tokens, emblemas & mais</span>
-            <h2 className="page-title">
-              Central de Utilitários
-            </h2>
-            <p className="page-subtitle">
-              Explore fichas (tokens), planos de Planechase, emblemas, masmorras, marcadores oficiais e escolha artes alternativas para imprimir proxies A4.
-            </p>
-          </div>
-        </div>
+  const noColorFilter = !isColorlessOnly && !isMultiOnly && selectedColors.length === 0;
+  const hasActiveFilters = !noColorFilter || searchQuery.trim() !== '' || (category === 'tokens' && selectedChipQuery !== '');
 
-        {/* Utility Category Tabs */}
-        <div
-          style={{
-            marginTop: '18px',
-            display: 'flex',
-            gap: '8px',
-            flexWrap: 'wrap',
-            paddingBottom: '14px',
-            borderBottom: '1px solid var(--border-subtle)',
-          }}
-        >
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setSelectedChipQuery('');
+    handleResetColors();
+  };
+
+  return (
+    <div className="util-page">
+      {/* Cabeçalho + categorias */}
+      <div className="glass-panel page-header-panel util-header">
+        <span className="section-eyebrow"><Sparkles size={12} /> Tokens, emblemas & mais</span>
+        <h2 className="page-title">Utilitários</h2>
+        <p className="page-subtitle">{activeCategoryMeta.description}</p>
+
+        <div className="util-cats" role="tablist" aria-label="Categorias de utilitários">
           {UTILITY_CATEGORIES.map((cat) => {
             const isActive = category === cat.id;
             return (
               <button
                 key={cat.id}
                 type="button"
-                className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-secondary'}`}
+                role="tab"
+                aria-selected={isActive}
+                className={`util-cat ${isActive ? 'is-active' : ''}`}
                 onClick={() => handleCategoryChange(cat.id)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
                 {cat.icon}
-                {cat.label}
+                <span>{cat.label}</span>
               </button>
             );
           })}
         </div>
+      </div>
 
-        {/* Active Category Description + Search Bar */}
-        <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ fontSize: '0.82rem', color: '#ffcc4d', fontWeight: 500 }}>
-            {activeCategoryMeta.description}
+      {/* Busca, cores e visualização */}
+      <div className="util-toolbar">
+        <form onSubmit={handleSearchSubmit} className="util-search">
+          <Search size={16} className="util-search-icon" />
+          <input
+            type="text"
+            className="input-text"
+            placeholder={activeCategoryMeta.placeholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Buscar utilitários"
+          />
+          {searchQuery && (
+            <button type="button" className="util-search-clear" onClick={() => setSearchQuery('')} title="Limpar busca" aria-label="Limpar busca">
+              <X size={15} />
+            </button>
+          )}
+        </form>
+
+        {category === 'tokens' && (
+          <div className="util-colors" role="group" aria-label="Filtrar por cor">
+            {(['W', 'U', 'B', 'R', 'G'] as const).map((col) => {
+              const isSelected = selectedColors.includes(col);
+              return (
+                <button
+                  key={col}
+                  type="button"
+                  className={`util-color ${isSelected ? 'is-active' : ''}`}
+                  onClick={() => handleToggleColor(col)}
+                  title={`Filtrar cor ${col}`}
+                  aria-pressed={isSelected}
+                >
+                  <span className={`mana-pip mana-pip-${col}`}>{col}</span>
+                </button>
+              );
+            })}
+            <button type="button" className={`util-color-text ${isMultiOnly ? 'is-active' : ''}`} onClick={handleToggleMulti} aria-pressed={isMultiOnly}>
+              Multi
+            </button>
+            <button type="button" className={`util-color-text ${isColorlessOnly ? 'is-active' : ''}`} onClick={handleToggleColorless} aria-pressed={isColorlessOnly}>
+              Incolor
+            </button>
           </div>
+        )}
 
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '10px', flex: '1 1 320px' }}>
-              <div style={{ position: 'relative', flex: 1 }}>
-                <Search
-                  size={17}
-                  style={{ position: 'absolute', left: '12px', top: '11px', color: '#71717a' }}
-                />
-                <input
-                  type="text"
-                  className="input-text"
-                  placeholder={activeCategoryMeta.placeholder}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ paddingLeft: '38px' }}
-                />
-              </div>
-              <button type="submit" className="btn btn-primary">
-                <Search size={16} /> Buscar
+        <div className="util-view-controls">
+          {viewMode === 'grid' && (
+            <>
+              <button
+                type="button"
+                className={`util-icon-toggle ${!showGridDetails ? 'is-active' : ''}`}
+                onClick={handleToggleGridDetails}
+                title={showGridDetails ? 'Mostrar apenas as artes' : 'Mostrar detalhes'}
+                aria-pressed={!showGridDetails}
+              >
+                {showGridDetails ? <Eye size={15} /> : <EyeOff size={15} />}
               </button>
-            </form>
-
-            {/* Color Filter for Tokens */}
-            {category === 'tokens' && (
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  className={`btn btn-sm ${!isColorlessOnly && !isMultiOnly && selectedColors.length === 0 ? 'btn-primary' : 'btn-ghost'}`}
-                  onClick={handleResetColors}
-                >
-                  Todas
-                </button>
-                {(['W', 'U', 'B', 'R', 'G'] as const).map((col) => {
-                  const isSelected = selectedColors.includes(col);
-                  return (
-                    <button
-                      key={col}
-                      type="button"
-                      className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-ghost'}`}
-                      onClick={() => handleToggleColor(col)}
-                      title={`Filtrar cor ${col}`}
-                    >
-                      <span className={`mana-pip mana-pip-${col}`}>{col}</span>
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  className={`btn btn-sm ${isMultiOnly ? 'btn-primary' : 'btn-ghost'}`}
-                  onClick={handleToggleMulti}
-                  title="Multicolor"
-                >
-                  Multi
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-sm ${isColorlessOnly ? 'btn-primary' : 'btn-ghost'}`}
-                  onClick={handleToggleColorless}
-                  title="Incolor"
-                >
-                  Incolor
-                </button>
+              <div className="util-zoom" title={`Escala da grade (${gridCardSize}px)`}>
+                <ZoomOut size={13} />
+                <input
+                  type="range"
+                  min={110}
+                  max={340}
+                  step={10}
+                  value={gridCardSize}
+                  onChange={(e) => handleGridCardSizeChange(Number(e.target.value))}
+                  aria-label="Tamanho dos cards"
+                />
+                <ZoomIn size={13} />
               </div>
-            )}
+            </>
+          )}
+          <div className="view-toggle" role="radiogroup" aria-label="Modo de visualização">
+            <button type="button" role="radio" aria-checked={viewMode === 'grid'} className={`view-toggle-btn ${viewMode === 'grid' ? 'is-active' : ''}`} onClick={() => changeViewMode('grid')} title="Visualizar em grade" aria-label="Visualizar em grade">
+              <LayoutGrid size={16} />
+            </button>
+            <button type="button" role="radio" aria-checked={viewMode === 'list'} className={`view-toggle-btn ${viewMode === 'list' ? 'is-active' : ''}`} onClick={() => changeViewMode('list')} title="Visualizar em lista" aria-label="Visualizar em lista">
+              <List size={16} />
+            </button>
           </div>
+        </div>
+      </div>
 
-          {/* Quick Token Chips when in Tokens category */}
-          {category === 'tokens' && (
-            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-              {POPULAR_TOKEN_CHIPS.map((chip) => {
-                const isActive = !searchQuery.trim() && selectedChipQuery === chip.query;
+      {/* Atalhos de fichas */}
+      {category === 'tokens' && (
+        <div className="util-chips" role="group" aria-label="Atalhos de fichas">
+          {POPULAR_TOKEN_CHIPS.map((chip) => {
+            const isActive = !searchQuery.trim() && selectedChipQuery === chip.query;
+            return (
+              <button
+                key={chip.label}
+                type="button"
+                className={`chip ${isActive ? 'is-active' : ''}`}
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedChipQuery(chip.query);
+                }}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Status */}
+      <div className="util-status">
+        {!loading && filteredItems.length > 0 && (
+          <span>
+            Exibindo <strong>{visibleItems.length}</strong> de <strong>{filteredItems.length}</strong>{' '}
+            {filteredItems.length === 1 ? 'item' : 'itens'}
+          </span>
+        )}
+        {isStreamingMore && (
+          <span className="util-streaming">
+            <Loader2 size={12} className="animate-spin" /> Carregando o restante…
+          </span>
+        )}
+        {hasActiveFilters && (
+          <button type="button" className="util-clear" onClick={clearAllFilters}>
+            <X size={12} /> Limpar filtros
+          </button>
+        )}
+      </div>
+
+      {/* Resultados */}
+      {loading ? (
+        <div className="util-empty">
+          <Loader2 className="animate-spin" size={32} style={{ color: 'var(--primary)' }} />
+          <span>Carregando do Scryfall…</span>
+        </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="util-empty">
+          <Search size={28} />
+          <strong>Nada encontrado</strong>
+          <span>Tente termos em inglês (ex.: “Treasure”, “Dominaria”, “Teferi”, “Monarch”).</span>
+          {hasActiveFilters && (
+            <button type="button" className="btn btn-secondary btn-sm" onClick={clearAllFilters}>
+              Limpar filtros
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          {viewMode === 'grid' ? (
+            <div className="cards-grid" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardSize}px, 1fr))` }}>
+              {visibleItems.map((item) => (
+                <UtilityCardItem
+                  key={item.id}
+                  item={item}
+                  isAdded={!!addedMap[item.id]}
+                  showGridDetails={showGridDetails}
+                  gridCardSize={gridCardSize}
+                  onHoverStart={handleHoverStart}
+                  onHoverMove={handleHoverMove}
+                  onHoverEnd={handleHoverEnd}
+                  onSelectArt={handleSelectArt}
+                  onAddProxy={handleAddProxySingle}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="util-list">
+              <div className="util-list-head">
+                <span>Nome</span>
+                <span className="hide-sm">Tipo</span>
+                <span className="hide-sm">Edição</span>
+                <span className="util-pt-col hide-sm">P/R</span>
+                <span />
+              </div>
+              {visibleItems.map((item) => {
+                const isAdded = !!addedMap[item.id];
                 return (
-                  <button
-                    key={chip.label}
-                    type="button"
-                    className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => {
-                      setSearchQuery('');
-                      setSelectedChipQuery(chip.query);
-                    }}
-                    style={{ whiteSpace: 'nowrap' }}
-                  >
-                    {chip.label}
-                  </button>
+                  <div key={item.id} className="util-row">
+                    <span
+                      className="util-row-name"
+                      onMouseEnter={(e) => handleHoverStart(e, item)}
+                      onMouseMove={handleHoverMove}
+                      onMouseLeave={handleHoverEnd}
+                      title={item.name}
+                    >
+                      {item.name}
+                      <span className="util-row-type-sm">{item.typeLine}</span>
+                    </span>
+                    <span className="util-row-type hide-sm" title={item.typeLine}>{item.typeLine}</span>
+                    <span className="util-row-set hide-sm" title={`${item.setName} #${item.collectorNumber}`}>
+                      <span className="coll-setcode">{item.setCode.toUpperCase()}</span>
+                      <span className="util-row-num">#{item.collectorNumber}</span>
+                    </span>
+                    <span className="util-pt-col util-row-pt hide-sm">{item.power && item.toughness ? `${item.power}/${item.toughness}` : ''}</span>
+                    <span className="util-row-actions">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-icon btn-sm"
+                        onClick={() => {
+                          handleHoverEnd();
+                          handleSelectArt(item.id);
+                        }}
+                        title="Escolher arte alternativa"
+                        aria-label="Escolher arte alternativa"
+                      >
+                        <ImageIcon size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${isAdded ? 'btn-ghost' : 'btn-secondary'}`}
+                        onClick={() => {
+                          handleHoverEnd();
+                          handleAddProxySingle(item);
+                        }}
+                      >
+                        {isAdded ? <CheckIcon size={14} className="text-emerald-400" /> : <Printer size={14} />}
+                        <span className="util-add-label">{isAdded ? 'Na fila' : 'Imprimir'}</span>
+                      </button>
+                    </span>
+                  </div>
                 );
               })}
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Grid Controls: Count, Streaming Indicator, Details Toggle & Scale Zoom Slider */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '-10px', gap: '8px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.8rem', color: '#a1a1aa' }}>
-          {!loading && filteredItems.length > 0 && (
-            <span>
-              Exibindo <strong style={{ color: '#f4f4f5' }}>{visibleItems.length}</strong> de{' '}
-              <strong style={{ color: '#f4f4f5' }}>{filteredItems.length}</strong>{' '}
-              {filteredItems.length === 1 ? 'item' : 'itens'}
-            </span>
-          )}
-          {isStreamingMore && (
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                color: '#ffbb00',
-                fontSize: '0.75rem',
-                background: 'rgba(255, 187, 0, 0.12)',
-                padding: '2px 8px',
-                borderRadius: '12px',
-              }}
-            >
-              <Loader2 size={12} className="animate-spin" />
-              Carregando restante (A–Z)...
-            </span>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            className={`btn btn-sm ${showGridDetails ? 'btn-secondary' : 'btn-primary'}`}
-            onClick={handleToggleGridDetails}
-            title={showGridDetails ? 'Ocultar detalhes (mostrar apenas artes)' : 'Mostrar detalhes completos dos utilitários'}
-            style={{ height: '32px' }}
-          >
-            {showGridDetails ? <EyeOff size={14} /> : <Eye size={14} />}
-            <span>{showGridDetails ? 'Só Artes' : 'Com Detalhes'}</span>
-          </button>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'var(--bg-darkest)',
-              padding: '4px 10px',
-              borderRadius: '8px',
-              border: '1px solid var(--border-subtle)',
-              height: '32px',
-            }}
-            title={`Ajustar escala da grade (${gridCardSize}px)`}
-          >
-            <ZoomOut size={13} style={{ color: '#a1a1aa' }} />
-            <input
-              type="range"
-              min={110}
-              max={340}
-              step={10}
-              value={gridCardSize}
-              onChange={(e) => handleGridCardSizeChange(Number(e.target.value))}
-              style={{ width: '85px', accentColor: '#ffbb00', cursor: 'pointer' }}
-            />
-            <ZoomIn size={13} style={{ color: '#a1a1aa' }} />
-            <span style={{ fontSize: '0.75rem', color: '#a1a1aa', minWidth: '36px', textAlign: 'right' }}>
-              {gridCardSize}px
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Results Grid */}
-      {loading ? (
-        <div
-          style={{
-            padding: '60px',
-            textAlign: 'center',
-            color: '#a1a1aa',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px',
-          }}
-        >
-          <Loader2 className="animate-spin text-indigo-400" size={36} />
-          <span>Carregando utilitários oficiais do Scryfall...</span>
-        </div>
-      ) : filteredItems.length === 0 ? (
-        <div className="glass-card" style={{ padding: '60px', textAlign: 'center', color: '#a1a1aa' }}>
-          Nenhum item encontrado para esta busca. Experimente termos em inglês (ex: "Treasure", "Dominaria", "Teferi", "Monarch").
-        </div>
-      ) : (
-        <>
-          <div
-            className="cards-grid"
-            style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardSize}px, 1fr))` }}
-          >
-            {visibleItems.map((item) => (
-              <UtilityCardItem
-                key={item.id}
-                item={item}
-                isAdded={!!addedMap[item.id]}
-                showGridDetails={showGridDetails}
-                gridCardSize={gridCardSize}
-                onHoverStart={handleHoverStart}
-                onHoverMove={handleHoverMove}
-                onHoverEnd={handleHoverEnd}
-                onSelectArt={handleSelectArt}
-                onAddProxy={handleAddProxySingle}
-              />
-            ))}
-          </div>
-
-          {/* Infinite scroll sentinel & manual load more */}
           {visibleLimit < filteredItems.length && (
-            <div
-              ref={loadMoreRef}
-              style={{
-                padding: '24px',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '12px',
-              }}
-            >
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => setVisibleLimit((prev) => Math.min(prev + 60, filteredItems.length))}
-              >
+            <div ref={loadMoreRef} className="util-more">
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setVisibleLimit((prev) => Math.min(prev + 60, filteredItems.length))}>
                 Carregar mais ({filteredItems.length - visibleLimit} restantes)
               </button>
             </div>
