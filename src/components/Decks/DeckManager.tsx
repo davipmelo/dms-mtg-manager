@@ -14,6 +14,8 @@ import {
   X,
   SlidersHorizontal,
   MoveVertical,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 
 interface DeckManagerProps {
@@ -41,6 +43,21 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
   onUpdateDeck,
   onOpenManageTags,
 }) => {
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>(() => {
+    try {
+      return localStorage.getItem('dms_deck_list_view') === 'list' ? 'list' : 'cards';
+    } catch {
+      return 'cards';
+    }
+  });
+  const changeViewMode = (mode: 'cards' | 'list') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('dms_deck_list_view', mode);
+    } catch {
+      // ignore
+    }
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
   const [quickTagMenuDeckId, setQuickTagMenuDeckId] = useState<string | null>(null);
@@ -322,6 +339,31 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                 )}
               </div>
 
+              <div className="view-toggle" role="radiogroup" aria-label="Modo de visualização">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={viewMode === 'cards'}
+                  className={`view-toggle-btn ${viewMode === 'cards' ? 'is-active' : ''}`}
+                  onClick={() => changeViewMode('cards')}
+                  title="Visualizar em cards"
+                  aria-label="Visualizar em cards"
+                >
+                  <LayoutGrid size={16} />
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={viewMode === 'list'}
+                  className={`view-toggle-btn ${viewMode === 'list' ? 'is-active' : ''}`}
+                  onClick={() => changeViewMode('list')}
+                  title="Visualizar em lista"
+                  aria-label="Visualizar em lista"
+                >
+                  <List size={16} />
+                </button>
+              </div>
+
               {(searchQuery || activeTagFilter) && (
                 <button
                   type="button"
@@ -465,6 +507,90 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
           >
             Limpar Filtros
           </button>
+        </div>
+      ) : viewMode === 'list' ? (
+        <div className="decks-list">
+          {filteredDecks.map((deck) => {
+            const cardCount = deck.cards.reduce((sum, c) => sum + c.quantity, 0);
+            const targetCount = deck.format === 'commander' ? 100 : 60;
+            const coverImage =
+              deck.coverImageUrl ||
+              deck.commanderCard?.imageUrlArtCrop ||
+              deck.cards[0]?.card.imageUrlArtCrop ||
+              '';
+            const appliedTags = getDeckTags(deck);
+            return (
+              <div key={deck.id} className="deck-row" onClick={() => onOpenDeck(deck.id)}>
+                <div
+                  className="deck-row-thumb"
+                  style={{
+                    backgroundImage: coverImage ? `url(${coverImage})` : undefined,
+                    backgroundPosition: `center ${deck.coverPosition ?? 50}%`,
+                  }}
+                />
+                <div className="deck-row-main">
+                  <strong className="deck-row-title">{deck.name}</strong>
+                  <span className="deck-row-sub">
+                    {deck.commanderCard ? `Comandante: ${deck.commanderCard.name}` : deck.description || 'Sem comandante'}
+                  </span>
+                </div>
+                <span className="deck-row-format">{deck.format.toUpperCase()}</span>
+                <span className="deck-row-count" title={`${cardCount} de ${targetCount} cartas`}>
+                  <span
+                    className="deck-row-dot"
+                    style={{ background: cardCount === targetCount ? '#22c55e' : '#ffbb00' }}
+                  />
+                  {cardCount}/{targetCount}
+                </span>
+                <div className="deck-row-tags">
+                  {appliedTags.slice(0, 3).map((t) => (
+                    <span
+                      key={t.id}
+                      className="deck-row-tag"
+                      style={{ color: t.color, borderColor: `${t.color}55`, background: `${t.color}14` }}
+                    >
+                      {t.name}
+                    </span>
+                  ))}
+                  {appliedTags.length > 3 && <span className="deck-row-tag-more">+{appliedTags.length - 3}</span>}
+                </div>
+                <div className="deck-row-actions" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => onSendDeckToProxies(deck)}
+                    title="Enviar cartas deste deck para impressão de proxies A4"
+                  >
+                    <Printer size={14} /> <span className="deck-row-btn-label">Imprimir</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => (onEditDeck ? onEditDeck(deck) : onOpenDeck(deck.id))}
+                    title="Editar nome, descrição, tags ou lista de cartas"
+                  >
+                    <Edit3 size={14} /> <span className="deck-row-btn-label">Editar</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-icon btn-sm"
+                    onClick={() => {
+                      if (confirm(`Tem certeza que deseja excluir o deck "${deck.name}"?`)) {
+                        onDeleteDeck(deck.id);
+                      }
+                    }}
+                    title="Excluir Deck"
+                    aria-label="Excluir Deck"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                  <button type="button" className="btn btn-primary btn-sm" onClick={() => onOpenDeck(deck.id)}>
+                    Abrir
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div
