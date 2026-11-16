@@ -1094,6 +1094,16 @@ img.is-mpc-bleed-crop {
   }
 }
 
+/* Com 5 abas, esconde o rótulo das abas inativas entre tablet e desktop estreito */
+@media (min-width: 769px) and (max-width: 1240px) {
+  .app-nav-tab:not(.is-active) .app-nav-label {
+    display: none;
+  }
+  .app-nav-tab {
+    padding: 8px 11px;
+  }
+}
+
 @media (max-width: 1180px) {
   .app-action-label {
     display: none;
@@ -1153,7 +1163,7 @@ img.is-mpc-bleed-crop {
 
   .mobile-tabbar {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     position: fixed;
     left: 10px;
     right: 10px;
