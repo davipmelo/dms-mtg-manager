@@ -71,11 +71,30 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
   // Batch Selection state for quick removal in list/table view
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
 
-  const handleToggleSelectItem = (id: string) => {
+  // Última caixa marcada/desmarcada: âncora para seleção em intervalo com Shift
+  const lastSelectedIdRef = useRef<string | null>(null);
+
+  const handleToggleSelectItem = (id: string, shiftKey = false) => {
+    const anchorId = lastSelectedIdRef.current;
+    lastSelectedIdRef.current = id;
     setSelectedItemIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const willSelect = !prev.has(id);
+      if (shiftKey && anchorId && anchorId !== id) {
+        const ids = sortedItems.map((i) => i.id);
+        const a = ids.indexOf(anchorId);
+        const b = ids.indexOf(id);
+        if (a !== -1 && b !== -1) {
+          const [from, to] = a < b ? [a, b] : [b, a];
+          for (let i = from; i <= to; i++) {
+            if (willSelect) next.add(ids[i]);
+            else next.delete(ids[i]);
+          }
+          return next;
+        }
+      }
+      if (willSelect) next.add(id);
+      else next.delete(id);
       return next;
     });
   };
@@ -907,7 +926,13 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                   return (
                     <tr key={item.id} className={isSelected ? 'is-selected' : ''}>
                       <td className="col-check">
-                        <input type="checkbox" checked={isSelected} onChange={() => handleToggleSelectItem(item.id)} />
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => undefined}
+                          onClick={(e) => handleToggleSelectItem(item.id, e.shiftKey)}
+                          title="Segure Shift para selecionar um intervalo"
+                        />
                       </td>
                       <td className="col-name">
                         <div className="coll-name-cell">
