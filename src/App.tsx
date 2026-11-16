@@ -48,6 +48,8 @@ import { DeckManager } from './components/Decks/DeckManager';
 import { DeckBuilder } from './components/Decks/DeckBuilder';
 import { UtilitiesTab } from './components/Utilities/UtilitiesTab';
 import { ProxyStudio } from './components/Proxies/ProxyStudio';
+import { CardMaker } from './components/CardMaker/CardMaker';
+import type { ProxySendItem } from './components/CardMaker/ExportModal';
 
 import { AddCardModal } from './components/Modals/AddCardModal';
 import { DeckCreationModal } from './components/Modals/DeckCreationModal';
@@ -67,6 +69,7 @@ import {
   Swords,
   Compass,
   Printer,
+  PenTool,
   Upload,
   Download,
   Database,
@@ -74,7 +77,7 @@ import {
 
 export function App() {
   const [activeTab, setActiveTab] = useState<
-    'collection' | 'decks' | 'utilities' | 'proxies'
+    'collection' | 'decks' | 'utilities' | 'proxies' | 'cardmaker'
   >('decks');
   const [rawCollection, setRawCollection] = useState<CollectionItem[]>([]);
   const [decks, setDecks] = useState<Deck[]>([]);
@@ -1418,6 +1421,29 @@ export function App() {
     }
   };
 
+  const handleAddCustomCardsToProxies = (items: ProxySendItem[]) => {
+    const stamp = Date.now();
+    const nextItems: ProxyItem[] = items.map((it, i) => {
+      const cardId = `custom-maker-${stamp}-${i}-${Math.random().toString(36).substring(2, 6)}`;
+      const card: Card = {
+        id: cardId,
+        name: it.name,
+        cmc: 0,
+        typeLine: it.typeLine,
+        colors: [],
+        colorIdentity: [],
+        rarity: (['common', 'uncommon', 'rare', 'mythic'].includes(it.rarity) ? it.rarity : 'special') as Card['rarity'],
+        setName: 'Card Maker',
+        setCode: 'CUSTOM',
+        collectorNumber: '★',
+        imageUrl: it.imageUrl,
+        imageUrlLarge: it.imageUrl,
+      };
+      return { id: `proxy-${stamp}-${i}-${Math.random().toString(36).substring(2, 7)}`, card, quantity: it.quantity };
+    });
+    updateProxiesState((prev) => [...prev, ...nextItems]);
+  };
+
   const handleAddDeckToProxies = async (deck: Deck) => {
     // 1. Separate commander(s) and other cards
     const commanderCards: Array<{ card: Card; quantity: number }> = [];
@@ -1747,7 +1773,7 @@ export function App() {
   }, []);
 
   const navTabs: {
-    id: 'decks' | 'collection' | 'utilities' | 'proxies';
+    id: 'decks' | 'collection' | 'utilities' | 'proxies' | 'cardmaker';
     label: string;
     shortLabel: string;
     icon: typeof Swords;
@@ -1765,9 +1791,10 @@ export function App() {
       count: totalProxyCount > 0 ? totalProxyCount : undefined,
       alert: true,
     },
+    { id: 'cardmaker', label: 'Card Maker', shortLabel: 'Maker', icon: PenTool },
   ];
 
-  const handleSelectTab = (tab: 'decks' | 'collection' | 'utilities' | 'proxies') => {
+  const handleSelectTab = (tab: 'decks' | 'collection' | 'utilities' | 'proxies' | 'cardmaker') => {
     if (tab !== 'decks' || activeTab === 'decks') {
       setActiveDeckId(null);
     }
@@ -1819,11 +1846,12 @@ export function App() {
                 <button
                   key={tab.id}
                   data-tab={tab.id}
+                  title={tab.label}
                   className={`app-nav-tab ${isActive ? 'is-active' : ''}`}
                   onClick={() => handleSelectTab(tab.id)}
                   aria-current={isActive ? 'page' : undefined}
                 >
-                  <Icon size={16} /> {tab.label}
+                  <Icon size={16} /> <span className="app-nav-label">{tab.label}</span>
                   {tab.count !== undefined && (
                     <span className={`nav-count ${tab.alert ? 'is-alert' : ''}`}>{tab.count}</span>
                   )}
@@ -1983,6 +2011,8 @@ export function App() {
         {activeTab === 'utilities' && (
           <UtilitiesTab onAddUtilityToProxies={handleAddCardToProxies} />
         )}
+
+        {activeTab === 'cardmaker' && <CardMaker onSendToProxies={handleAddCustomCardsToProxies} />}
 
         {activeTab === 'proxies' && (
           <ProxyStudio
