@@ -45,9 +45,9 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
 }) => {
   const [viewMode, setViewMode] = useState<'cards' | 'list'>(() => {
     try {
-      return localStorage.getItem('dms_deck_list_view') === 'list' ? 'list' : 'cards';
+      return localStorage.getItem('dms_deck_list_view') === 'cards' ? 'cards' : 'list';
     } catch {
-      return 'cards';
+      return 'list';
     }
   });
   const changeViewMode = (mode: 'cards' | 'list') => {

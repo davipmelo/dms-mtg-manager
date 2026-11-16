@@ -847,12 +847,11 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
             </div>
           )}
 
-          <div className="glass-panel" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+          <div className="coll-table-wrap">
+            <table className="coll-table">
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-medium)', color: '#a1a1aa' }}>
-                  {/* Select All Checkbox */}
-                  <th style={{ width: '40px', padding: '12px 14px', textAlign: 'center' }}>
+                <tr>
+                  <th className="col-check">
                     <input
                       type="checkbox"
                       checked={allFilteredSelected}
@@ -860,277 +859,118 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                         if (el) el.indeterminate = !allFilteredSelected && someFilteredSelected;
                       }}
                       onChange={handleToggleSelectAll}
-                      style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#ffbb00' }}
                       title={allFilteredSelected ? 'Desmarcar todas' : 'Selecionar todas as cartas da lista'}
                     />
                   </th>
-                  <th
-                    onClick={() => handleSort('quantity')}
-                    style={{
-                      padding: '12px 16px',
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      color: sortColumn === 'quantity' ? '#ffbb00' : '#a1a1aa',
-                    }}
-                    title="Ordenar por Quantidade"
-                  >
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>Qtd.</span>
-                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'quantity' ? 1 : 0.25 }}>
-                      {sortColumn === 'quantity' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
-                    </span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('available')}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    color: sortColumn === 'available' ? '#ffbb00' : '#a1a1aa',
-                  }}
-                  title="Ordenar por Disponível / Uso"
-                >
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>Disponível / Uso</span>
-                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'available' ? 1 : 0.25 }}>
-                      {sortColumn === 'available' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
-                    </span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('name')}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    color: sortColumn === 'name' ? '#ffbb00' : '#a1a1aa',
-                  }}
-                  title="Ordenar por Nome"
-                >
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>Nome</span>
-                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'name' ? 1 : 0.25 }}>
-                      {sortColumn === 'name' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
-                    </span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('cmc')}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    color: sortColumn === 'cmc' ? '#ffbb00' : '#a1a1aa',
-                  }}
-                  title="Ordenar por Custo"
-                >
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>Custo</span>
-                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'cmc' ? 1 : 0.25 }}>
-                      {sortColumn === 'cmc' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
-                    </span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('type')}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    color: sortColumn === 'type' ? '#ffbb00' : '#a1a1aa',
-                  }}
-                  title="Ordenar por Tipo"
-                >
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>Tipo</span>
-                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'type' ? 1 : 0.25 }}>
-                      {sortColumn === 'type' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
-                    </span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('set')}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    color: sortColumn === 'set' ? '#ffbb00' : '#a1a1aa',
-                  }}
-                  title="Ordenar por Edição"
-                >
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>Edição</span>
-                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'set' ? 1 : 0.25 }}>
-                      {sortColumn === 'set' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
-                    </span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('rarity')}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    color: sortColumn === 'rarity' ? '#ffbb00' : '#a1a1aa',
-                  }}
-                  title="Ordenar por Raridade"
-                >
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>Raridade</span>
-                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'rarity' ? 1 : 0.25 }}>
-                      {sortColumn === 'rarity' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
-                    </span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('price')}
-                  style={{
-                    padding: '12px 16px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    color: sortColumn === 'price' ? '#ffbb00' : '#a1a1aa',
-                  }}
-                  title="Ordenar por Preço"
-                >
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    <span>Preço</span>
-                    <span style={{ fontSize: '0.75rem', opacity: sortColumn === 'price' ? 1 : 0.25 }}>
-                      {sortColumn === 'price' ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
-                    </span>
-                  </div>
-                </th>
-                <th style={{ padding: '12px 16px', textAlign: 'right' }}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedItems.map((item) => {
-                const isSelected = selectedItemIds.has(item.id);
-                return (
-                  <tr
-                    key={item.id}
-                    style={{
-                      borderBottom: '1px solid var(--border-subtle)',
-                      transition: 'background 0.15s ease',
-                      backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.08)' : 'transparent',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    {/* Row Checkbox */}
-                    <td style={{ width: '40px', padding: '10px 14px', textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleToggleSelectItem(item.id)}
-                        style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#ffbb00' }}
-                      />
-                    </td>
-                    <td style={{ padding: '10px 16px', fontWeight: 700 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <button
-                          className="btn btn-ghost btn-icon" 
-                          onClick={() => onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))}
-                        >
-                          <Minus size={12} />
-                        </button>
-                        <span>{item.quantity}</span>
-                        <button
-                          className="btn btn-ghost btn-icon" 
-                          onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                        >
-                          <Plus size={12} />
-                        </button>
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 16px' }}>
-                      <span style={{ color: '#10b981', fontWeight: 600 }}>{item.availableQuantity ?? item.quantity}</span>
-                      <span style={{ color: '#71717a' }}> / </span>
-                      <span style={{ color: '#e6a800', fontWeight: 600 }}>{item.inUseQuantity ?? 0}</span>
-                    </td>
-                    <td style={{ padding: '10px 16px', fontWeight: 600, color: '#f4f4f5' }}>
-                      <span
-                        style={{
-                          cursor: 'pointer',
-                          borderBottom: '1px dotted rgba(161, 161, 170, 0.45)',
-                          paddingBottom: '1px',
-                          transition: 'color 0.15s ease, border-color 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#ffcc4d';
-                          e.currentTarget.style.borderColor = '#ffbb00';
-                          setMousePos({ x: e.clientX, y: e.clientY });
-                          setHoveredPreview({
-                            url: item.card.imageUrlLarge || item.card.imageUrl,
-                            title: item.card.name,
-                            subtitle: `${item.card.setName} (${item.card.setCode.toUpperCase()} #${item.card.collectorNumber})`,
-                            badge: item.isFoil ? 'Foil ★' : undefined,
-                          });
-                        }}
-                        onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.color = '#f4f4f5';
-                          e.currentTarget.style.borderColor = 'rgba(161, 161, 170, 0.45)';
-                          setHoveredPreview(null);
-                        }}
-                      >
-                        {item.card.name}
-                      </span>{' '}
-                      {item.isFoil && <Sparkles size={12} className="inline text-amber-400" />}
-                    </td>
-                    <td style={{ padding: '10px 16px' }}>
-                      <ManaCostRenderer manaCost={item.card.manaCost} />
-                    </td>
-                    <td style={{ padding: '10px 16px', color: '#a1a1aa' }}>
-                      {item.card.typeLine}
-                    </td>
-                    <td style={{ padding: '10px 16px', color: '#71717a' }}>
-                      {item.card.setCode}
-                    </td>
-                    <td style={{ padding: '10px 16px' }}>
-                      <span className={`badge badge-rarity-${item.card.rarity.toLowerCase()}`}>
-                        {item.card.rarity}
+                  {(
+                    [
+                      { key: 'name', label: 'Carta', cls: 'col-name' },
+                      { key: 'quantity', label: 'Qtd.', cls: 'col-qty' },
+                      { key: 'available', label: 'Disp. / Uso', cls: 'col-avail hide-sm' },
+                      { key: 'cmc', label: 'Custo', cls: 'col-cost' },
+                      { key: 'set', label: 'Edição', cls: 'col-set hide-sm' },
+                      { key: 'rarity', label: 'Raridade', cls: 'col-rarity hide-md' },
+                      { key: 'price', label: 'Preço', cls: 'col-price hide-sm' },
+                    ] as { key: SortColumn; label: string; cls: string }[]
+                  ).map((col) => (
+                    <th
+                      key={col.key}
+                      className={`${col.cls} is-sortable ${sortColumn === col.key ? 'is-sorted' : ''}`}
+                      onClick={() => handleSort(col.key)}
+                      title={`Ordenar por ${col.label}`}
+                    >
+                      <span>{col.label}</span>
+                      <span className="sort-ind">
+                        {sortColumn === col.key ? (sortDirection === 'asc' ? '▲' : '▼') : '⇅'}
                       </span>
-                    </td>
-                    <td style={{ padding: '10px 16px', color: '#10b981' }}>
-                      {item.card.priceUsd ? `$${(item.card.priceUsd * item.quantity).toFixed(2)}` : '—'}
-                    </td>
-                    <td style={{ padding: '10px 16px', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '6px' }}>
-                        <button
-                          className="btn btn-ghost btn-icon" 
-                          onClick={() => onOpenArtSelector(item.card, item.id)}
-                          title="Trocar Arte"
-                        >
-                          <ImageIcon size={15} />
-                        </button>
-                        <button
-                          className="btn btn-ghost btn-icon" 
-                          onClick={() => onAddToProxies(item.card, 1)}
-                          title="Adicionar à Impressão"
-                        >
-                          <Printer size={15} />
-                        </button>
-                        <button
-                          className="btn btn-ghost btn-icon"
-                          style={{ color: '#f43f5e' }}
-                          onClick={() => onRemoveItem(item.id)}
-                          title="Remover carta da coleção"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </th>
+                  ))}
+                  <th className="col-actions">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedItems.map((item) => {
+                  const isSelected = selectedItemIds.has(item.id);
+                  const art = item.card.imageUrlArtCrop || item.card.imageUrlSmall || item.card.imageUrl;
+                  return (
+                    <tr key={item.id} className={isSelected ? 'is-selected' : ''}>
+                      <td className="col-check">
+                        <input type="checkbox" checked={isSelected} onChange={() => handleToggleSelectItem(item.id)} />
+                      </td>
+                      <td className="col-name">
+                        <div className="coll-name-cell">
+                          <span className="coll-thumb" style={{ backgroundImage: art ? `url(${art})` : undefined }} />
+                          <span className="coll-name-text">
+                            <span
+                              className="coll-name"
+                              onMouseEnter={(e) => {
+                                setMousePos({ x: e.clientX, y: e.clientY });
+                                setHoveredPreview({
+                                  url: item.card.imageUrlLarge || item.card.imageUrl,
+                                  title: item.card.name,
+                                  subtitle: `${item.card.setName} (${item.card.setCode.toUpperCase()} #${item.card.collectorNumber})`,
+                                  badge: item.isFoil ? 'Foil ★' : undefined,
+                                });
+                              }}
+                              onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                              onMouseLeave={() => setHoveredPreview(null)}
+                            >
+                              {item.card.name}
+                              {item.isFoil && <Sparkles size={12} className="text-amber-400" />}
+                            </span>
+                            <span className="coll-type">{item.card.typeLine}</span>
+                          </span>
+                        </div>
+                      </td>
+                      <td className="col-qty">
+                        <div className="coll-stepper">
+                          <button type="button" onClick={() => onUpdateQuantity(item.id, Math.max(0, item.quantity - 1))} aria-label="Diminuir quantidade">
+                            <Minus size={12} />
+                          </button>
+                          <span>{item.quantity}</span>
+                          <button type="button" onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} aria-label="Aumentar quantidade">
+                            <Plus size={12} />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="col-avail hide-sm">
+                        <span className="coll-avail">{item.availableQuantity ?? item.quantity}</span>
+                        <span className="coll-sep">/</span>
+                        <span className="coll-inuse">{item.inUseQuantity ?? 0}</span>
+                      </td>
+                      <td className="col-cost">
+                        <ManaCostRenderer manaCost={item.card.manaCost} />
+                      </td>
+                      <td className="col-set hide-sm">
+                        <span className="coll-setcode" title={item.card.setName}>
+                          {item.card.setCode.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="col-rarity hide-md">
+                        <span className={`badge badge-rarity-${item.card.rarity.toLowerCase()}`}>{item.card.rarity}</span>
+                      </td>
+                      <td className="col-price hide-sm">
+                        {item.card.priceUsd ? `$${(item.card.priceUsd * item.quantity).toFixed(2)}` : '—'}
+                      </td>
+                      <td className="col-actions">
+                        <div className="coll-actions">
+                          <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={() => onOpenArtSelector(item.card, item.id)} title="Trocar Arte" aria-label="Trocar Arte">
+                            <ImageIcon size={15} />
+                          </button>
+                          <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={() => onAddToProxies(item.card, 1)} title="Adicionar à Impressão" aria-label="Adicionar à Impressão">
+                            <Printer size={15} />
+                          </button>
+                          <button type="button" className="btn btn-ghost btn-icon btn-sm coll-delete" onClick={() => onRemoveItem(item.id)} title="Remover carta da coleção" aria-label="Remover carta da coleção">
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
       </div>
       )}
 

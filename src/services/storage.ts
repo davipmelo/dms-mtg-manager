@@ -549,14 +549,14 @@ export function getUiSettings(): UiSettings {
     const savedSize = localStorage.getItem('dms_grid_card_size');
     const parsedSize = savedSize ? Number(savedSize) : 200;
     return {
-      collectionViewMode: colMode === 'table' ? 'table' : 'grid',
+      collectionViewMode: colMode === 'grid' ? 'grid' : 'table',
       deckViewMode: deckMode === 'table' ? 'table' : 'grid',
       gridCardSize: Number.isFinite(parsedSize) ? Math.min(340, Math.max(110, parsedSize)) : 200,
       gridShowDetails: localStorage.getItem('dms_grid_show_details') !== 'false',
     };
   } catch {
     return {
-      collectionViewMode: 'grid',
+      collectionViewMode: 'table',
       deckViewMode: 'grid',
       gridCardSize: 200,
       gridShowDetails: true,

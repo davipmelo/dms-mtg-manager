@@ -1899,3 +1899,240 @@ th {
     grid-template-columns: 1fr 1fr auto 1fr;
   }
 }
+
+/* Coleção: tabela em lista */
+.coll-table-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.coll-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.85rem;
+  text-align: left;
+}
+.coll-table th {
+  position: sticky;
+  top: 0;
+  padding: 11px 14px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.025);
+  border-bottom: 1px solid var(--border-medium);
+  white-space: nowrap;
+}
+.coll-table th.is-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+.coll-table th.is-sortable:hover {
+  color: var(--text-main);
+}
+.coll-table th.is-sorted {
+  color: var(--primary);
+}
+.sort-ind {
+  margin-left: 5px;
+  font-size: 0.62rem;
+  opacity: 0.35;
+}
+.coll-table th.is-sorted .sort-ind {
+  opacity: 1;
+}
+.coll-table td {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+  color: var(--text-soft);
+}
+.coll-table tbody tr {
+  transition: background 0.15s ease;
+}
+.coll-table tbody tr:hover {
+  background: rgba(255, 187, 0, 0.04);
+}
+.coll-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.coll-table tbody tr.is-selected {
+  background: var(--primary-soft);
+}
+.coll-table .col-check {
+  width: 40px;
+  text-align: center;
+  padding-left: 12px;
+  padding-right: 4px;
+}
+.coll-table .col-check input {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+.coll-table .col-name {
+  min-width: 240px;
+}
+.coll-table .col-actions {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
+}
+.coll-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.coll-thumb {
+  flex-shrink: 0;
+  width: 56px;
+  height: 40px;
+  border-radius: 7px;
+  background: #0a0a0c center / cover;
+  border: 1px solid var(--border-subtle);
+}
+.coll-name-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.coll-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: default;
+  transition: color 0.15s ease;
+}
+.coll-table tbody tr:hover .coll-name {
+  color: var(--primary);
+}
+.coll-type {
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+}
+.coll-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-medium);
+  border-radius: 9px;
+  background: var(--bg-input);
+}
+.coll-stepper span {
+  min-width: 26px;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-main);
+}
+.coll-stepper button {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.coll-stepper button:hover {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+.coll-avail {
+  color: #4ade80;
+  font-weight: 700;
+}
+.coll-inuse {
+  color: var(--primary);
+  font-weight: 700;
+}
+.coll-sep {
+  color: var(--text-faint);
+  margin: 0 4px;
+}
+.coll-setcode {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+}
+.coll-table .col-price {
+  color: #4ade80;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.coll-actions {
+  display: inline-flex;
+  gap: 2px;
+}
+.coll-delete:hover:not(:disabled) {
+  background: var(--danger-glow);
+  color: #ff8080;
+}
+.coll-table .col-cost,
+.coll-table .col-cost > span {
+  white-space: nowrap;
+  flex-wrap: nowrap !important;
+}
+@media (max-width: 1240px) {
+  .coll-table .hide-md {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .coll-table .hide-sm {
+    display: none;
+  }
+  .coll-table .col-name {
+    min-width: 0;
+  }
+  .coll-table td,
+  .coll-table th {
+    padding: 8px 8px;
+  }
+  .coll-thumb {
+    width: 44px;
+    height: 34px;
+  }
+  .coll-type {
+    max-width: 160px;
+  }
+}
+@media (max-width: 600px) {
+  .coll-table .col-cost,
+  .coll-thumb {
+    display: none;
+  }
+  .coll-table td,
+  .coll-table th {
+    padding: 8px 5px;
+  }
+  .coll-type {
+    max-width: 120px;
+  }
+  .coll-actions .btn-icon {
+    min-width: 30px;
+    padding: 0 4px;
+  }
+}
