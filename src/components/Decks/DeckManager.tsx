@@ -1004,20 +1004,28 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                       paddingTop: '12px',
                       borderTop: '1px solid var(--border-subtle)',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
+                      flexDirection: 'column',
+                      gap: '8px',
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => onSendDeckToProxies(deck)}
-                      title="Enviar cartas deste deck para impressão de proxies A4"
+                      type="button"
+                      className="btn btn-primary"
+                      style={{ width: '100%' }}
+                      onClick={() => onOpenDeck(deck.id)}
                     >
-                      <Printer size={14} /> Imprimir Proxies
+                      Abrir Deck
                     </button>
 
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '8px' }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => onSendDeckToProxies(deck)}
+                        title="Enviar cartas deste deck para impressão de proxies A4"
+                      >
+                        <Printer size={14} /> Imprimir
+                      </button>
                       <button
                         type="button"
                         className="btn btn-secondary btn-sm"
@@ -1028,22 +1036,16 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                       </button>
                       <button
                         type="button"
-                        className="btn btn-ghost btn-icon text-red-400"
+                        className="btn btn-danger btn-icon btn-sm"
                         onClick={() => {
                           if (confirm(`Tem certeza que deseja excluir o deck "${deck.name}"?`)) {
                             onDeleteDeck(deck.id);
                           }
                         }}
                         title="Excluir Deck"
+                        aria-label="Excluir Deck"
                       >
-                        <Trash2 size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-primary btn-sm"
-                        onClick={() => onOpenDeck(deck.id)}
-                      >
-                        Abrir Deck
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </div>
