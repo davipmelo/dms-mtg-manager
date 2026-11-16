@@ -547,7 +547,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                       inset: 0,
                       background: isRepositioning
                         ? 'linear-gradient(to bottom, rgba(14, 14, 16,0.15) 0%, rgba(14, 14, 16,0.7) 100%)'
-                        : 'linear-gradient(to bottom, rgba(14, 14, 16,0.3) 0%, rgba(14, 14, 16,0.95) 100%)',
+                        : 'linear-gradient(to bottom, rgba(14, 14, 16, 0) 0%, rgba(14, 14, 16, 0) 70%, rgba(14, 14, 16, 0.6) 100%)',
                       pointerEvents: 'none',
                     }}
                   />
@@ -573,7 +573,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                       style={{
                         padding: '3px 8px',
                         borderRadius: '6px',
-                        background: 'rgba(9, 9, 11, 0.55)',
+                        background: 'rgba(9, 9, 11, 0.72)',
                         backdropFilter: 'blur(6px)',
                       }}
                     >
@@ -587,7 +587,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                         gap: '6px',
                         padding: '3px 8px',
                         borderRadius: '6px',
-                        background: 'rgba(9, 9, 11, 0.55)',
+                        background: 'rgba(9, 9, 11, 0.72)',
                         backdropFilter: 'blur(6px)',
                         fontVariantNumeric: 'tabular-nums',
                         letterSpacing: '0.03em',

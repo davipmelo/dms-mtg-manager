@@ -1412,11 +1412,11 @@ img.is-mpc-bleed-crop {
 
 .deck-card-banner {
   transition: height 0.2s ease, background-position 0.15s ease, filter 0.4s ease !important;
-  filter: saturate(0.9) brightness(0.92);
+  filter: none;
 }
 
 .deck-card:hover .deck-card-banner {
-  filter: saturate(1.1) brightness(1.05);
+  filter: saturate(1.08);
 }
 
 .deck-card .deck-card-title {
