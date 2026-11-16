@@ -842,6 +842,8 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
             style={{
               backgroundImage: `url(${deckHeroArt})`,
               backgroundPosition: `center ${deck.coverPosition ?? 35}%`,
+              transform: deck.coverZoom && deck.coverZoom > 1 ? `scale(${deck.coverZoom})` : undefined,
+              transformOrigin: `center ${deck.coverPosition ?? 35}%`,
             }}
           />
         )}

@@ -363,6 +363,10 @@ export function normalizeDeck(deck: Deck): Deck {
       typeof deck.coverPosition === 'number'
         ? Math.max(0, Math.min(100, Math.round(deck.coverPosition)))
         : undefined,
+    coverZoom:
+      typeof deck.coverZoom === 'number' && deck.coverZoom > 1
+        ? Math.min(3, Math.round(deck.coverZoom * 100) / 100)
+        : undefined,
     cards: unGroupedCards,
   };
 }

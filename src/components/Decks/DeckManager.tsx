@@ -49,6 +49,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
   // Cover image vertical repositioning state
   const [repositioningDeckId, setRepositioningDeckId] = useState<string | null>(null);
   const [tempCoverPosition, setTempCoverPosition] = useState<number>(50);
+  const [tempCoverZoom, setTempCoverZoom] = useState<number>(1);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartYRef = useRef<number>(0);
   const dragStartPosRef = useRef<number>(50);
@@ -64,6 +65,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
   const handleStartReposition = (deck: Deck) => {
     setRepositioningDeckId(deck.id);
     setTempCoverPosition(typeof deck.coverPosition === 'number' ? deck.coverPosition : 50);
+    setTempCoverZoom(deck.coverZoom && deck.coverZoom > 1 ? deck.coverZoom : 1);
   };
 
   const handleSaveReposition = (deck: Deck) => {
@@ -71,6 +73,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
       onUpdateDeck({
         ...deck,
         coverPosition: tempCoverPosition,
+        coverZoom: tempCoverZoom > 1 ? tempCoverZoom : undefined,
         updatedAt: new Date().toISOString(),
       });
     }
@@ -485,6 +488,7 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
             const isTagMenuOpen = quickTagMenuDeckId === deck.id;
             const isRepositioning = repositioningDeckId === deck.id;
             const currentPosition = isRepositioning ? tempCoverPosition : (deck.coverPosition ?? 50);
+            const currentZoom = isRepositioning ? tempCoverZoom : (deck.coverZoom ?? 1);
 
             return (
               <div
@@ -512,9 +516,6 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                   style={{
                     position: 'relative',
                     height: isRepositioning ? '200px' : '140px',
-                    backgroundImage: `url(${coverImage})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: `center ${currentPosition}%`,
                     borderTopLeftRadius: '13px',
                     borderTopRightRadius: '13px',
                     overflow: 'hidden',
@@ -532,6 +533,18 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                     style={{
                       position: 'absolute',
                       inset: 0,
+                      backgroundImage: `url(${coverImage})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: `center ${currentPosition}%`,
+                      transform: currentZoom > 1 ? `scale(${currentZoom})` : undefined,
+                      transformOrigin: `center ${currentPosition}%`,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
                       background: isRepositioning
                         ? 'linear-gradient(to bottom, rgba(14, 14, 16,0.15) 0%, rgba(14, 14, 16,0.7) 100%)'
                         : 'linear-gradient(to bottom, rgba(14, 14, 16,0.3) 0%, rgba(14, 14, 16,0.95) 100%)',
@@ -539,26 +552,56 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                     }}
                   />
 
-                  {/* Format & Card Count Badges */}
+                  {/* Format & Card Count (minimalista) */}
                   <div
                     style={{
                       position: 'absolute',
-                      top: '12px',
-                      left: '12px',
-                      right: '12px',
+                      top: '10px',
+                      left: '10px',
+                      right: '10px',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       pointerEvents: 'none',
+                      fontSize: '0.64rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.09em',
+                      color: 'rgba(244, 244, 245, 0.9)',
                     }}
                   >
-                    <span className="badge badge-primary">{deck.format.toUpperCase()}</span>
                     <span
-                      className={`badge ${
-                        cardCount === targetCount ? 'badge-success' : 'badge-warning'
-                      }`}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        background: 'rgba(9, 9, 11, 0.55)',
+                        backdropFilter: 'blur(6px)',
+                      }}
                     >
-                      {cardCount} / {targetCount} Cartas
+                      {deck.format.toUpperCase()}
+                    </span>
+                    <span
+                      title={`${cardCount} de ${targetCount} cartas`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        background: 'rgba(9, 9, 11, 0.55)',
+                        backdropFilter: 'blur(6px)',
+                        fontVariantNumeric: 'tabular-nums',
+                        letterSpacing: '0.03em',
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          background: cardCount === targetCount ? '#22c55e' : '#ffbb00',
+                        }}
+                      />
+                      {cardCount}/{targetCount}
                     </span>
                   </div>
 
@@ -588,52 +631,23 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                       }}
                     >
                       <MoveVertical size={13} color="#e6a800" />
-                      <span>Arraste para ajustar ({tempCoverPosition}%)</span>
+                      <span>Arraste para mover</span>
                     </div>
                   )}
 
-                  {/* Idle Reposition Trigger Button */}
+                  {/* Idle Reposition Trigger (ícone discreto) */}
                   {!isRepositioning && (
                     <button
                       type="button"
+                      className="deck-reposition-btn"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleStartReposition(deck);
                       }}
-                      title="Ajustar posição vertical da capa"
-                      style={{
-                        position: 'absolute',
-                        bottom: '10px',
-                        right: '10px',
-                        zIndex: 5,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        fontSize: '0.72rem',
-                        fontWeight: 600,
-                        padding: '4px 10px',
-                        borderRadius: '20px',
-                        background: 'rgba(24, 24, 27, 0.82)',
-                        backdropFilter: 'blur(8px)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        color: '#e4e4e7',
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                        transition: 'all 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#e6a800';
-                        e.currentTarget.style.color = '#000';
-                        e.currentTarget.style.borderColor = '#e6a800';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(24, 24, 27, 0.82)';
-                        e.currentTarget.style.color = '#e4e4e7';
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                      }}
+                      title="Ajustar posição e zoom da capa"
+                      aria-label="Ajustar posição e zoom da capa"
                     >
-                      <MoveVertical size={12} />
-                      Reposicionar
+                      <MoveVertical size={14} />
                     </button>
                   )}
                 </div>
@@ -683,6 +697,32 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                         }}
                       >
                         {tempCoverPosition}%
+                      </span>
+                    </div>
+
+                    {/* Zoom */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#a1a1aa', fontWeight: 600 }}>Zoom:</span>
+                      <input
+                        type="range"
+                        min="1"
+                        max="3"
+                        step="0.05"
+                        value={tempCoverZoom}
+                        onChange={(e) => setTempCoverZoom(Number(e.target.value))}
+                        style={{ flex: 1, accentColor: '#e6a800', cursor: 'pointer', height: '4px' }}
+                      />
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          color: '#ffcc33',
+                          minWidth: '36px',
+                          textAlign: 'right',
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
+                        {tempCoverZoom.toFixed(1)}×
                       </span>
                     </div>
 

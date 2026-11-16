@@ -127,6 +127,7 @@ export interface Deck {
   partnerCard?: Card;
   cards: DeckCard[];
   coverImageUrl?: string;
+  coverZoom?: number; // Zoom da capa (1 = ajustada, até 3), default 1
   coverPosition?: number; // Vertical alignment percentage (0 = top, 50 = center, 100 = bottom), default 50
   createdAt: string;
   updatedAt: string;
