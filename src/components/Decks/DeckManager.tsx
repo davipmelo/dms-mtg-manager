@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Deck, DeckTag } from '../../types';
+import { Thumb, scryfallSmall } from '../Common/Thumb';
 import {
   Shield,
   Swords,
@@ -521,12 +522,15 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
             const appliedTags = getDeckTags(deck);
             return (
               <div key={deck.id} className="deck-row" onClick={() => onOpenDeck(deck.id)}>
-                <div
+                <Thumb
                   className="deck-row-thumb"
-                  style={{
-                    backgroundImage: coverImage ? `url(${coverImage})` : undefined,
-                    backgroundPosition: `center ${deck.coverPosition ?? 50}%`,
-                  }}
+                  src={
+                    deck.coverImageUrl ||
+                    scryfallSmall(deck.commanderCard?.imageUrlSmall || deck.commanderCard?.imageUrl) ||
+                    coverImage
+                  }
+                  fallback={coverImage}
+                  position={deck.coverImageUrl ? `50% ${deck.coverPosition ?? 50}%` : '50% 28%'}
                 />
                 <div className="deck-row-main">
                   <strong className="deck-row-title">{deck.name}</strong>
@@ -655,13 +659,19 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                   onPointerUp={isRepositioning ? handleBannerPointerUp : undefined}
                   onPointerCancel={isRepositioning ? handleBannerPointerUp : undefined}
                 >
-                  <div
+                  <img
+                    src={coverImage}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    draggable={false}
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      backgroundImage: `url(${coverImage})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: `center ${currentPosition}%`,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      objectPosition: `center ${currentPosition}%`,
                       transform: currentZoom > 1 ? `scale(${currentZoom})` : undefined,
                       transformOrigin: `center ${currentPosition}%`,
                       pointerEvents: 'none',

@@ -2136,3 +2136,30 @@ th {
     padding: 0 4px;
   }
 }
+
+/* Miniaturas leves (<img> lazy) */
+.thumb {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  background: #0a0a0c;
+}
+.thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.thumb.is-loaded img {
+  opacity: 1;
+}
+.coll-more {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+}
+.deck-row-thumb.thumb {
+  flex-shrink: 0;
+}

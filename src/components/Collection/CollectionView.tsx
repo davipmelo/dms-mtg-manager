@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { CollectionItem, ViewMode, Card, isDoubleFacedCard } from '../../types';
 import { resolveCardFaces } from '../../services/scryfall';
 import { getUiSettings, saveUiSettings, UiSettings } from '../../services/storage';
+import { Thumb, scryfallSmall } from '../Common/Thumb';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
 import { InteractiveCharts } from '../Analytics/InteractiveCharts';
@@ -54,6 +55,19 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
     setViewMode(mode);
     saveUiSettings({ collectionViewMode: mode }, 'local');
   };
+
+  // Renderização progressiva da lista: evita montar centenas de linhas e imagens de uma vez
+  const [visibleRows, setVisibleRows] = useState(100);
+  const rowsSentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = rowsSentinelRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) setVisibleRows((n) => n + 100);
+    }, { rootMargin: '600px' });
+    io.observe(el);
+    return () => io.disconnect();
+  });
 
   // Batch Selection state for quick removal in list/table view
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
@@ -889,9 +903,9 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {sortedItems.map((item) => {
+                {sortedItems.slice(0, visibleRows).map((item) => {
                   const isSelected = selectedItemIds.has(item.id);
-                  const art = item.card.imageUrlArtCrop || item.card.imageUrlSmall || item.card.imageUrl;
+                  const thumbSrc = item.card.imageUrlSmall || scryfallSmall(item.card.imageUrl);
                   return (
                     <tr key={item.id} className={isSelected ? 'is-selected' : ''}>
                       <td className="col-check">
@@ -899,7 +913,7 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                       </td>
                       <td className="col-name">
                         <div className="coll-name-cell">
-                          <span className="coll-thumb" style={{ backgroundImage: art ? `url(${art})` : undefined }} />
+                          <Thumb className="coll-thumb" src={thumbSrc} fallback={item.card.imageUrlArtCrop} position="50% 28%" />
                           <span className="coll-name-text">
                             <span
                               className="coll-name"
@@ -970,6 +984,13 @@ export const CollectionView: React.FC<CollectionViewProps> = ({
                 })}
               </tbody>
             </table>
+            {sortedItems.length > visibleRows && (
+              <div ref={rowsSentinelRef} className="coll-more">
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setVisibleRows((n) => n + 100)}>
+                  Mostrar mais ({sortedItems.length - visibleRows})
+                </button>
+              </div>
+            )}
           </div>
       </div>
       )}
