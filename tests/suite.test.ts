@@ -562,7 +562,10 @@ test('firebase: multi-device cloud sync round-trip propagates all user actions w
 });
 
 test('firebase: rejects oversized uncompressible cloud document (> 1.04MB) with descriptive error', async () => {
-  const giantNonDataString = 'X'.repeat(1_100_000);
+  // Dados aleatórios não comprimem; com gzip, repetição (ex.: 'X' * N) passaria a caber.
+  const giantNonDataString = Array.from({ length: 1_100_000 }, () =>
+    String.fromCharCode(33 + Math.floor(Math.random() * 90))
+  ).join('');
   const brokenCard = makeCard({ oracleText: giantNonDataString });
 
   await assert.rejects(

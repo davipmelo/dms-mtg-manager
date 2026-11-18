@@ -25,20 +25,6 @@ interface DeckTokensPanelProps {
   onUpdateDeck: (updated: Deck) => void;
 }
 
-const TOKEN_CHIPS = [
-  { label: 'Populares', query: '__POPULAR_TOKENS__' },
-  { label: 'Tesouro', query: '!"Treasure"' },
-  { label: 'Comida', query: '!"Food"' },
-  { label: 'Pista', query: '!"Clue"' },
-  { label: 'Sangue', query: '!"Blood"' },
-  { label: 'Zumbi', query: '!"Zombie"' },
-  { label: 'Soldado', query: '!"Soldier"' },
-  { label: 'Goblin', query: '!"Goblin"' },
-  { label: 'Espírito', query: '!"Spirit"' },
-  { label: 'Dragão', query: '!"Dragon"' },
-  { label: 'Cópia', query: '!"Copy"' },
-];
-
 const toArtCard = (t: TokenCard): Card => ({
   id: t.id,
   oracleId: t.oracleId,
@@ -71,7 +57,7 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
 
   // Estado do seletor de fichas
   const [query, setQuery] = useState('');
-  const [chipQuery, setChipQuery] = useState('__POPULAR_TOKENS__');
+  const [serverQuery, setServerQuery] = useState('');
   const [results, setResults] = useState<TokenCard[]>([]);
   const [loading, setLoading] = useState(false);
   const [justAdded, setJustAdded] = useState<Record<string, boolean>>({});
@@ -95,7 +81,7 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
     try {
       const res = await searchUtilityCards('tokens', q, 'all', {
         signal: controller.signal,
-        maxPages: 2,
+        maxPages: 40,
         onProgress: (partial) => {
           if (reqId !== reqRef.current || controller.signal.aborted) return;
           setResults(partial);
@@ -110,10 +96,10 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
 
   useEffect(() => {
     if (!isPickerOpen) return;
-    runSearch(chipQuery);
+    runSearch(serverQuery);
     return () => abortRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPickerOpen, chipQuery]);
+  }, [isPickerOpen, serverQuery]);
 
   useEffect(() => {
     if (!isPickerOpen) return;
@@ -208,12 +194,13 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
   };
 
   const filteredResults = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q || q.includes(':') || q.startsWith('!')) return results;
-    return results.filter(
-      (r) => r.name.toLowerCase().includes(q) || (r.typeLine || '').toLowerCase().includes(q)
-    );
-  }, [results, query]);
+    const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length === 0 || serverQuery) return results;
+    return results.filter((r) => {
+      const hay = `${r.name} ${r.typeLine || ''} ${r.setName || ''}`.toLowerCase();
+      return words.every((w) => hay.includes(w));
+    });
+  }, [results, query, serverQuery]);
 
   return (
     <div className="glass-panel deck-tokens-panel">
@@ -301,7 +288,7 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
               className="util-search"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (query.trim()) runSearch(query.trim());
+                setServerQuery(query.trim());
               }}
             >
               <Search size={16} className="util-search-icon" />
@@ -310,25 +297,13 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
                 className="input-text"
                 placeholder="Buscar ficha (ex: Treasure, Zombie, Angel)..."
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  if (serverQuery) setServerQuery('');
+                }}
                 autoFocus
               />
             </form>
-            <div className="util-chips" role="group" aria-label="Atalhos de fichas">
-              {TOKEN_CHIPS.map((chip) => (
-                <button
-                  key={chip.label}
-                  type="button"
-                  className={`chip ${!query.trim() && chipQuery === chip.query ? 'is-active' : ''}`}
-                  onClick={() => {
-                    setQuery('');
-                    setChipQuery(chip.query);
-                  }}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
             <div className="deck-token-picker-body">
               {loading ? (
                 <div className="util-empty">
@@ -341,7 +316,7 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
                 </div>
               ) : (
                 <div className="deck-token-picker-grid">
-                  {filteredResults.slice(0, 80).map((r) => (
+                  {filteredResults.slice(0, 400).map((r) => (
                     <button
                       key={r.id}
                       type="button"

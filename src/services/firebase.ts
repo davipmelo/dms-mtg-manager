@@ -530,8 +530,18 @@ async function optimizeDecksImages(
         ? await optimizeCardImages(deck.partnerCard, compactMode)
         : deck.partnerCard;
 
+      const optimizedTokens = deck.tokens
+        ? await Promise.all(
+            deck.tokens.map(async (dt) => ({
+              ...dt,
+              token: (await optimizeCardImages(dt.token as unknown as Card, compactMode)) as unknown as typeof dt.token,
+            }))
+          )
+        : deck.tokens;
+
       return {
         ...deck,
+        tokens: optimizedTokens,
         cards: optimizedCards,
         coverImageUrl: optimizedCover,
         commanderCard: optimizedCommander,
@@ -552,6 +562,51 @@ async function optimizeProxiesImages(
       card: await optimizeCardImages(proxy.card as Card, compactMode),
     }))
   );
+}
+
+/* ---- Compressão do documento (gzip + base64) para caber no limite de 1MB do Firestore ---- */
+const CLOUD_COMPRESSED_FIELD = 'blobGzip';
+
+async function gzipToBase64(text: string): Promise<string | null> {
+  if (typeof CompressionStream === 'undefined') return null;
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
+  const buf = new Uint8Array(await new Response(stream).arrayBuffer());
+  let bin = '';
+  for (let i = 0; i < buf.length; i += 0x8000) {
+    bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  }
+  return btoa(bin);
+}
+
+async function gunzipFromBase64(b64: string): Promise<string> {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return await new Response(stream).text();
+}
+
+/** Empacota o payload: metadados ficam visíveis e o conteúdo vai comprimido num único campo. */
+async function packCloudPayload(payload: CloudUserData): Promise<Record<string, any>> {
+  const packed = await gzipToBase64(JSON.stringify(payload));
+  if (!packed) return payload as unknown as Record<string, any>;
+  return {
+    app: payload.app,
+    schemaVersion: payload.schemaVersion,
+    updatedAt: payload.updatedAt,
+    syncRevision: payload.syncRevision ?? null,
+    clientSessionId: payload.clientSessionId ?? null,
+    [CLOUD_COMPRESSED_FIELD]: packed,
+  };
+}
+
+/** Desempacota dados vindos da nuvem (aceita o formato antigo, sem compressão). */
+async function unpackCloudData(raw: any): Promise<CloudUserData> {
+  if (raw && typeof raw[CLOUD_COMPRESSED_FIELD] === 'string') {
+    const full = JSON.parse(await gunzipFromBase64(raw[CLOUD_COMPRESSED_FIELD])) as CloudUserData;
+    return { ...full, syncRevision: raw.syncRevision ?? full.syncRevision, clientSessionId: raw.clientSessionId ?? full.clientSessionId };
+  }
+  return raw as CloudUserData;
 }
 
 export async function buildCloudPayload(data: {
@@ -587,11 +642,17 @@ export async function buildCloudPayload(data: {
   };
 
   let built = await createSanitized(false);
-  // Firestore hard document cap is 1,048,576 bytes. Compact proactively above 900KB.
-  if (built.bytes > 900000) {
+  const canGzip = typeof CompressionStream !== 'undefined';
+  // Com gzip o documento fica ~10x menor; sem gzip, compacta imagens proativamente acima de 900KB.
+  const effectiveBytes = async (b: { obj: CloudUserData; bytes: number }) =>
+    canGzip ? ((await gzipToBase64(JSON.stringify(b.obj)))?.length ?? b.bytes) : b.bytes;
+
+  let size = await effectiveBytes(built);
+  if (size > 900000) {
     built = await createSanitized(true);
+    size = await effectiveBytes(built);
   }
-  if (built.bytes > 1040000) {
+  if (size > 1040000) {
     throw new Error(
       'Os dados excedem o limite máximo de tamanho por documento na nuvem (1MB). Considere remover imagens personalizadas muito pesadas ou cartas excedentes.'
     );
@@ -620,7 +681,7 @@ export async function saveUserCloudData(
 
   if (instances) {
     const userDocRef = instances.sdk.fs.doc(instances.db, 'userData', uid);
-    await instances.sdk.fs.setDoc(userDocRef, sanitizedPayload);
+    await instances.sdk.fs.setDoc(userDocRef, await packCloudPayload(sanitizedPayload));
     return sanitizedPayload;
   }
 
@@ -649,7 +710,7 @@ export async function loadUserCloudData(uid: string): Promise<CloudUserData | nu
     const userDocRef = instances.sdk.fs.doc(instances.db, 'userData', uid);
     const snap = await instances.sdk.fs.getDoc(userDocRef);
     if (!snap.exists()) return null;
-    return snap.data() as CloudUserData;
+    return await unpackCloudData(snap.data());
   }
 
   // Fallback: Simulated cloud storage
@@ -683,7 +744,11 @@ export function subscribeToUserCloudData(
         userDocRef,
         (snap) => {
           if (snap.exists()) {
-            onUpdate(snap.data() as CloudUserData);
+            unpackCloudData(snap.data())
+              .then((d) => {
+                if (!cancelled) onUpdate(d);
+              })
+              .catch((e) => onError?.(e));
           }
         },
         (err) => {
