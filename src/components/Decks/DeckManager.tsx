@@ -271,11 +271,8 @@ export const DeckManager: React.FC<DeckManagerProps> = ({
                 <Tag size={15} className="text-amber-400" /> Gerenciar Tags
               </button>
             )}
-            <button className="btn btn-secondary btn-sm" onClick={onOpenImportModal}>
+            <button className="btn btn-primary btn-sm" onClick={onOpenImportModal}>
               <Download size={15} /> Importar Deck
-            </button>
-            <button className="btn btn-primary btn-sm" onClick={onOpenCreateModal}>
-              <Plus size={16} /> Novo Deck
             </button>
           </div>
         </div>

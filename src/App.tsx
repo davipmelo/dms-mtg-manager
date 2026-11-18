@@ -1559,6 +1559,46 @@ export function App() {
       }
     }
 
+    // Fichas do deck vêm logo após as cartas (fichas de dupla face: frente + verso)
+    (deck.tokens || []).forEach((dt, tIdx) => {
+      const tok = dt.token;
+      const faces = tok.cardFaces;
+      if (faces && faces.length >= 2 && faces[1].imageUrl) {
+        deckProxyItems.push({
+          id: `proxy-deck-${Date.now()}-tok${tIdx}-front-${Math.random().toString(36).substring(2, 6)}`,
+          card: {
+            ...tok,
+            name: faces[0].name || tok.name.split(' // ')[0].trim(),
+            imageUrl: tok.imageUrl || faces[0].imageUrl,
+            imageUrlLarge: tok.imageUrlLarge || tok.imageUrl || faces[0].imageUrlLarge || faces[0].imageUrl,
+            faceLabel: 'frente',
+          },
+          quantity: dt.quantity,
+          isToken: true,
+        });
+        deckProxyItems.push({
+          id: `proxy-deck-${Date.now()}-tok${tIdx}-back-${Math.random().toString(36).substring(2, 6)}`,
+          card: {
+            ...tok,
+            id: `${tok.id}-back`,
+            name: faces[1].name || `${tok.name} (Verso)`,
+            imageUrl: faces[1].imageUrl,
+            imageUrlLarge: faces[1].imageUrlLarge || faces[1].imageUrl,
+            faceLabel: 'verso',
+          },
+          quantity: dt.quantity,
+          isToken: true,
+        });
+      } else {
+        deckProxyItems.push({
+          id: `proxy-deck-${Date.now()}-tok${tIdx}-${Math.random().toString(36).substring(2, 7)}`,
+          card: tok,
+          quantity: dt.quantity,
+          isToken: true,
+        });
+      }
+    });
+
     if (shouldReplace) {
       updateProxiesState(deckProxyItems);
     } else {

@@ -4,6 +4,7 @@ import { resolveCardFaces } from '../../services/scryfall';
 import { normalizeDeck, getUiSettings, saveUiSettings, UiSettings } from '../../services/storage';
 import { ManaCostRenderer } from '../Common/ManaCostRenderer';
 import { CardImage } from '../Common/CardImage';
+import { DeckTokensPanel } from './DeckTokensPanel';
 import { CardHoverPreview, CardHoverPreviewData } from '../Common/CardHoverPreview';
 import {
   ArrowLeft,
@@ -1161,6 +1162,9 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
           </Suspense>
         )}
       </div>
+
+      {/* Fichas associadas a este deck (impressas junto com ele) */}
+      <DeckTokensPanel deck={deck} onUpdateDeck={onUpdateDeck} />
 
       {/* Filter & View Switcher Bar (Identical to Collection) */}
       <div className="glass-panel" style={{ padding: '16px 20px' }}>

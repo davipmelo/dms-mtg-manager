@@ -118,9 +118,17 @@ export interface DeckTag {
   color: string;
 }
 
+/** Ficha/utilitário associado a um deck específico (impresso junto com o deck). */
+export interface DeckToken {
+  id: string;
+  token: TokenCard;
+  quantity: number;
+}
+
 export interface Deck {
   id: string;
   name: string;
+  tokens?: DeckToken[];
   format: DeckFormat;
   description?: string;
   commanderCard?: Card;
