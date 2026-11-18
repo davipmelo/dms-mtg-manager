@@ -17,6 +17,7 @@ interface UserMenuProps {
   user: UserProfile | null;
   syncStatus: SyncStatus;
   lastSyncedAt: Date | null;
+  syncErrorMessage?: string | null;
   onOpenAuthModal: (tab?: 'login' | 'register' | 'forgot') => void;
   onLogout: () => void;
   onForceSync: () => Promise<void>;
@@ -26,6 +27,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   user,
   syncStatus,
   lastSyncedAt,
+  syncErrorMessage,
   onOpenAuthModal,
   onLogout,
   onForceSync,
@@ -330,7 +332,20 @@ export const UserMenu: React.FC<UserMenuProps> = ({
             </button>
           </div>
 
-          {/* Feedback Banner */}
+          {/* Feedback Banner (manual) ou último erro do sync automático */}
+          {!feedbackMessage && syncStatus === 'error' && syncErrorMessage && (
+            <div
+              style={{
+                padding: '8px 12px',
+                fontSize: '0.75rem',
+                background: 'rgba(239, 68, 68, 0.15)',
+                color: '#fca5a5',
+                borderBottom: '1px solid var(--border-subtle, #2a2a2f)',
+              }}
+            >
+              {syncErrorMessage}
+            </div>
+          )}
           {feedbackMessage && (
             <div
               style={{

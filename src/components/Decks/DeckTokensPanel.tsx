@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
-import { Deck, DeckToken, TokenCard, Card, CardPrint } from '../../types';
+import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
+import { Deck, DeckToken, TokenCard, Card, CardPrint, ViewMode, isDoubleFacedCard } from '../../types';
 import { searchUtilityCards } from '../../services/scryfall';
 import { CardImage } from '../Common/CardImage';
+import { CardHoverPreview, CardHoverPreviewData } from '../Common/CardHoverPreview';
 import {
   Coins,
   Plus,
@@ -14,6 +15,8 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Printer,
+  RotateCw,
 } from 'lucide-react';
 
 const ArtSelectorModal = lazy(() =>
@@ -23,6 +26,11 @@ const ArtSelectorModal = lazy(() =>
 interface DeckTokensPanelProps {
   deck: Deck;
   onUpdateDeck: (updated: Deck) => void;
+  onAddToProxies?: (card: TokenCard, quantity: number) => void;
+  /** Segue o modo de visualização das cartas do deck (grade ou lista). */
+  viewMode?: ViewMode;
+  gridCardSize?: number;
+  showGridDetails?: boolean;
 }
 
 const toArtCard = (t: TokenCard): Card => ({
@@ -44,16 +52,65 @@ const toArtCard = (t: TokenCard): Card => ({
   imageUrl: t.imageUrl,
   imageUrlLarge: t.imageUrlLarge,
   cardFaces: t.cardFaces,
-  layout: 'token',
+  layout: t.layout || 'token',
 });
 
-export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdateDeck }) => {
+/** Nome, imagens e legenda da face visível de uma ficha (frente ou verso). */
+function tokenFace(t: TokenCard, flipped: boolean) {
+  const frontName = t.cardFaces?.[0]?.name || t.name.split(' // ')[0].trim();
+  const backName =
+    t.cardFaces?.[1]?.name ||
+    (t.name.includes(' // ') ? t.name.split(' // ')[1].trim() : `${t.name} (Verso)`);
+  const imageUrl = flipped ? t.cardFaces?.[1]?.imageUrl || t.imageUrl : t.imageUrl;
+  const imageUrlLarge = flipped
+    ? t.cardFaces?.[1]?.imageUrlLarge || t.cardFaces?.[1]?.imageUrl || imageUrl
+    : t.imageUrlLarge || imageUrl;
+  return {
+    name: flipped ? backName : frontName,
+    typeLine: (flipped ? t.cardFaces?.[1]?.typeLine : t.cardFaces?.[0]?.typeLine) || t.typeLine,
+    imageUrl,
+    imageUrlLarge,
+  };
+}
+
+function tokenSubtitle(t: TokenCard, flipped = false) {
+  const set = t.setCode ? `${t.setName || ''} (${t.setCode.toUpperCase()} #${t.collectorNumber})` : t.setName;
+  return `${t.typeLine || ''}${set ? ` • ${set}` : ''}${flipped ? ' • [Verso]' : ''}`;
+}
+
+export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({
+  deck,
+  onUpdateDeck,
+  onAddToProxies,
+  viewMode = 'grid',
+  gridCardSize = 180,
+  showGridDetails = true,
+}) => {
   const tokens = deck.tokens || [];
   const totalQty = tokens.reduce((s, t) => s + t.quantity, 0);
 
   const [collapsed, setCollapsed] = useState(tokens.length === 0);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [artTokenId, setArtTokenId] = useState<string | null>(null);
+  const [artTarget, setArtTarget] = useState<{ id: string; face: 'front' | 'back' } | null>(null);
+  const [flipped, setFlipped] = useState<Set<string>>(new Set());
+  const [printedFlash, setPrintedFlash] = useState<Record<string, boolean>>({});
+
+  // Preview ampliado ao passar o mouse (igual às demais áreas de cartas)
+  const [hoveredPreview, setHoveredPreview] = useState<CardHoverPreviewData | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const showPreview = useCallback((e: React.MouseEvent, t: TokenCard, isFlipped = false, badge?: string) => {
+    const face = tokenFace(t, isFlipped);
+    setMousePos({ x: e.clientX, y: e.clientY });
+    setHoveredPreview({
+      url: face.imageUrlLarge,
+      title: face.name,
+      subtitle: tokenSubtitle(t, isFlipped),
+      badge,
+      badgeColor: '#ffbb00',
+    });
+  }, []);
+  const movePreview = useCallback((e: React.MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY }), []);
+  const hidePreview = useCallback(() => setHoveredPreview(null), []);
 
   // Estado do seletor de fichas
   const [query, setQuery] = useState('');
@@ -104,11 +161,16 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
   useEffect(() => {
     if (!isPickerOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !artTokenId) setIsPickerOpen(false);
+      if (e.key === 'Escape' && !artTarget) setIsPickerOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isPickerOpen, artTokenId]);
+  }, [isPickerOpen, artTarget]);
+
+  const closePicker = () => {
+    hidePreview();
+    setIsPickerOpen(false);
+  };
 
   const handleAdd = (token: TokenCard) => {
     const existing = tokens.find((t) => t.token.id === token.id);
@@ -132,18 +194,46 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
     save(next);
   };
 
-  const handleRemove = (id: string) => save(tokens.filter((t) => t.id !== id));
+  const handleRemove = (id: string) => {
+    hidePreview();
+    save(tokens.filter((t) => t.id !== id));
+  };
 
-  const artTarget = useMemo(
-    () => tokens.find((t) => t.id === artTokenId) || null,
-    [tokens, artTokenId]
+  const handlePrint = (dt: DeckToken) => {
+    if (!onAddToProxies) return;
+    hidePreview();
+    onAddToProxies(dt.token, dt.quantity);
+    setPrintedFlash((p) => ({ ...p, [dt.id]: true }));
+    setTimeout(() => setPrintedFlash((p) => ({ ...p, [dt.id]: false })), 1200);
+  };
+
+  const handlePrintAll = () => tokens.forEach(handlePrint);
+
+  const toggleFlip = (id: string) => {
+    hidePreview();
+    setFlipped((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const openArt = (dt: DeckToken) => {
+    hidePreview();
+    setArtTarget({ id: dt.id, face: flipped.has(dt.id) ? 'back' : 'front' });
+  };
+
+  const artToken = useMemo(
+    () => (artTarget ? tokens.find((t) => t.id === artTarget.id) || null : null),
+    [tokens, artTarget]
   );
 
   const handleSelectPrint = (print: CardPrint, targetFace: 'front' | 'back' = 'front') => {
-    if (!artTokenId) return;
+    if (!artTarget) return;
     save(
       tokens.map((dt) => {
-        if (dt.id !== artTokenId) return dt;
+        if (dt.id !== artTarget.id) return dt;
         const item = dt.token;
         const isDfc = Boolean(
           (item.cardFaces && item.cardFaces.length >= 2) || item.name.includes(' // ')
@@ -186,6 +276,7 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
             collectorNumber: print.collectorNumber,
             imageUrl: print.imageUrl,
             imageUrlLarge: print.imageUrlLarge || print.imageUrl,
+            artist: print.artist || item.artist,
             cardFaces: print.cardFaces || item.cardFaces,
           },
         };
@@ -202,6 +293,178 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
     });
   }, [results, query, serverQuery]);
 
+  const qtyInDeck = useMemo(() => {
+    const map = new Map<string, number>();
+    tokens.forEach((t) => map.set(t.token.id, (map.get(t.token.id) || 0) + t.quantity));
+    return map;
+  }, [tokens]);
+
+  const renderQtyStepper = (dt: DeckToken) => (
+    <span className="deck-token-stepper">
+      <button type="button" className="btn btn-ghost btn-icon btn-xs" onClick={() => handleQty(dt.id, -1)} aria-label={`Diminuir ${dt.token.name}`}>
+        <Minus size={13} />
+      </button>
+      <strong>{dt.quantity}</strong>
+      <button type="button" className="btn btn-ghost btn-icon btn-xs" onClick={() => handleQty(dt.id, 1)} aria-label={`Aumentar ${dt.token.name}`}>
+        <Plus size={13} />
+      </button>
+    </span>
+  );
+
+  const renderGrid = () => (
+    <div className="cards-grid" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${gridCardSize}px, 1fr))` }}>
+      {tokens.map((dt) => {
+        const t = dt.token;
+        const isDfc = isDoubleFacedCard(t);
+        const isFlipped = isDfc && flipped.has(dt.id);
+        const face = tokenFace(t, isFlipped);
+        const printed = !!printedFlash[dt.id];
+        return (
+          <div key={dt.id} className="card-item-container">
+            <div
+              className="card-image-wrapper"
+              onMouseEnter={(e) => showPreview(e, t, isFlipped, 'Ficha')}
+              onMouseMove={movePreview}
+              onMouseLeave={hidePreview}
+            >
+              <CardImage
+                name={face.name}
+                imageUrl={face.imageUrl}
+                imageUrlLarge={face.imageUrlLarge}
+                setCode={t.setCode}
+                collectorNumber={t.collectorNumber}
+                face={isFlipped ? 'back' : 'front'}
+                className="card-image"
+              />
+              <div className="deck-token-qty-badge">{dt.quantity}x</div>
+
+              {isDfc && (
+                <button
+                  type="button"
+                  className={`btn-flip-card ${isFlipped ? 'is-active' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFlip(dt.id);
+                  }}
+                  title={isFlipped ? 'Virar para Frente' : 'Virar para o Verso'}
+                >
+                  <RotateCw size={12} style={{ transform: isFlipped ? 'rotate(180deg)' : 'none', transition: 'transform 0.25s ease' }} />
+                  <span>Virar</span>
+                </button>
+              )}
+
+              {!showGridDetails && (
+                <div className="card-art-actions-overlay">
+                  <button type="button" className="btn btn-secondary btn-icon" onClick={(e) => { e.stopPropagation(); openArt(dt); }} title={isFlipped ? 'Trocar Arte do Verso' : 'Trocar Arte / Edição'}>
+                    <ImageIcon size={15} />
+                  </button>
+                  {onAddToProxies && (
+                    <button type="button" className="btn btn-secondary btn-icon" onClick={(e) => { e.stopPropagation(); handlePrint(dt); }} title="Imprimir Proxies">
+                      {printed ? <Check size={15} /> : <Printer size={15} />}
+                    </button>
+                  )}
+                  <button type="button" className="btn btn-secondary btn-icon text-red-400" onClick={(e) => { e.stopPropagation(); handleRemove(dt.id); }} title="Remover do Deck">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {showGridDetails && (
+              <div className="deck-token-details">
+                <div>
+                  <div className="deck-token-name" title={face.name}>{face.name}</div>
+                  <div className="deck-token-type" title={face.typeLine}>{face.typeLine}</div>
+                </div>
+                <div className="deck-token-meta">
+                  <span title={`${t.setName} (${t.setCode}) #${t.collectorNumber}`}>
+                    {t.setCode?.toUpperCase()} • #{t.collectorNumber}
+                  </span>
+                  {t.power && t.toughness && <strong>{t.power}/{t.toughness}</strong>}
+                </div>
+                <div className="deck-token-actions">
+                  {renderQtyStepper(dt)}
+                  <span className="deck-token-actions-right">
+                    <button type="button" className="btn btn-ghost btn-icon btn-xs" onClick={() => openArt(dt)} title={isFlipped ? 'Trocar Arte do Verso' : 'Trocar arte (alters, personalizadas ou upload)'} aria-label={`Trocar arte de ${t.name}`}>
+                      <ImageIcon size={13} />
+                    </button>
+                    {onAddToProxies && (
+                      <button type="button" className="btn btn-ghost btn-icon btn-xs" onClick={() => handlePrint(dt)} title="Imprimir Proxies" aria-label={`Imprimir ${t.name}`}>
+                        {printed ? <Check size={13} className="text-emerald-400" /> : <Printer size={13} />}
+                      </button>
+                    )}
+                    <button type="button" className="btn btn-ghost btn-icon btn-xs" onClick={() => handleRemove(dt.id)} title="Remover do Deck" aria-label={`Remover ${t.name}`}>
+                      <Trash2 size={13} />
+                    </button>
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderList = () => (
+    <div className="util-list">
+      <div className="util-list-head deck-token-row">
+        <span>Nome</span>
+        <span className="hide-sm">Tipo</span>
+        <span className="hide-sm">Edição</span>
+        <span>Qtd.</span>
+        <span />
+      </div>
+      {tokens.map((dt) => {
+        const t = dt.token;
+        const isDfc = isDoubleFacedCard(t);
+        const isFlipped = isDfc && flipped.has(dt.id);
+        const face = tokenFace(t, isFlipped);
+        const printed = !!printedFlash[dt.id];
+        return (
+          <div key={dt.id} className="util-row deck-token-row">
+            <span className="util-row-namecell">
+              <span
+                className="util-row-name"
+                onMouseEnter={(e) => showPreview(e, t, isFlipped, 'Ficha')}
+                onMouseMove={movePreview}
+                onMouseLeave={hidePreview}
+                title={face.name}
+              >
+                {face.name}
+                <span className="util-row-type-sm">{face.typeLine}</span>
+              </span>
+              <button type="button" className="row-art-btn" onClick={() => openArt(dt)} title="Trocar arte" aria-label={`Trocar arte de ${t.name}`}>
+                <ImageIcon size={13} />
+              </button>
+              {isDfc && (
+                <button type="button" className="row-art-btn" onClick={() => toggleFlip(dt.id)} title={isFlipped ? 'Mostrar frente' : 'Mostrar verso'} aria-label="Virar ficha">
+                  <RotateCw size={13} />
+                </button>
+              )}
+            </span>
+            <span className="util-row-type hide-sm" title={face.typeLine}>{face.typeLine}</span>
+            <span className="util-row-set hide-sm" title={`${t.setName} #${t.collectorNumber}`}>
+              <span className="coll-setcode">{t.setCode?.toUpperCase()}</span>
+              <span className="util-row-num">#{t.collectorNumber}</span>
+            </span>
+            {renderQtyStepper(dt)}
+            <span className="util-row-actions">
+              {onAddToProxies && (
+                <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={() => handlePrint(dt)} title="Imprimir Proxies" aria-label={`Imprimir ${t.name}`}>
+                  {printed ? <Check size={14} className="text-emerald-400" /> : <Printer size={14} />}
+                </button>
+              )}
+              <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={() => handleRemove(dt.id)} title="Remover do Deck" aria-label={`Remover ${t.name}`}>
+                <Trash2 size={14} />
+              </button>
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div className="glass-panel deck-tokens-panel">
       <div className="deck-tokens-head">
@@ -216,9 +479,16 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
           <span className="deck-tokens-count">{totalQty}</span>
           {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
         </button>
-        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsPickerOpen(true)}>
-          <Plus size={14} /> Adicionar ficha
-        </button>
+        <div className="deck-tokens-head-actions">
+          {onAddToProxies && tokens.length > 0 && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={handlePrintAll} title="Adicionar todas as fichas à fila de impressão">
+              <Printer size={14} /> <span className="hide-sm">Imprimir fichas</span>
+            </button>
+          )}
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsPickerOpen(true)}>
+            <Plus size={14} /> Adicionar ficha
+          </button>
+        </div>
       </div>
 
       {!collapsed &&
@@ -227,51 +497,14 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
             Nenhuma ficha neste deck. Elas serão impressas junto com as cartas quando você enviar o
             deck para os Proxies.
           </p>
+        ) : viewMode === 'table' ? (
+          renderList()
         ) : (
-          <div className="deck-tokens-grid">
-            {tokens.map((dt) => (
-              <div key={dt.id} className="deck-token">
-                <div className="deck-token-img">
-                  <CardImage
-                    name={dt.token.name}
-                    imageUrl={dt.token.imageUrl}
-                    imageUrlLarge={dt.token.imageUrlLarge}
-                    setCode={dt.token.setCode}
-                    collectorNumber={dt.token.collectorNumber}
-                    className="card-image"
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-icon deck-token-art"
-                    onClick={() => setArtTokenId(dt.id)}
-                    title="Trocar arte (alters, personalizadas ou upload)"
-                    aria-label={`Trocar arte de ${dt.token.name}`}
-                  >
-                    <ImageIcon size={14} />
-                  </button>
-                </div>
-                <div className="deck-token-name" title={dt.token.name}>
-                  {dt.token.name}
-                </div>
-                <div className="deck-token-controls">
-                  <button type="button" className="btn btn-ghost btn-icon" onClick={() => handleQty(dt.id, -1)} aria-label="Diminuir">
-                    <Minus size={14} />
-                  </button>
-                  <strong>{dt.quantity}</strong>
-                  <button type="button" className="btn btn-ghost btn-icon" onClick={() => handleQty(dt.id, 1)} aria-label="Aumentar">
-                    <Plus size={14} />
-                  </button>
-                  <button type="button" className="btn btn-ghost btn-icon" onClick={() => handleRemove(dt.id)} title="Remover ficha" aria-label="Remover ficha">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          renderGrid()
         ))}
 
       {isPickerOpen && (
-        <div className="deck-token-picker-overlay" onClick={() => setIsPickerOpen(false)}>
+        <div className="deck-token-picker-overlay" onClick={closePicker}>
           <div
             className="deck-token-picker"
             role="dialog"
@@ -280,7 +513,7 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
           >
             <div className="deck-token-picker-head">
               <strong>Adicionar ficha a “{deck.name}”</strong>
-              <button type="button" className="btn btn-ghost btn-icon" onClick={() => setIsPickerOpen(false)} aria-label="Fechar">
+              <button type="button" className="btn btn-ghost btn-icon" onClick={closePicker} aria-label="Fechar">
                 <X size={16} />
               </button>
             </div>
@@ -303,8 +536,13 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
                 }}
                 autoFocus
               />
+              {query && (
+                <button type="button" className="util-search-clear" onClick={() => { setQuery(''); setServerQuery(''); }} title="Limpar busca" aria-label="Limpar busca">
+                  <X size={15} />
+                </button>
+              )}
             </form>
-            <div className="deck-token-picker-body">
+            <div className="deck-token-picker-body" onScroll={hidePreview}>
               {loading ? (
                 <div className="util-empty">
                   <Loader2 className="animate-spin" size={28} style={{ color: 'var(--primary)' }} />
@@ -315,41 +553,60 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({ deck, onUpdate
                   <span>Tente termos em inglês (ex.: “Treasure”, “Soldier”).</span>
                 </div>
               ) : (
-                <div className="deck-token-picker-grid">
-                  {filteredResults.slice(0, 400).map((r) => (
-                    <button
-                      key={r.id}
-                      type="button"
-                      className="deck-token-pick"
-                      onClick={() => handleAdd(r)}
-                      title={`${r.name} — ${r.typeLine}`}
-                    >
-                      <CardImage
-                        name={r.name}
-                        imageUrl={r.imageUrl}
-                        imageUrlLarge={r.imageUrlLarge}
-                        setCode={r.setCode}
-                        collectorNumber={r.collectorNumber}
-                        className="card-image"
-                      />
-                      <span className="deck-token-pick-name">
-                        {justAdded[r.id] ? <Check size={12} /> : null} {r.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div className="deck-token-picker-status">
+                    {filteredResults.length > 400
+                      ? `Mostrando 400 de ${filteredResults.length} fichas — refine a busca`
+                      : `${filteredResults.length} ${filteredResults.length === 1 ? 'ficha' : 'fichas'}`}
+                  </div>
+                  <div className="deck-token-picker-grid">
+                    {filteredResults.slice(0, 400).map((r) => {
+                      const inDeck = qtyInDeck.get(r.id) || 0;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          className="deck-token-pick"
+                          onClick={() => handleAdd(r)}
+                          onMouseEnter={(e) => showPreview(e, r, false, inDeck ? `${inDeck}x no deck` : undefined)}
+                          onMouseMove={movePreview}
+                          onMouseLeave={hidePreview}
+                          aria-label={`Adicionar ${r.name} ao deck`}
+                        >
+                          <span className="deck-token-pick-img">
+                            <CardImage
+                              name={r.name}
+                              imageUrl={r.imageUrl}
+                              imageUrlLarge={r.imageUrlLarge}
+                              setCode={r.setCode}
+                              collectorNumber={r.collectorNumber}
+                              className="card-image"
+                            />
+                            {inDeck > 0 && <span className="deck-token-qty-badge">{inDeck}x</span>}
+                          </span>
+                          <span className="deck-token-pick-name">
+                            {justAdded[r.id] ? <Check size={12} className="text-emerald-400" /> : null} {r.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {artTarget && (
+      <CardHoverPreview preview={hoveredPreview} mousePos={mousePos} />
+
+      {artToken && artTarget && (
         <Suspense fallback={null}>
           <ArtSelectorModal
             isOpen
-            card={toArtCard(artTarget.token)}
-            onClose={() => setArtTokenId(null)}
+            card={toArtCard(artToken.token)}
+            initialFace={artTarget.face}
+            onClose={() => setArtTarget(null)}
             onSelectPrint={handleSelectPrint}
           />
         </Suspense>

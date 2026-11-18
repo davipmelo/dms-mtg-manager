@@ -45,6 +45,15 @@ import {
   loadUserCloudData,
   subscribeToUserCloudData,
 } from '../src/services/firebase';
+import {
+  extractAssets,
+  restoreAssets,
+  encodeCloudData,
+  decodeCloudData,
+  splitBytes,
+  joinBytes,
+  hashBytes,
+} from '../src/services/cloudCodec';
 
 function makeCard(overrides: Partial<Card> = {}): Card {
   return {
@@ -561,20 +570,60 @@ test('firebase: multi-device cloud sync round-trip propagates all user actions w
   }
 });
 
-test('firebase: rejects oversized uncompressible cloud document (> 1.04MB) with descriptive error', async () => {
-  // Dados aleatórios não comprimem; com gzip, repetição (ex.: 'X' * N) passaria a caber.
-  const giantNonDataString = Array.from({ length: 1_100_000 }, () =>
-    String.fromCharCode(33 + Math.floor(Math.random() * 90))
-  ).join('');
-  const brokenCard = makeCard({ oracleText: giantNonDataString });
+function randomText(length: number): string {
+  // Dados aleatórios praticamente não comprimem com gzip
+  const bytes = new Uint8Array(length);
+  for (let i = 0; i < length; i += 65536) {
+    crypto.getRandomValues(bytes.subarray(i, Math.min(i + 65536, length)));
+  }
+  let out = '';
+  for (let i = 0; i < length; i++) out += String.fromCharCode(33 + (bytes[i] % 90));
+  return out;
+}
 
+test('firebase: documentos acima de 1MB agora cabem (comprimidos/divididos) e só o teto total é rejeitado', async () => {
+  const mediumCard = makeCard({ oracleText: randomText(1_100_000) });
+  const ok = await buildCloudPayload({
+    collection: [{ card: mediumCard, quantity: 1, addedAt: '2026-01-01T00:00:00.000Z' }],
+    decks: [],
+    proxies: [],
+  });
+  assert.equal(ok.collection.length, 1);
+
+  const giantCard = makeCard({ oracleText: randomText(12_000_000) });
   await assert.rejects(
     () =>
       buildCloudPayload({
-        collection: [{ card: brokenCard, quantity: 1, addedAt: '2026-01-01T00:00:00.000Z' }],
+        collection: [{ card: giantCard, quantity: 1, addedAt: '2026-01-01T00:00:00.000Z' }],
         decks: [],
         proxies: [],
       }),
-    /excedem o limite máximo/i
+    /excedem o limite/i
   );
+});
+
+test('cloudCodec: deduplica imagens embutidas, comprime, divide e restaura sem perdas', async () => {
+  const dataUrl = 'data:image/jpeg;base64,' + randomText(40_000);
+  const custom = makeCard({ id: 'custom-1', setCode: 'CUSTOM', imageUrl: dataUrl, imageUrlLarge: dataUrl });
+  const content = {
+    collection: [{ card: custom, quantity: 1 }],
+    decks: [makeDeck({ cards: [{ card: custom, quantity: 1, category: 'main' }], coverImageUrl: dataUrl })],
+    proxies: [{ id: 'p1', card: custom, quantity: 2 }],
+  };
+
+  const envelope = extractAssets(content);
+  assert.equal(envelope.assets.length, 1, 'a mesma imagem deve ser guardada uma única vez');
+  assert.ok(!JSON.stringify(envelope.data).includes('data:image'));
+  assert.deepEqual(restoreAssets(envelope), content);
+
+  const bytes = await encodeCloudData(content);
+  // 5 cópias de ~40KB viram 1 cópia comprimida
+  assert.ok(bytes.length < 60_000, `esperado < 60KB, obtido ${bytes.length}`);
+  assert.deepEqual(await decodeCloudData(bytes), content);
+
+  const parts = splitBytes(bytes, 7_000);
+  assert.ok(parts.length > 1);
+  assert.deepEqual(joinBytes(parts), bytes);
+  assert.equal(hashBytes(joinBytes(parts)), hashBytes(bytes));
+  assert.notEqual(hashBytes(await encodeCloudData({ ...content, proxies: [] })), hashBytes(bytes));
 });

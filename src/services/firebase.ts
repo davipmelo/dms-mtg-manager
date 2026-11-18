@@ -3,6 +3,20 @@ import type { Auth, User } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
 import { UserProfile, CloudUserData, CollectionItem, Deck, ProxyItem, Card, DeckTag } from '../types';
 import { compressDataUrlIfNeeded } from './imageUtils';
+import {
+  CLOUD_FORMAT,
+  SINGLE_DOC_MAX_BYTES,
+  CHUNK_BYTES,
+  MAX_TOTAL_BYTES,
+  canCompress,
+  encodeCloudData,
+  decodeCloudData,
+  gunzipBytes,
+  base64ToBytes,
+  splitBytes,
+  joinBytes,
+  hashBytes,
+} from './cloudCodec';
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -429,7 +443,7 @@ async function optimizeCardImages<T extends Card>(
     Boolean(url && url.startsWith('data:image/') && url.length > minCompressLen);
 
   const compressIfNeeded = async (url?: string) =>
-    isDataUrlTooLarge(url) ? compressDataUrlIfNeeded(url, maxW, maxH, quality) : url;
+    isDataUrlTooLarge(url) ? compressDataUrlIfNeeded(url, maxW, maxH, quality, minCompressLen) : url;
 
   const optimizedUrl = await compressIfNeeded(cleaned.imageUrl);
   const optimizedLarge =
@@ -564,52 +578,18 @@ async function optimizeProxiesImages(
   );
 }
 
-/* ---- Compressão do documento (gzip + base64) para caber no limite de 1MB do Firestore ---- */
-const CLOUD_COMPRESSED_FIELD = 'blobGzip';
+/* ---- Documento na nuvem: imagens deduplicadas + gzip em bytes + divisão em partes ---- */
 
-async function gzipToBase64(text: string): Promise<string | null> {
-  if (typeof CompressionStream === 'undefined') return null;
-  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
-  const buf = new Uint8Array(await new Response(stream).arrayBuffer());
-  let bin = '';
-  for (let i = 0; i < buf.length; i += 0x8000) {
-    bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-  }
-  return btoa(bin);
-}
+const CHUNKS_SUBCOLLECTION = 'chunks';
 
-async function gunzipFromBase64(b64: string): Promise<string> {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-  return await new Response(stream).text();
-}
+export const CLOUD_TOO_LARGE_MESSAGE =
+  'Os dados excedem o limite de armazenamento na nuvem mesmo comprimidos. Remova imagens personalizadas muito pesadas ou cartas excedentes.';
+export const CLOUD_CHUNK_RULES_MESSAGE =
+  'Seus dados passaram de 1MB comprimidos e precisam ser divididos em partes, mas as regras do Firestore ainda não permitem isso. Publique o arquivo firestore.rules atualizado (regra userData/{userId}/chunks) no Firebase Console.';
 
-/** Empacota o payload: metadados ficam visíveis e o conteúdo vai comprimido num único campo. */
-async function packCloudPayload(payload: CloudUserData): Promise<Record<string, any>> {
-  const packed = await gzipToBase64(JSON.stringify(payload));
-  if (!packed) return payload as unknown as Record<string, any>;
-  return {
-    app: payload.app,
-    schemaVersion: payload.schemaVersion,
-    updatedAt: payload.updatedAt,
-    syncRevision: payload.syncRevision ?? null,
-    clientSessionId: payload.clientSessionId ?? null,
-    [CLOUD_COMPRESSED_FIELD]: packed,
-  };
-}
+type CloudContent = Omit<CloudUserData, 'updatedAt' | 'syncRevision' | 'clientSessionId'>;
 
-/** Desempacota dados vindos da nuvem (aceita o formato antigo, sem compressão). */
-async function unpackCloudData(raw: any): Promise<CloudUserData> {
-  if (raw && typeof raw[CLOUD_COMPRESSED_FIELD] === 'string') {
-    const full = JSON.parse(await gunzipFromBase64(raw[CLOUD_COMPRESSED_FIELD])) as CloudUserData;
-    return { ...full, syncRevision: raw.syncRevision ?? full.syncRevision, clientSessionId: raw.clientSessionId ?? full.clientSessionId };
-  }
-  return raw as CloudUserData;
-}
-
-export async function buildCloudPayload(data: {
+interface CloudSaveInput {
   collection: CollectionItem[];
   decks: Deck[];
   proxies: ProxyItem[];
@@ -617,75 +597,256 @@ export async function buildCloudPayload(data: {
   settings?: Record<string, any>;
   clientSessionId?: string;
   syncRevision?: number;
-}): Promise<CloudUserData> {
-  const createSanitized = async (compact: boolean): Promise<{ obj: CloudUserData; bytes: number }> => {
-    const collection = await optimizeCollectionImages(data.collection, compact);
-    const decks = await optimizeDecksImages(data.decks, compact);
-    const proxies = await optimizeProxiesImages(data.proxies, compact);
-
-    const payload: CloudUserData = {
-      app: 'proliferate',
-      schemaVersion: 1,
-      updatedAt: new Date().toISOString(),
-      syncRevision: data.syncRevision,
-      clientSessionId: data.clientSessionId,
-      collection,
-      decks,
-      proxies,
-      deckTags: data.deckTags || [],
-      settings: data.settings || {},
-    };
-
-    const json = JSON.stringify(payload);
-    const bytes = new TextEncoder().encode(json).length;
-    return { obj: JSON.parse(json) as CloudUserData, bytes };
-  };
-
-  let built = await createSanitized(false);
-  const canGzip = typeof CompressionStream !== 'undefined';
-  // Com gzip o documento fica ~10x menor; sem gzip, compacta imagens proativamente acima de 900KB.
-  const effectiveBytes = async (b: { obj: CloudUserData; bytes: number }) =>
-    canGzip ? ((await gzipToBase64(JSON.stringify(b.obj)))?.length ?? b.bytes) : b.bytes;
-
-  let size = await effectiveBytes(built);
-  if (size > 900000) {
-    built = await createSanitized(true);
-    size = await effectiveBytes(built);
-  }
-  if (size > 1040000) {
-    throw new Error(
-      'Os dados excedem o limite máximo de tamanho por documento na nuvem (1MB). Considere remover imagens personalizadas muito pesadas ou cartas excedentes.'
-    );
-  }
-
-  return built.obj;
 }
 
-export async function saveUserCloudData(
-  uid: string,
-  data: {
-    collection: CollectionItem[];
-    decks: Deck[];
-    proxies: ProxyItem[];
-    deckTags?: DeckTag[];
-    settings?: Record<string, any>;
-    clientSessionId?: string;
-    syncRevision?: number;
+interface PreparedCloudPayload {
+  payload: CloudUserData;
+  /** Conteúdo comprimido (null quando o navegador não suporta CompressionStream). */
+  bytes: Uint8Array | null;
+  hash: string | null;
+}
+
+/** Estado por usuário para evitar gravações repetidas e limpar partes antigas. */
+const cloudDocState = new Map<
+  string,
+  { hash?: string | null; chunks?: number; syncRevision?: number; updatedAt?: string }
+>();
+
+function rememberCloudDoc(uid: string, meta: { hash?: string | null; chunks?: number; syncRevision?: number | null; updatedAt?: string }) {
+  const prev = cloudDocState.get(uid) || {};
+  cloudDocState.set(uid, {
+    hash: meta.hash !== undefined ? meta.hash : prev.hash,
+    chunks: typeof meta.chunks === 'number' ? meta.chunks : prev.chunks,
+    syncRevision: typeof meta.syncRevision === 'number' ? meta.syncRevision : prev.syncRevision,
+    updatedAt: meta.updatedAt || prev.updatedAt,
+  });
+}
+
+async function sanitizeForCloud(data: CloudSaveInput, compact: boolean): Promise<CloudUserData> {
+  const collection = await optimizeCollectionImages(data.collection, compact);
+  const decks = await optimizeDecksImages(data.decks, compact);
+  const proxies = await optimizeProxiesImages(data.proxies, compact);
+  const payload: CloudUserData = {
+    app: 'proliferate',
+    schemaVersion: 1,
+    updatedAt: new Date().toISOString(),
+    syncRevision: data.syncRevision,
+    clientSessionId: data.clientSessionId,
+    collection,
+    decks,
+    proxies,
+    deckTags: data.deckTags || [],
+    settings: data.settings || {},
+  };
+  // Remove undefined (o Firestore rejeita) e referências compartilhadas
+  return JSON.parse(JSON.stringify(payload)) as CloudUserData;
+}
+
+async function prepareCloudPayload(data: CloudSaveInput, compact = false): Promise<PreparedCloudPayload> {
+  const payload = await sanitizeForCloud(data, compact);
+  if (!canCompress()) {
+    return { payload, bytes: null, hash: null };
   }
+  // Só o conteúdo vai comprimido; metadados (revisão, sessão, data) ficam no documento
+  const { updatedAt: _u, syncRevision: _r, clientSessionId: _c, ...content } = payload;
+  const bytes = await encodeCloudData<CloudContent>(content);
+  return { payload, bytes, hash: hashBytes(bytes) };
+}
+
+function rawJsonBytes(payload: CloudUserData): number {
+  return new TextEncoder().encode(JSON.stringify(payload)).length;
+}
+
+export async function buildCloudPayload(data: CloudSaveInput): Promise<CloudUserData> {
+  let prepared = await prepareCloudPayload(data, false);
+  const sizeOf = (p: PreparedCloudPayload) => (p.bytes ? p.bytes.length : rawJsonBytes(p.payload));
+  const limit = prepared.bytes ? MAX_TOTAL_BYTES : 1_040_000;
+  if (sizeOf(prepared) > limit) {
+    prepared = await prepareCloudPayload(data, true);
+  }
+  if (sizeOf(prepared) > limit) {
+    throw new Error(CLOUD_TOO_LARGE_MESSAGE);
+  }
+  return prepared.payload;
+}
+
+function getCloudErrorCode(err: any): string {
+  return String(err?.code || '').replace(/^firestore\//, '');
+}
+
+async function writeCloudDoc(
+  instances: FirebaseInstances,
+  uid: string,
+  prepared: PreparedCloudPayload
+): Promise<void> {
+  const { fs } = instances.sdk;
+  const mainRef = fs.doc(instances.db, 'userData', uid);
+  const { payload, bytes, hash } = prepared;
+
+  const meta = {
+    app: payload.app,
+    schemaVersion: payload.schemaVersion,
+    updatedAt: payload.updatedAt,
+    syncRevision: payload.syncRevision ?? null,
+    clientSessionId: payload.clientSessionId ?? null,
+  };
+
+  if (!bytes) {
+    // Navegador sem CompressionStream: formato antigo (JSON puro, até 1MB)
+    if (rawJsonBytes(payload) > 1_040_000) throw new Error(CLOUD_TOO_LARGE_MESSAGE);
+    await fs.setDoc(mainRef, payload);
+    rememberCloudDoc(uid, { hash: null, chunks: 0, syncRevision: payload.syncRevision, updatedAt: payload.updatedAt });
+    return;
+  }
+
+  const prevChunks = cloudDocState.get(uid)?.chunks || 0;
+  const batch = fs.writeBatch(instances.db);
+  let chunkCount = 0;
+
+  if (bytes.length <= SINGLE_DOC_MAX_BYTES) {
+    batch.set(mainRef, {
+      ...meta,
+      format: CLOUD_FORMAT,
+      chunks: 0,
+      hash,
+      size: bytes.length,
+      data: fs.Bytes.fromUint8Array(bytes),
+    });
+  } else {
+    const parts = splitBytes(bytes, CHUNK_BYTES);
+    chunkCount = parts.length;
+    const setId = `${hash}-${Date.now().toString(36)}`;
+    parts.forEach((part, i) => {
+      batch.set(fs.doc(instances.db, 'userData', uid, CHUNKS_SUBCOLLECTION, String(i)), {
+        setId,
+        index: i,
+        data: fs.Bytes.fromUint8Array(part),
+      });
+    });
+    batch.set(mainRef, {
+      ...meta,
+      format: CLOUD_FORMAT,
+      chunks: chunkCount,
+      setId,
+      hash,
+      size: bytes.length,
+    });
+  }
+
+  // Remove partes que sobraram de uma gravação anterior maior
+  for (let i = chunkCount; i < prevChunks; i++) {
+    batch.delete(fs.doc(instances.db, 'userData', uid, CHUNKS_SUBCOLLECTION, String(i)));
+  }
+
+  await batch.commit();
+  rememberCloudDoc(uid, { hash, chunks: chunkCount, syncRevision: payload.syncRevision, updatedAt: payload.updatedAt });
+}
+
+async function decodeCloudDoc(
+  instances: FirebaseInstances | null,
+  uid: string,
+  raw: any
 ): Promise<CloudUserData> {
+  if (raw && raw.format === CLOUD_FORMAT) {
+    let bytes: Uint8Array;
+    if (raw.chunks > 0) {
+      if (!instances) throw new Error('Firebase indisponível para ler as partes do documento.');
+      const { fs } = instances.sdk;
+      const snaps = await Promise.all(
+        Array.from({ length: raw.chunks }, (_, i) =>
+          fs.getDoc(fs.doc(instances.db, 'userData', uid, CHUNKS_SUBCOLLECTION, String(i)))
+        )
+      );
+      const parts = snaps.map((s, i) => {
+        const d = s.exists() ? (s.data() as any) : null;
+        if (!d || d.setId !== raw.setId) {
+          throw new Error(`Parte ${i + 1}/${raw.chunks} dos dados na nuvem está desatualizada; tentando de novo.`);
+        }
+        return d.data.toUint8Array() as Uint8Array;
+      });
+      bytes = joinBytes(parts);
+    } else {
+      bytes = raw.data.toUint8Array();
+    }
+    const content = await decodeCloudData<CloudContent>(bytes);
+    rememberCloudDoc(uid, {
+      hash: raw.hash ?? null,
+      chunks: raw.chunks || 0,
+      syncRevision: raw.syncRevision,
+      updatedAt: raw.updatedAt,
+    });
+    return {
+      ...content,
+      app: raw.app || content.app || 'proliferate',
+      schemaVersion: raw.schemaVersion ?? content.schemaVersion ?? 1,
+      updatedAt: raw.updatedAt,
+      syncRevision: raw.syncRevision ?? undefined,
+      clientSessionId: raw.clientSessionId ?? undefined,
+    };
+  }
+
+  // Formato intermediário (gzip em base64 num campo de texto)
+  if (raw && typeof raw.blobGzip === 'string') {
+    const full = JSON.parse(await gunzipBytes(base64ToBytes(raw.blobGzip))) as CloudUserData;
+    rememberCloudDoc(uid, { hash: null, chunks: 0 });
+    return {
+      ...full,
+      syncRevision: raw.syncRevision ?? full.syncRevision,
+      clientSessionId: raw.clientSessionId ?? full.clientSessionId,
+    };
+  }
+
+  // Formato original (JSON puro)
+  rememberCloudDoc(uid, { hash: null, chunks: 0 });
+  return raw as CloudUserData;
+}
+
+/**
+ * Salva os dados do usuário na nuvem.
+ * - Não grava nada se o conteúdo for idêntico ao último salvo (economiza cota de escrita).
+ * - Usa um documento único até ~1MB comprimido; acima disso divide em partes numa escrita atômica.
+ */
+export async function saveUserCloudData(uid: string, data: CloudSaveInput): Promise<CloudUserData> {
   const instances = await getFirebaseInstances();
 
-  // Compress oversized user-uploaded base64 images and strip bloated cache properties
-  // so payloads stay safely well below Firestore's 1MB document limit
-  const sanitizedPayload = await buildCloudPayload(data);
-
   if (instances) {
-    const userDocRef = instances.sdk.fs.doc(instances.db, 'userData', uid);
-    await instances.sdk.fs.setDoc(userDocRef, await packCloudPayload(sanitizedPayload));
-    return sanitizedPayload;
+    let prepared = await prepareCloudPayload(data, false);
+    const known = cloudDocState.get(uid);
+
+    if (prepared.hash && known?.hash && prepared.hash === known.hash) {
+      // Nada mudou desde a última gravação/leitura: mantém a revisão que está na nuvem
+      return {
+        ...prepared.payload,
+        syncRevision: known.syncRevision ?? prepared.payload.syncRevision,
+        updatedAt: known.updatedAt || prepared.payload.updatedAt,
+      };
+    }
+
+    if (prepared.bytes && prepared.bytes.length > MAX_TOTAL_BYTES) {
+      prepared = await prepareCloudPayload(data, true);
+      if (prepared.bytes && prepared.bytes.length > MAX_TOTAL_BYTES) {
+        throw new Error(CLOUD_TOO_LARGE_MESSAGE);
+      }
+    }
+
+    try {
+      await writeCloudDoc(instances, uid, prepared);
+    } catch (err: any) {
+      const isChunked = Boolean(prepared.bytes && prepared.bytes.length > SINGLE_DOC_MAX_BYTES);
+      if (!isChunked || getCloudErrorCode(err) !== 'permission-denied') throw err;
+      // Regras antigas não permitem partes: tenta caber num único documento com imagens compactadas
+      const compact = await prepareCloudPayload(data, true);
+      if (compact.bytes && compact.bytes.length <= SINGLE_DOC_MAX_BYTES) {
+        await writeCloudDoc(instances, uid, compact);
+        return compact.payload;
+      }
+      throw new Error(CLOUD_CHUNK_RULES_MESSAGE);
+    }
+    return prepared.payload;
   }
 
   // Fallback: Simulated cloud storage in localStorage
+  const sanitizedPayload = await buildCloudPayload(data);
   try {
     const rawAll = localStorage.getItem(STORAGE_KEY_SIMULATED_CLOUD_DATA);
     const all = rawAll ? JSON.parse(rawAll) : {};
@@ -707,10 +868,20 @@ export async function loadUserCloudData(uid: string): Promise<CloudUserData | nu
   const instances = await getFirebaseInstances();
 
   if (instances) {
-    const userDocRef = instances.sdk.fs.doc(instances.db, 'userData', uid);
-    const snap = await instances.sdk.fs.getDoc(userDocRef);
-    if (!snap.exists()) return null;
-    return await unpackCloudData(snap.data());
+    const { fs } = instances.sdk;
+    const userDocRef = fs.doc(instances.db, 'userData', uid);
+    const snap = await fs.getDoc(userDocRef);
+    if (!snap.exists()) {
+      rememberCloudDoc(uid, { hash: null, chunks: 0 });
+      return null;
+    }
+    try {
+      return await decodeCloudDoc(instances, uid, snap.data());
+    } catch {
+      // Partes em transição (outro aparelho gravando): uma nova leitura resolve
+      const retry = await fs.getDoc(userDocRef);
+      return retry.exists() ? decodeCloudDoc(instances, uid, retry.data()) : null;
+    }
   }
 
   // Fallback: Simulated cloud storage
@@ -724,6 +895,13 @@ export async function loadUserCloudData(uid: string): Promise<CloudUserData | nu
   }
 }
 
+export interface CloudSubscribeOptions {
+  /** Sessão deste navegador: ecos das próprias gravações não são baixados/descomprimidos. */
+  ownSessionId?: string;
+  /** Chamado em vez de onUpdate quando o snapshot é eco desta sessão (só metadados). */
+  onOwnEcho?: (meta: { syncRevision?: number; updatedAt: string }) => void;
+}
+
 /**
  * Subscribes to real-time updates for a user's cloud data.
  * Fires instantly whenever another device/tab saves changes,
@@ -732,7 +910,8 @@ export async function loadUserCloudData(uid: string): Promise<CloudUserData | nu
 export function subscribeToUserCloudData(
   uid: string,
   onUpdate: (data: CloudUserData) => void,
-  onError?: (err: any) => void
+  onError?: (err: any) => void,
+  options: CloudSubscribeOptions = {}
 ): () => void {
   if (isFirebaseConfigured()) {
     let cancelled = false;
@@ -743,13 +922,23 @@ export function subscribeToUserCloudData(
       unsubscribe = instances.sdk.fs.onSnapshot(
         userDocRef,
         (snap) => {
-          if (snap.exists()) {
-            unpackCloudData(snap.data())
-              .then((d) => {
-                if (!cancelled) onUpdate(d);
-              })
-              .catch((e) => onError?.(e));
+          // Gravação local ainda não confirmada pelo servidor: nada novo para aplicar
+          if (!snap.exists() || snap.metadata.hasPendingWrites) return;
+          const raw = snap.data() as any;
+          if (options.ownSessionId && raw.clientSessionId === options.ownSessionId) {
+            rememberCloudDoc(uid, { syncRevision: raw.syncRevision, updatedAt: raw.updatedAt });
+            options.onOwnEcho?.({ syncRevision: raw.syncRevision ?? undefined, updatedAt: raw.updatedAt });
+            return;
           }
+          decodeCloudDoc(instances, uid, raw)
+            .then((d) => {
+              if (!cancelled) onUpdate(d);
+            })
+            .catch((e) => {
+              // Partes ainda em transição: o próximo snapshot (ou foco na janela) traz a versão completa
+              console.warn('Falha ao decodificar dados da nuvem:', e);
+              onError?.(e);
+            });
         },
         (err) => {
           console.warn('Erro na escuta em tempo real da nuvem:', err);
@@ -826,11 +1015,17 @@ export function getFriendlyErrorMessage(err: any): string {
   if (code === 'auth/unauthorized-domain') {
     return 'Domínio não autorizado. Adicione seu domínio em Firebase Console > Authentication > Settings > Authorized domains.';
   }
-  if (code === 'permission-denied') {
+  if (code === 'permission-denied' || code === 'firestore/permission-denied') {
     return 'Acesso não autorizado aos dados na nuvem.';
   }
+  if (code === 'resource-exhausted' || code === 'firestore/resource-exhausted') {
+    return 'Limite de uso do Firebase atingido por enquanto. As alterações ficam salvas neste aparelho e serão enviadas automaticamente mais tarde.';
+  }
+  if (code === 'unavailable' || code === 'firestore/unavailable') {
+    return 'Servidor da nuvem indisponível no momento. Nova tentativa automática em instantes.';
+  }
   if (message.includes('exceeds the maximum allowed size') || message.includes('maximum allowed size')) {
-    return 'Os dados ultrapassam o limite de tamanho do Firestore (1MB). A compressão automática foi aplicada para imagens.';
+    return CLOUD_TOO_LARGE_MESSAGE;
   }
   if (message.includes('Unsupported field value: undefined')) {
     return 'Erro de formatação de dados para a nuvem. Tentando sincronizar com sanitização automática...';

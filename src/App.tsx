@@ -40,7 +40,18 @@ import {
   loadUserCloudData,
   subscribeToUserCloudData,
   logoutUser,
+  getFriendlyErrorMessage,
+  CLOUD_TOO_LARGE_MESSAGE,
+  CLOUD_CHUNK_RULES_MESSAGE,
 } from './services/firebase';
+
+// Sync automático: espera uma pausa nas edições, mas nunca segura alterações por muito tempo
+const SYNC_DEBOUNCE_MS = 2000;
+const SYNC_MAX_WAIT_MS = 10000;
+// Novas tentativas após falha (s): 5, 15, 45, 2 min, 5 min...
+const SYNC_RETRY_DELAYS_MS = [5000, 15000, 45000, 120000, 300000];
+// Ao voltar para a aba depois desse tempo escondida, confere a nuvem (a escuta em tempo real cobre o resto)
+const CLOUD_RECHECK_AFTER_HIDDEN_MS = 5 * 60 * 1000;
 import { getCardByName, resolveCardFaces } from './services/scryfall';
 
 import { CollectionView } from './components/Collection/CollectionView';
@@ -115,6 +126,7 @@ export function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
+  const [syncErrorMessage, setSyncErrorMessage] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalInitialTab, setAuthModalInitialTab] = useState<
     'login' | 'register' | 'forgot'
@@ -155,6 +167,17 @@ export function App() {
   const isInitialCloudFetchInFlightRef = useRef<boolean>(false);
   const activeCloudFetchPromiseRef = useRef<Promise<CloudUserData> | null>(null);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const firstPendingAtRef = useRef<number | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryAttemptRef = useRef(0);
+  const hiddenAtRef = useRef<number | null>(null);
+
+  const clearSyncRetry = () => {
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  };
 
   // Initialize local data on mount
   useEffect(() => {
@@ -273,6 +296,10 @@ export function App() {
       syncTimeoutRef.current = null;
     }
     hasPendingLocalChangesRef.current = false;
+    firstPendingAtRef.current = null;
+    clearSyncRetry();
+    retryAttemptRef.current = 0;
+    setSyncErrorMessage(null);
 
     if (typeof cloudData.syncRevision === 'number') {
       lastCloudRevisionRef.current = Math.max(lastCloudRevisionRef.current, cloudData.syncRevision);
@@ -311,8 +338,10 @@ export function App() {
       syncTimeoutRef.current = null;
     }
 
+    clearSyncRetry();
     const nextRevision = lastCloudRevisionRef.current + 1;
     hasPendingLocalChangesRef.current = false;
+    firstPendingAtRef.current = null;
     setSyncStatus('syncing');
 
     const promise = saveUserCloudData(uid, {
@@ -337,14 +366,36 @@ export function App() {
         lastCloudUpdatedAtRef.current,
         new Date(saved.updatedAt || Date.now()).getTime()
       );
-      setSyncStatus('synced');
+      retryAttemptRef.current = 0;
+      setSyncErrorMessage(null);
+      // Edições feitas durante a gravação continuam pendentes (o debounce cuida delas)
+      setSyncStatus(hasPendingLocalChangesRef.current ? 'syncing' : 'synced');
       setLastSyncedAt(new Date(saved.updatedAt || Date.now()));
       return saved;
-    } catch (err) {
+    } catch (err: any) {
       // Restore dirty flag so reconnect or next retry flushes these edits
       hasPendingLocalChangesRef.current = true;
       const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
       setSyncStatus(isOffline ? 'offline' : 'error');
+      const friendly = getFriendlyErrorMessage(err);
+      setSyncErrorMessage(isOffline ? null : friendly);
+
+      // Erros de tamanho não se resolvem sozinhos; os demais (rede, cota, servidor) tentam de novo
+      const msg = String(err?.message || '');
+      const isPermanent = msg === CLOUD_TOO_LARGE_MESSAGE || msg === CLOUD_CHUNK_RULES_MESSAGE;
+      if (!isPermanent && !isOffline) {
+        const delay =
+          SYNC_RETRY_DELAYS_MS[Math.min(retryAttemptRef.current, SYNC_RETRY_DELAYS_MS.length - 1)];
+        retryAttemptRef.current += 1;
+        clearSyncRetry();
+        retryTimerRef.current = setTimeout(() => {
+          retryTimerRef.current = null;
+          const user = currentUserRef.current;
+          if (user && user.uid === uid && hasPendingLocalChangesRef.current) {
+            pushCloudData(uid).catch(() => undefined);
+          }
+        }, delay);
+      }
       throw err;
     } finally {
       if (activeCloudFetchPromiseRef.current === promise) {
@@ -367,6 +418,9 @@ export function App() {
         cloudUnsubscribe();
         cloudUnsubscribe = null;
       }
+      clearSyncRetry();
+      retryAttemptRef.current = 0;
+      setSyncErrorMessage(null);
 
       const prevUid = currentUserRef.current?.uid;
       currentUserRef.current = user;
@@ -448,6 +502,21 @@ export function App() {
         },
         (err) => {
           console.warn('Erro na escuta da nuvem:', err);
+        },
+        {
+          // Ecos das próprias gravações: só atualiza revisão/horário, sem baixar o conteúdo
+          ownSessionId: clientSessionId.current,
+          onOwnEcho: (meta) => {
+            if (typeof meta.syncRevision === 'number') {
+              lastCloudRevisionRef.current = Math.max(lastCloudRevisionRef.current, meta.syncRevision);
+            }
+            lastCloudUpdatedAtRef.current = Math.max(
+              lastCloudUpdatedAtRef.current,
+              new Date(meta.updatedAt || Date.now()).getTime()
+            );
+            if (!hasPendingLocalChangesRef.current) setSyncStatus('synced');
+            setLastSyncedAt(new Date(meta.updatedAt || Date.now()));
+          },
         }
       );
     });
@@ -462,7 +531,8 @@ export function App() {
 
   // Sync on window focus, visibility change, page unload, and network reconnect
   useEffect(() => {
-    const checkCloudOnFocus = async () => {
+    // Envia pendências ao voltar; só lê a nuvem quando a escuta em tempo real pode ter perdido algo
+    const checkCloudOnFocus = async (forceRead = false) => {
       const user = currentUserRef.current;
       if (!user || isInitialCloudFetchInFlightRef.current) return;
 
@@ -475,6 +545,8 @@ export function App() {
         }
         return;
       }
+
+      if (!forceRead) return;
 
       try {
         const cloudData = await loadUserCloudData(user.uid);
@@ -502,26 +574,34 @@ export function App() {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
+        hiddenAtRef.current = Date.now();
         flushPendingBeforeHide();
       } else if (document.visibilityState === 'visible') {
-        checkCloudOnFocus();
+        const hiddenFor = hiddenAtRef.current ? Date.now() - hiddenAtRef.current : 0;
+        hiddenAtRef.current = null;
+        checkCloudOnFocus(hiddenFor > CLOUD_RECHECK_AFTER_HIDDEN_MS);
       }
     };
+    const handleFocus = () => checkCloudOnFocus(false);
+    const handleOnline = () => {
+      retryAttemptRef.current = 0;
+      checkCloudOnFocus(true);
+    };
 
-    window.addEventListener('focus', checkCloudOnFocus);
-    window.addEventListener('online', checkCloudOnFocus);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('online', handleOnline);
     window.addEventListener('pagehide', flushPendingBeforeHide);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      window.removeEventListener('focus', checkCloudOnFocus);
-      window.removeEventListener('online', checkCloudOnFocus);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('online', handleOnline);
       window.removeEventListener('pagehide', flushPendingBeforeHide);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [currentUser]);
 
-  // Auto-sync user edits to Cloud Firestore (fast 800ms debounce)
+  // Auto-sync: debounce de 2s com espera máxima de 10s durante edições contínuas
   useEffect(() => {
     if (
       localChangeNonce === 0 ||
@@ -536,13 +616,21 @@ export function App() {
       clearTimeout(syncTimeoutRef.current);
     }
 
+    // Já existe nova tentativa agendada após erro: ela levará estas alterações
+    if (retryTimerRef.current) return;
+
     setSyncStatus('syncing');
+
+    const now = Date.now();
+    if (firstPendingAtRef.current === null) firstPendingAtRef.current = now;
+    const waited = now - firstPendingAtRef.current;
+    const delay = Math.max(0, Math.min(SYNC_DEBOUNCE_MS, SYNC_MAX_WAIT_MS - waited));
 
     syncTimeoutRef.current = setTimeout(() => {
       pushCloudData(currentUser.uid).catch((err) => {
-        console.error('Falha no auto-sync:', err);
+        console.warn('Falha no auto-sync (nova tentativa agendada):', err);
       });
-    }, 800);
+    }, delay);
 
     return () => {
       if (syncTimeoutRef.current) {
@@ -554,6 +642,7 @@ export function App() {
   // Manual Sync & Logout Handlers
   const handleForceSync = async () => {
     if (!currentUser) return;
+    retryAttemptRef.current = 0;
     await pushCloudData(currentUser.uid);
   };
 
@@ -1913,6 +2002,7 @@ export function App() {
               user={currentUser}
               syncStatus={syncStatus}
               lastSyncedAt={lastSyncedAt}
+              syncErrorMessage={syncErrorMessage}
               onOpenAuthModal={(tab) => {
                 setAuthModalInitialTab(tab || 'login');
                 setIsAuthModalOpen(true);

@@ -1164,7 +1164,14 @@ export const DeckBuilder: React.FC<DeckBuilderProps> = ({
       </div>
 
       {/* Fichas associadas a este deck (impressas junto com ele) */}
-      <DeckTokensPanel deck={deck} onUpdateDeck={onUpdateDeck} />
+      <DeckTokensPanel
+        deck={deck}
+        onUpdateDeck={onUpdateDeck}
+        onAddToProxies={onAddToProxies ? (t, q) => onAddToProxies(t as unknown as Card, q) : undefined}
+        viewMode={viewMode}
+        gridCardSize={gridCardSize}
+        showGridDetails={showGridDetails}
+      />
 
       {/* Filter & View Switcher Bar (Identical to Collection) */}
       <div className="glass-panel" style={{ padding: '16px 20px' }}>

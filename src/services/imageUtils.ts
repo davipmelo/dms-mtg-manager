@@ -64,9 +64,10 @@ export async function compressDataUrlIfNeeded(
   url?: string,
   maxWidth = 800,
   maxHeight = 1120,
-  quality = 0.82
+  quality = 0.82,
+  minLength = 150000
 ): Promise<string | undefined> {
-  if (!url || typeof url !== 'string' || !url.startsWith('data:image/') || url.length < 150000) {
+  if (!url || typeof url !== 'string' || !url.startsWith('data:image/') || url.length < minLength) {
     return url;
   }
 
