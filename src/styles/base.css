@@ -2758,6 +2758,8 @@ tr:hover .row-art-btn,
 .deck-token-pick { background: none; border: 1px solid transparent; border-radius: var(--radius-md); padding: 4px; color: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 4px; text-align: left; }
 .deck-token-pick:hover, .deck-token-pick:focus-visible { border-color: var(--primary); }
 .deck-token-pick-img { position: relative; display: block; border-radius: var(--radius-md); overflow: hidden; }
+.deck-token-pick-cat { font-size: 0.66rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.06em; }
+.deck-token-picker-loading { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; }
 .deck-token-pick-name { font-size: 0.74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 900px) {
   .util-row.deck-token-row { grid-template-columns: minmax(0, 1fr) auto auto; }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
-import { Deck, DeckToken, TokenCard, Card, CardPrint, ViewMode, isDoubleFacedCard } from '../../types';
+import { Deck, DeckToken, TokenCard, Card, CardPrint, ViewMode, UtilityCategory, isDoubleFacedCard } from '../../types';
 import { searchUtilityCards } from '../../services/scryfall';
 import { CardImage } from '../Common/CardImage';
 import { CardHoverPreview, CardHoverPreviewData } from '../Common/CardHoverPreview';
@@ -32,6 +32,18 @@ interface DeckTokensPanelProps {
   gridCardSize?: number;
   showGridDetails?: boolean;
 }
+
+/** Todas as categorias do menu Utilitários entram na busca do deck. */
+const SEARCH_CATEGORIES: Array<{ id: UtilityCategory; label: string }> = [
+  { id: 'tokens', label: 'Ficha' },
+  { id: 'markers', label: 'Marcador' },
+  { id: 'emblems', label: 'Emblema' },
+  { id: 'dungeons', label: 'Masmorra' },
+  { id: 'planes', label: 'Plano' },
+  { id: 'schemes', label: 'Esquema' },
+  { id: 'conspiracies', label: 'Conspiração' },
+  { id: 'attractions', label: 'Atração' },
+];
 
 const toArtCard = (t: TokenCard): Card => ({
   id: t.id,
@@ -116,6 +128,8 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({
   const [query, setQuery] = useState('');
   const [serverQuery, setServerQuery] = useState('');
   const [results, setResults] = useState<TokenCard[]>([]);
+  const [categoryById, setCategoryById] = useState<Record<string, string>>({});
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [justAdded, setJustAdded] = useState<Record<string, boolean>>({});
   const reqRef = useRef(0);
@@ -129,25 +143,66 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({
     });
   };
 
+  // Busca em todas as categorias: fichas (maior, em fluxo) e as demais em paralelo, uma de cada vez
   const runSearch = async (q: string) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
     const reqId = ++reqRef.current;
+    const isCurrent = () => reqId === reqRef.current && !controller.signal.aborted;
+
+    const byCategory = new Map<UtilityCategory, TokenCard[]>();
+    const publish = () => {
+      if (!isCurrent()) return;
+      const seen = new Set<string>();
+      const merged: TokenCard[] = [];
+      const cats: Record<string, string> = {};
+      for (const { id, label } of SEARCH_CATEGORIES) {
+        for (const item of byCategory.get(id) || []) {
+          if (seen.has(item.id)) continue;
+          seen.add(item.id);
+          merged.push(item);
+          cats[item.id] = label;
+        }
+      }
+      setResults(merged);
+      setCategoryById(cats);
+      if (merged.length > 0) setLoading(false);
+    };
+
     setLoading(true);
-    try {
-      const res = await searchUtilityCards('tokens', q, 'all', {
+    setLoadingMore(true);
+    setResults([]);
+
+    const fetchCategory = (cat: UtilityCategory) =>
+      searchUtilityCards(cat, q, 'all', {
         signal: controller.signal,
         maxPages: 40,
         onProgress: (partial) => {
-          if (reqId !== reqRef.current || controller.signal.aborted) return;
-          setResults(partial);
-          setLoading(false);
+          byCategory.set(cat, partial);
+          publish();
         },
+      }).then((res) => {
+        byCategory.set(cat, res);
+        publish();
       });
-      if (reqId === reqRef.current && !controller.signal.aborted) setResults(res);
+
+    const others = SEARCH_CATEGORIES.filter((c) => c.id !== 'tokens');
+    try {
+      await Promise.all([
+        fetchCategory('tokens'),
+        (async () => {
+          for (const c of others) {
+            if (controller.signal.aborted) return;
+            await fetchCategory(c.id);
+          }
+        })(),
+      ]);
     } finally {
-      if (reqId === reqRef.current) setLoading(false);
+      if (reqId === reqRef.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   };
 
@@ -288,10 +343,10 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (words.length === 0 || serverQuery) return results;
     return results.filter((r) => {
-      const hay = `${r.name} ${r.typeLine || ''} ${r.setName || ''}`.toLowerCase();
+      const hay = `${r.name} ${r.typeLine || ''} ${r.setName || ''} ${categoryById[r.id] || ''}`.toLowerCase();
       return words.every((w) => hay.includes(w));
     });
-  }, [results, query, serverQuery]);
+  }, [results, query, serverQuery, categoryById]);
 
   const qtyInDeck = useMemo(() => {
     const map = new Map<string, number>();
@@ -512,7 +567,7 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="deck-token-picker-head">
-              <strong>Adicionar ficha a “{deck.name}”</strong>
+              <strong>Adicionar ficha ou utilitário a “{deck.name}”</strong>
               <button type="button" className="btn btn-ghost btn-icon" onClick={closePicker} aria-label="Fechar">
                 <X size={16} />
               </button>
@@ -528,7 +583,7 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({
               <input
                 type="text"
                 className="input-text"
-                placeholder="Buscar ficha (ex: Treasure, Zombie, Angel)..."
+                placeholder="Buscar fichas, marcadores, emblemas, planos, esquemas... (ex: Morph, Poison)"
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
@@ -556,8 +611,13 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({
                 <>
                   <div className="deck-token-picker-status">
                     {filteredResults.length > 400
-                      ? `Mostrando 400 de ${filteredResults.length} fichas — refine a busca`
-                      : `${filteredResults.length} ${filteredResults.length === 1 ? 'ficha' : 'fichas'}`}
+                      ? `Mostrando 400 de ${filteredResults.length} resultados — refine a busca`
+                      : `${filteredResults.length} ${filteredResults.length === 1 ? 'resultado' : 'resultados'}`}
+                    {loadingMore && (
+                      <span className="deck-token-picker-loading">
+                        <Loader2 size={12} className="animate-spin" /> carregando mais categorias…
+                      </span>
+                    )}
                   </div>
                   <div className="deck-token-picker-grid">
                     {filteredResults.slice(0, 400).map((r) => {
@@ -568,7 +628,9 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({
                           type="button"
                           className="deck-token-pick"
                           onClick={() => handleAdd(r)}
-                          onMouseEnter={(e) => showPreview(e, r, false, inDeck ? `${inDeck}x no deck` : undefined)}
+                          onMouseEnter={(e) =>
+                            showPreview(e, r, false, inDeck ? `${inDeck}x no deck` : categoryById[r.id])
+                          }
                           onMouseMove={movePreview}
                           onMouseLeave={hidePreview}
                           aria-label={`Adicionar ${r.name} ao deck`}
@@ -587,6 +649,9 @@ export const DeckTokensPanel: React.FC<DeckTokensPanelProps> = ({
                           <span className="deck-token-pick-name">
                             {justAdded[r.id] ? <Check size={12} className="text-emerald-400" /> : null} {r.name}
                           </span>
+                          {categoryById[r.id] && categoryById[r.id] !== 'Ficha' && (
+                            <span className="deck-token-pick-cat">{categoryById[r.id]}</span>
+                          )}
                         </button>
                       );
                     })}
